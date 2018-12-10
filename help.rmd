@@ -1,0 +1,493 @@
+---
+title: "secrdesign app 1.0"
+author: "Murray Efford"
+date: '2018-12-10'
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+  html_document:
+    toc: yes
+    toc_depth: 2
+---
+
+# An interactive app for designing spatially explicit capture--recapture studies
+
+## Murray Efford 2018-12-10
+
+# Contents
+  [Introduction](#introduction)  
+  [Design](#designspecs)  
+  [Costing](#costspecs)  
+  [Simulation](#simspecs)  
+  [Spacing](#spacingspecs)  
+  [Summary](#summary)  
+  [Options](#optionspecs)  
+  [References](#references)  
+  [Appendices](#appendix1)  
+
+----------------------------------------------------
+
+
+# Introduction  <a name="introduction"></a>
+
+This Shiny application is an interactive interface to parts of the R package **secrdesign** ([Efford 2018a](#references)). It focuses on the effect of detector layout and other design variables on the precision of density estimates, measured by the relative standard error (RSE, aka CV). Vary settings on the [Design](#designspecs) page to obtain an immediate "rule-of-thumb" approximation to RSE, based on the expected numbers of recaptures and distinct individuals. 
+
+The approximation is biased low for some layouts, especially when sample size is small. A correction factor may be applied to adjust the rule-of-thumb. Refine the approximation by [simulating](#simspecs) data from the chosen design; this may take a long time. Use "Add to summary" to include the current scenario in a spreadsheet for export.
+
+Tip: on small displays, running your browser in full-screen mode will avoid the need to scroll down (often F11 will get you there; otherwise try the options menu).
+
+IMPORTANT NOTE: Maximising precision is only one component of study design. Sampling must also be representative of the population in the region of interest. Linear arrays are unreliable when home ranges are elongated in a common direction ([Efford 2018b](#references)).
+
+# Design  <a name="designspecs"></a>
+
+*Use settings on this page to specify a detector layout, population and sampling parameters. The settings are interpreted in various plots and used for calculations shown in the Results window. They are also used for calculations on later pages (Costing, Spacing, Simulation).* \(\renewcommand{\vec}[1]{\mathbf{#1}}\)
+
+## Detector array
+
+<table style="width:40%">
+  <tr>
+    <td>Detector type</td>
+    <td>multi, proximity or count</td>
+  </tr>
+</table> 
+<br>
+Options for detector type follow **secr** ([Efford (2018c)](#references)): "multi" refers to a multi-catch trap; "proximity" to binary proximity detectors, and "count" to detectors that yield integer counts. Counts are assumed to be Poisson-distributed.
+<br>
+
+The detector layout may be specified as a rectangular grid or line (via `make.grid`), or read from a file. For a rectangular grid the options are:
+
+<table style="width:40%">
+  <tr>
+    <td>rows</td>
+    <td>number of rows (ny)</td>
+  </tr>
+  <tr>
+    <td>columns</td>
+    <td>number of columns (nx)</td>
+  </tr>
+  <tr>
+    <td>row spacing</td>
+    <td>metres (spacey)</td>
+  </tr>
+  <tr>
+    <td>column spacing</td>
+    <td>metres (spacex)</td>
+  </tr>
+  <tr>
+    <td>hollow</td>
+    <td>detectors only on perimeter?</td>
+  </tr>
+</table> 
+
+<br>
+
+The **secr** function `make.grid` forms a rectangular detector layout. By default, column settings are equal to row settings; to alter this either change the column settings *after* the row setings, or see Options to uncouple rows and columns. The order of detectors is column-boustrophedonical (`make.grid` argument ID = "numxb"), so connecting them in sequence gives a plausible route. See `?make.grid` for more.
+
+<!-- A further option 'Pgrid' constructs a grid within a polygon. The polygon boundary is input from a file. -->
+                          
+## Parameters
+            
+<table style="width:50%">
+  <tr>
+    <td> Density </td>
+    <td> animals per hectare (multiply by 100 for animals per km<sup>2</sup>) </td>
+  </tr>
+  <tr>
+    <td> Detection function </td>
+    <td> HHN &nbsp; hazard halfnormal &nbsp; \( \small \lambda(d) = -\lambda_0 \exp\{-d^2/(2\sigma^2)\} \) </td>
+  </tr>
+  <tr>
+    <td> </td>
+    <td> HEX &nbsp; hazard negative exponential  &nbsp; \( \small \lambda(d) = -\lambda_0 \exp(-d/\sigma) \) </td>
+  </tr>
+  <tr>
+    <td>lambda0</td>
+    <td>intercept \(\lambda_0\)</td>
+  </tr>
+  <tr>
+    <td>sigma</td>
+    <td>spatial scale \(\sigma\)</td>
+  </tr>
+</table> 
+<br>
+Only two detection functions are supported: 'HHN' and 'HEX'. These relate an animal's hazard of detection at a particular detector on a particular sampling occasion (\(\lambda\)) to the distance \(\small d\) of the detector from its home-range centre. The corresponding probability of detection is \(\small g(d) = 1 - \exp \{ - \lambda(d)\}\).
+
+See the [Detectfn](#detectfnplot) plot for the effect of given lambda0 and sigma.
+
+## General
+ 
+<table style="width:40%">
+  <tr>
+    <td>Occasions</td>
+    <td>number of sampling occasions (times detectors were checked)</td>
+  </tr>
+  <tr>
+    <td>Clusters</td>
+    <td>number of replicate identical arrays</td>
+  </tr>
+  <tr>
+    <td>Distribution</td>
+    <td>distribution of number detected</td>
+  </tr>
+</table> 
+
+<br>
+
+A study may be extended by sampling on more occasions. The number of recaptures $r$ increases indefinitely, but the number of distinct individuals $n$ levels off.
+
+Replicating the sampling effort at many independent locations within the same population increases both $r$ and $n$. Using multiple clusters (repeated arrays) is also a way to sample a large region. We assume clusters are far enough apart that no animal is detected on more than one cluster (array).
+    
+<a name="distribution"></a>
+
+The Distribution radio button toggles between two models for the number of detected individuals $n$. The "Binomial" option corresponds to fixed number $N$ in the masked area and a binomial point process for the distribution of activity centres.  The "Poisson" option corresponds to Poisson $N$ and a Poisson point process for activity centres. The chosen distribution is used in [simulations](#simulation) for both generating data and fitting a model.
+
+## Action buttons
+
+<table style="width:40%">
+  <tr>
+    <td>All defaults</td>
+    <td>Reset all input options to defaults</td>
+  </tr>
+  <tr>
+    <td>Suggest spacing</td>
+    <td>Finds spacing with E(n) = E(r) and sets this for current grid or line</td>
+  </tr>
+  <tr>
+    <td>Simulate</td>
+    <td>Simulate current scenario with settings on Simulation page</td>
+  </tr>
+  <tr>
+    <td>Add to summary</td>
+    <td>Transfer scenario and results to summary table</td>
+  </tr>
+</table> 
+
+<br>
+
+'Suggest spacing' does not apply when the detector array is input from a file.
+                
+## Results  <a name="nrmspecs"></a>
+
+*Values in the Results window are updated automatically when the inputs change.*
+
+<table style="width:40%">
+  <tr>
+    <td>Expected number of individuals<sup>1</sup> </td>
+    <td> \(n\) </td>
+  </tr>
+  <tr>
+    <td>Expected number of recaptures<sup>1,2</sup></td>
+    <td> \(r\) </td>
+  </tr>
+  <tr>
+    <td>Expected number of movements<sup>1,3</sup></td>
+    <td> \(m\) </td>
+  </tr>
+  <tr>
+    <td>Median detectors per 95% home range<sup>4</sup></td>
+    <td> across region for all non-zero points </td>
+  </tr>
+  <tr>
+    <td>Overlap coefficient<sup>5</sup></td>
+    <td> \( k = \sigma \sqrt D / 100 \) </td>
+  </tr>
+  <tr>
+    <td>Effective sampling area<sup>6</sup> </td>
+    <td> \(a = \int_{R^2} p_\cdot(\vec x) \, d \vec x \) </td>
+  </tr>
+  <tr>
+    <td>Rule-of-thumb RSE<sup>7</sup> </td>
+    <td> \( 100 . \mbox{CF} / \sqrt { \mbox{min} (n,r)} \) </td>
+  </tr>
+</table> 
+<br>
+1\. Formulae for the expected numbers of individuals, recaptures and movements are given in [secrdesign-Enrm.pdf]. <br>
+2\. A recapture is any detection after an animal's first. <br>
+3\. A movement is any recapture at a different detector to the previous one. <br>
+4\. "home range"" used here loosely; 95% radius from secr::circular.r; median is across mask, excluding non-overlapping points <br>
+5\. \(k\) tends to fall in the range 0.3--1.1 (see [Efford et al. 2016](#references) for some examples). Scenarios with $\sigma$ and $D$ that result in $k$ outside this range may be unrealistic. <br>
+6\. \(\small p_\cdot(\mathbf x)\) is the probability an animal centred at \(\vec x\) is detected at 
+least once ([Borchers and Efford 2008](#references)). \(a\) varies with the number of sampling occasions and \(\lambda_0\) as well as \(\sigma\). <br>
+7\. See explanation below. <br>
+8\. The diameter of an array is the greatest distance between two detectors. Arrays less than \(5\sigma\) in diameter may not be large enough to estimate sigma reliably. <br>
+
+The relative standard error RSE (aka CV) is a measure of estimator precision. \(\small \mbox{RSE}(\hat D) = \mbox{SE} (\hat D) / \hat D \). For a particular design the precision may be predicted approximately from the expected values of \(n\) and \(r\) -- this is the "rule-of-thumb" RSE. The approximation is intended for Poisson-distributed $n$ (see [Distribution](#distribution)). Sampling variance is predictably less when $n$ is binomial; the binomial $\mbox{RSE}_B$ for a given Poisson $\mbox{RSE}_P$ depends on the effective sampling area $a$ and total mask area $A$ as follows
+$$\mbox{RSE}_B = \sqrt {\mbox{RSE}_P^2 - 1 / (DA)}.$$
+This adjustment is applied whenever a binomial distribution is selected.
+
+The raw "rule-of-thumb" RSE is further adjusted by a correction factor specified in [Options](#optionspecs). By default, the correction factor is also updated automatically to match the results from simulations whenever they are run.
+
+## Tabbed plots
+
+*Plots update automatically. Any plot may be saved by right-clicking on the image.*
+
+### Array
+
+Detector layout as input from file or constructed with `make.grid`
+
+### Detectfn   <a name="detectfnplot"></a>
+
+Detection function on the hazard scale
+
+### Popn
+
+One simulated realisation of a uniformly distributed population.
+
+### Pxy
+
+Contours of the overall detection probability \(p_\cdot(\mathbf x)\) ('Pxy' is the label that has been used for this quantity in the Windows application Density).  Settings in Options toggle the display between filled and unfilled contour plots, and determine whether contours are labelled. The requested contour levels are 0.1, 0.2, ..., 0.9, but higher contours may be missing. Click on the plot to find the value at a point.
+
+### Power
+
+Two styles of plot are offered (see Options | Power plot)
+
+#### Power for test of null hypothesis 
+
+Probability of detecting a change in density in a 2-survey comparison as a function of effect size for a given expected \(\small \mbox{RSE}(\hat D)\). See [Appendix 1](#appendix1) for the computation method.
+
+Effect size is the ratio of final density \(\small D_2\) to initial density \(\small D_1\) expressed as a percentage. The alpha level is specified in Options (default \(\small \alpha = 0.05\)). 
+
+The curve is initially computed for the rule-of-thumb RSE from the current design. Use the slider to vary this. Especially, consider adding a safety margin for underestimation of RSE.
+
+The default method assumes that \(\small \mbox{RSE}(\hat D)\) is the same in the initial and final surveys. It is more likely that \(\small \mbox{RSE}(\hat D)\) will increase as density declines. An adjustment is applied to the final RSE when the 'Adjust RSE' box is ticked:  \( \small \mbox{RSE}(\hat D_2) =   \sqrt {D_1/D_2} \mbox{RSE}(\hat D_1) \).
+
+#### Confidence interval for population change
+
+As an alternative to conventional power analysis we can construct intervals for the estimated ratio of densities, given the true ratio and the sampling errors. The interval is the region between the upper and lower curves for a given true population change on the x axis. 
+
+----------------------------------------------------
+
+# Costing  <a name="costspecs"></a>
+
+## Unit cost
+
+<table style="width:40%">
+  <tr>
+    <td>Travel per km $ </td>
+    <td> within-array </td>
+  </tr>
+  <tr>
+    <td>Cost per array $</td>
+    <td> one-off overheads for each array </td>
+  </tr>
+  <tr>
+    <td>Cost per detector $ </td>
+    <td> one-off cost of purchase and installation </td>
+  </tr>
+  <tr>
+    <td>Cost per detection $ </td>
+    <td> handling and lab costs </td>
+  </tr>
+</table> 
+                            
+## Route
+
+<table style="width:40%">
+  <tr>
+    <td>Type </td>
+    <td> sequential, manual or sumspacing </td>
+  </tr>
+  <tr>
+    <td> Return to start</td>
+    <td> </td>
+  </tr>
+</table> 
+
+<br>
+
+Travel cost depends on the length of the route taken to check detectors. If the layout lists detectors in the order they are to be visited then the default 'Sequential' option applies. However, this may not be the shortest route, especially if the route should return to the starting point. 
+
+The 'Manual' option allows the user to construct a route 'on the fly' by clicking near detectors at the turning points.  Click on 'Define new route...' to start again.
+
+The 'SumSpacing' option determines route length by summing inter-detector distances.
+
+----------------------------------------------------
+
+# Simulation  <a name="simspecs"></a>
+
+*This page optionally simulates the single scenario on the [Design](#designspecs) page. Simulations may be slow. You must close the application to abort them.*
+
+A very approximate algorithm is used to predict the execution time from the product of 
+
+* number of mask points
+* number of detectors
+* number of sampling occasions
+* expected number of detected animals, E(n)
+* number of clusters
+* number of replicates
+
+with adjustments for the maximisation method (default "none"), detector type (default "proximity") and fitting function (default `openCR.fit`). If the predicted time exceeds 0.2 minutes a dialogue box allows the user to cancel simulations.
+
+## Standalone R code
+
+Code is provided for users who want to go further. Multiple scenarios may be evaluated by providing vector arguments to `make.scenarios`.
+
+## Simulation control
+
+### Fit simulated data
+
+**secrdesign** >= 2.5.5 allows a choice between two functions for fitting closed-population SECR models: `secr.fit` in package **secr** and `openCR.fit` in package **openCR** ([Efford 2018d](#references)). The default is to use the faster multi-threaded code in `openCR.fit` (for this it is best to leave ncores = 1).
+
+`method = 'none'` by-passes maximisation and evaluates the Hessian (and hence the variance-covariance matrix) at the true values of the parameters. This is a fast way to predict \( \small \mbox{RSE}(\hat D) \); it is apparently reliable and requires few replicates. Bias is not estimated.
+
+If the 'Add to summary' box is ticked then simulation results are added automatically to the [Summary](#summary) table.
+
+### simulation controls
+<table style="width:40%">
+  <tr>
+    <td>nrepl </td>
+    <td> number of replicate simulations<sup>1</sup> </td>
+  </tr>
+  <tr>
+    <td>ncores</td>
+    <td> number of cores for parallel processing<sup>2</sup> </td>
+  </tr>
+  <tr>
+    <td>seed </td>
+    <td> random number seed<sup>3</sup> </td>
+  </tr>
+  <tr>
+    <td>nx </td>
+    <td>  number of cells in mask in x direction  </td>
+  </tr>
+  <tr>
+    <td>method</td>
+    <td> method used for likelihood maximisation by `secr.fit`<sup>4</sup> </td>
+  </tr>
+</table> 
+
+<br>
+1\. The default number is often enough for \(\small \mbox{RSE}(\hat D)\), but many more replicates are needed to estimate of \(\small \mbox{RB}(\hat D)\) reliably. <br>
+2\. Simulations are spread across multiple cores if ncores > 1. There may be little gain in speed. The maximum number of cores is determined automatically with `parallel::detectCores`.  <br>
+3\. Set a value greater than zero if you wish results to be repeatable. (Zero translates as NULL in the seed passed to `run.scenarios`) <br>
+<br>
+
+## Results
+
+<table style="width:40%">
+  <tr>
+    <td>Number of replicates </td>
+    <td>as input</td>
+  </tr>
+  <tr>
+    <td>Time for simulations</td>
+    <td>seconds</td>
+  </tr>
+  <tr>
+    <td> Simulated RSE </td>
+    <td>mean and SE over replicates</td>
+  </tr>
+  <tr>
+    <td> Simulated RB<sup>1</sup> </td>
+    <td>mean and SE over replicates</td>
+  </tr>
+</table> 
+<br>
+1\. Relative bias \( \small \mbox{RB}(\hat D) = (\hat D - D) / D \).
+
+<br>
+
+----------------------------------------------------
+
+# Spacing  <a name="spacingspecs"></a>
+
+*This page evaluates the effect of detector spacing on precision and total cost. The array geometry is fixed on the* [Design](#designspecs) *page. A numerical search is performed for the array spacing that minimises the rule-of-thumb \( \small \mbox{RSE}(\hat D) \).*
+
+## Standalone R code
+
+This code shows how `optimalSpacing` may be used to evaluate spacings. An internal version is executed when the button is clicked. 
+
+## Results
+
+<table style="width:30%">
+  <tr>
+    <td>Optimal spacing (relative to sigma) </td>
+  </tr>
+  <tr>
+    <td> Optimal spacing (absolute)</td>
+  </tr>
+  <tr>
+    <td> Minimum RSE </td>
+  </tr>
+</table> 
+
+<br>
+
+## Tabbed plots
+
+### RSE
+
+Rule-of-thumb RSE vs relative spacing. The spacing that minimises the rule-of-thumb RSE is shown with a dot.
+
+### nrm
+
+Expected values of $n$, $r$, and $m$ vs relative spacing ([Design](#nrmspecs)).
+
+### Cost
+
+Costings follow the [Costing](#costspecs) page. Route length and expected number of detections vary with spacing. The cost components for travel and per-detection will therefore vary if their unit cost is greater than zero.
+
+----------------------------------------------------
+
+# Summary  <a name="summary"></a>
+
+The table on this page has one row for each scenario; rows are added by clicking the 'Add to summary' button on the [Design](#designspecs) page, or automatically from [Simulation](#simspecs). Columns from "simfn" onwards will have missing values if no simulation has been performed.
+
+The table may be downloaded as a comma-separated text file.
+
+----------------------------------------------------
+
+# Options  <a name="optionspecs"></a>
+
+*These should be self-explanatory. Experiment if in doubt.*
+
+----------------------------------------------------
+# References <a name="references"></a>
+
+Borchers, D. L. and Efford, M. G. (2008) Spatially explicit
+   maximum likelihood methods for capture--recapture
+   studies. *Biometrics* **64**, 377--385.
+   
+Efford, M. G. (2018a) secrdesign: Sampling design for spatially explicit
+  capture--recapture. R package version 2.5.5.
+  https://CRAN.R-project.org/package=secrdesign
+
+Efford, M. G. (2018b) Non-circular home ranges and the estimation of population density. *Ecology* (in press).
+
+Efford, M. G. (2018c) secr: Spatially explicit capture--recapture models. R package version 3.1.8. https://CRAN.R-project.org/package=secr
+
+Efford, M. G. (2018d) openCR: Open population capture--recapture models. R package version 1.3.0. https://CRAN.R-project.org/package=openCR
+
+Efford, M. G., Dawson, D. K., Jhala, Y. V. and Qureshi, Q. (2016) 
+Density-dependent home-range size revealed by spatially explicit 
+capture--recapture. *Ecography* **39**, 676--688. 
+
+----------------------------------------------------
+
+# Appendix 1. Power calculation for comparison of two density estimates <a name="appendix1"></a>
+
+We want to predict the power of a comparison between two independent surveys as a function of the effect size (\( \small D_{21}\) = final density as fraction of initial density) and the predicted precision of the estimates, expressed as relative standard error RSE. The power calculation assumes log-normal errors in both the initial and final surveys. Log-normal errors are natural for estimates of density (we use a log link function for maximising the likelihood, and rely on symmetrical Wald intervals on the log scale).
+
+For a log normal distribution the variance on the log scale is \( \small \sigma^2 = \log (1 + \mbox{CV}^2) \) where CV is the coefficient of variation on the arithmetic scale (equivalent here to RSE).
+
+The mean \(\mu\) on the log scale is related to the mean \(m\) on the arithmetic scale by \( \small \mu = \log \frac{m}{\sqrt { 1 + \mbox{CV}^2}} \).
+
+We conduct a \(z\)-test on the log scale. The effect size is \( \small \mu_2 - \mu_1 \). In general we must allow for differing RSE in the two surveys, which affects both the effect size and its variance, as follows.
+
+$$ \small \mu_2 - \mu_1 = \log \frac{m_2}{\sqrt {1 + \mbox{CV}_2^2}} - \log \frac{m_1}{\sqrt {1 + \mbox{CV}_1^2}}. $$
+This reduces to 
+$$ \small \mu_2 - \mu_1 = \log \frac{m_2}{m_1} + \log \frac{\sqrt {1 + \mbox{CV}_1^2}}{\sqrt {1 + \mbox{CV}_2^2}}. $$
+For equal CV the second term drops out.
+
+The variance of the effect on the log scale is approximated by the sum of the respective variances:
+
+$$ \small \sigma_{21}^2 = \log(1 + \mbox{CV}_1^2) + \log(1 + \mbox{CV}_2^2).$$
+The standardised difference on the log scale \( \frac{\mu_2 - \mu_1}{\sigma_{21}} \) is compared to a standard normal variate at the desired alpha level.
+
+In our application we replace \( \small m_2 / m_1 \) by \( \small D_{21}\) and \( \small \mbox{CV}_1 \) by RSE. 
+
+To adjust for density-dependent RSE we assume that a difference in RSE between surveys is inversely proportional to the square root of \( \small D_{21} \) (this follows the logic of the rule-of-thumb in which both \(n\) and \(r\) scale with density). Thus \( \small \mbox{CV}_2 = \mbox{RSE} / \sqrt{D_{21}} \).
+
+--------------------------------------------------------------
+[secrdesign-Enrm.pdf]: http://www.otago.ac.nz/density/pdfs/secrdesign-tools.pdf
