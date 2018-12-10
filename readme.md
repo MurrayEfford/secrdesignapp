@@ -1,4 +1,4 @@
-# secrdesignapp on GitHub
+# secrdesignapp 1.0
 
 secrdesignapp is a partial interactive interface to the R package [secrdesign 2.5.5](https://CRAN.R-project.org/package=secrdesign). See the Help tab for details.
 
