@@ -1240,6 +1240,12 @@ server <- function(input, output, session) {
                     stop("provide valid filenames")
                 poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
                 
+                if (sum (pointsInPolygon(grid(), poly)) == 0) {
+                    showNotification("No detectors in polygon - ignoring Clip to polygon",
+                                     type = "warning", id = "noclip", duration = 5)
+                    poly <- NULL
+                }
+                
             }
         }
         else poly <- NULL
@@ -1249,26 +1255,6 @@ server <- function(input, output, session) {
     mask <- reactive( {
         rotrv$current <- FALSE
         pxyrv$value <- NULL
-        # if (input$polygonbox) {
-        #     inFile <- input$habpolyfilename
-        #     if (is.null(inFile))
-        #         poly <- NULL
-        #     else {
-        #         myshape <- input$habpolyfilename
-        #         dsnname <- dirname(myshape[1,4])
-        #         for ( i in 1:nrow(myshape)) {
-        #             file.rename(myshape[i,4], paste0(dsnname,"/",myshape[i,1]))}
-        #         filename <- list.files(dsnname, pattern="*.shp", full.names=FALSE)
-        #         layername <- tools::file_path_sans_ext(basename(filename))
-        #         
-        #         if (is.null(filename))
-        #             stop("provide valid filename")
-        #         
-        #         poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
-        #         
-        #     }
-        # }
-        # else poly <- NULL
         make.mask (grid(),
                    buffer = input$habxsigma * input$sigma,
                    nx = input$habnx,
@@ -1286,7 +1272,7 @@ server <- function(input, output, session) {
             if (is.null(core)) return (NULL)
             if (input$D * maskarea(mask()) > 10000) {
                 showNotification("population exceeds 10000; try again",
-                                 type = "warning", id = "bigpop", duration = 5)
+                                 type = "error", id = "bigpop", duration = 10)
                 return(NULL)
             }
             else removeNotification("bigpop")
