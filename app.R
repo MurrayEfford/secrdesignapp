@@ -3,6 +3,10 @@
 
 library(secrdesign)
 
+# requires package rgdal to read shapefiles
+# requires package parallel for max cores in simulate options (distributed with base R)
+# requires package tools for file path when reading shapefiles (distributed with base R)
+
 linewidth <- 2
 
 # Define UI 
@@ -1238,6 +1242,8 @@ server <- function(input, output, session) {
                 
                 if (is.null(filename))
                     stop("provide valid filenames")
+                if (!requireNamespace("rgdal"))
+                    stop("need package rgdal to read shapefiles")
                 poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
                 
                 if (sum (pointsInPolygon(grid(), poly)) == 0) {
