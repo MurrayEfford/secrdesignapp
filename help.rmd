@@ -31,7 +31,7 @@ output:
 
 # Introduction  <a name="introduction"></a>
 
-This Shiny application is an interactive interface to parts of the R package **secrdesign** ([Efford 2018a](#references)). It focuses on the effect of detector layout and other design variables on the precision of density estimates, measured by the relative standard error (RSE, aka CV). Vary settings on the [Design](#designspecs) page to obtain an immediate "rule-of-thumb" approximation to RSE, based on the expected numbers of recaptures and distinct individuals. 
+This Shiny application is an interactive interface to parts of the R package **secrdesign** ([Efford 2018a](#references)). It focuses on the effect of detector layout and other design variables on the precision of density estimates, measured by the relative standard error (RSE, aka CV). Vary settings on the [Design](#designspecs) page to obtain an immediate "rule-of-thumb" approximation to RSE, based on the expected numbers of recaptures and distinct individuals. The current source code is available from https://GitHub.com/MurrayEfford/secrdesignapp.
 
 The approximation is biased low for some layouts, especially when sample size is small. A correction factor may be applied to adjust the rule-of-thumb. Refine the approximation by [simulating](#simspecs) data from the chosen design; this may take a long time. Use "Add to summary" to include the current scenario in a spreadsheet for export.
 
