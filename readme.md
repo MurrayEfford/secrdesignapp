@@ -1,5 +1,6 @@
-Trial of secrdesign on GitHub 
+# secrdesignapp on GitHub 
 
-# to run directly 
+To run directly:
+
 library(shiny)
 runGitHub("secrdesignapp", "MurrayEfford")
