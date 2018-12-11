@@ -1,13 +1,17 @@
-# app.R 2018-12-10
+# app.R 2018-12-12
 # renamed from secrdesignapp.R
 
 library(secrdesign)
+pver <- packageVersion('secrdesign')
+if (compareVersion(as.character(pver), '2.5.5') < 0)
+    stop("secrdesignapp 1.0 requires secrdesign version 2.5.5 or later",
+         call. = FALSE)
 
 # requires package rgdal to read shapefiles
 # requires package parallel for max cores in simulate options (distributed with base R)
 # requires package tools for file path when reading shapefiles (distributed with base R)
 
-linewidth <- 2
+linewidth <- 2  # for various plots 
 
 # Define UI 
 ui <- fluidPage(
