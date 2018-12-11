@@ -432,9 +432,9 @@ Costings follow the [Costing](#costspecs) page. Route length and expected number
 
 # Summary  <a name="summary"></a>
 
-The table on this page has one row for each scenario; rows are added by clicking the 'Add to summary' button on the [Design](#designspecs) page, or automatically from [Simulation](#simspecs). Columns from "simfn" onwards will have missing values if no simulation has been performed.
+The table on this page has one column for each scenario; scenarios are added by clicking the 'Add to summary' button on the [Design](#designspecs) page, or automatically from [Simulation](#simspecs). Fields from "simfn" onwards will have missing values if no simulation has been performed.
 
-The table may be downloaded as a comma-separated text file.
+The table may be downloaded as a comma-separated text file. The table is transposed on download so that scenarios become rows.
 
 ----------------------------------------------------
 

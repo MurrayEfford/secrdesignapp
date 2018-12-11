@@ -1382,15 +1382,16 @@ server <- function(input, output, session) {
             sigma = input$sigma,
             k = round(input$D^0.5 * input$sigma / 100,3),
             
-            n = round(nrmval$En,1),
-            r = round(nrmval$Er,1),
-            m = round(nrmval$Em,1),
+            En = round(nrmval$En,1),
+            Er = round(nrmval$Er,1),
+            Em = round(nrmval$Em,1),
             perHR = nrmval$detperHR,
             rotRSE = round(nrmval$rotRSE * 100, 1),
             CF = round(nrmval$CF, 3),
             # perkm = input$perkm,
             # perarry = input$perarray,
             # perdetr = input$perdetector,
+            # pervist = input$pervisit,
             # perdetn = input$perdetection,
             
             route = round(gridpathlength()/1000 * input$nrepeats,3),
@@ -1420,8 +1421,8 @@ server <- function(input, output, session) {
         }
         
         df <- cbind(df, simdf)
-        
         sumrv$value <- rbind (sumrv$value, df)
+        rownames(sumrv$value) <- paste0("Scenario", 1:nrow(sumrv$value))
     }
     ##############################################################################
     
@@ -2332,7 +2333,13 @@ server <- function(input, output, session) {
     
     ##############################################################################
 
-    output$summarytable <- renderTable(sumrv$value)
+    output$summarytable <- renderTable({
+        tmp <- t(sumrv$value)
+        colnames(tmp) <- paste0('Scenario', 1:ncol(tmp))
+        tmp <- cbind(Field=colnames(sumrv$value), tmp)
+        # sumrv$value
+        tmp }, spacing = "xs"
+        )
 
     ##############################################################################
     
@@ -2343,7 +2350,7 @@ server <- function(input, output, session) {
     output$downloadData <- downloadHandler(
         filename = "summary.csv",
         content = function(file) {
-            write.csv(sumrv$value, file, row.names = FALSE)
+            write.csv(sumrv$value, file, row.names = TRUE)
         }
     )
 
