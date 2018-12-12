@@ -1375,21 +1375,21 @@ server <- function(input, output, session) {
             spacex = if (input$arrayinput=="Grid") input$spx else
                 if (input$arrayinput=="Line") input$spline else NA,
             spacey = if (input$arrayinput=="Grid") input$spy else NA,
-            ndetect = nrow(grid()) * input$nrepeats,
-            nocc = input$noccasions,
+            ndetectors = nrow(grid()) * input$nrepeats,
+            noccasions = input$noccasions,
             nrepeats = input$nrepeats,
-            distrib = input$distributionbtn,
+            distribution = input$distributionbtn,
             detectfn = input$detectfn,
             
             D = input$D,
             lambda0 = input$lambda0,
             sigma = input$sigma,
+            detperHR = nrmval$detperHR,
             k = round(input$D^0.5 * input$sigma / 100,3),
             
             En = round(nrmval$En,1),
             Er = round(nrmval$Er,1),
             Em = round(nrmval$Em,1),
-            perHR = nrmval$detperHR,
             rotRSE = round(nrmval$rotRSE * 100, 1),
             CF = round(nrmval$CF, 3),
             # perkm = input$perkm,
@@ -1448,8 +1448,8 @@ server <- function(input, output, session) {
     
     sumrv <- reactiveValues(
         value = read.csv(text = paste
-        ("date, time, detector, source, nx, ny, spacex, spacey, ndetect, nocc, ",
-            "ncluster, distrib, detectfn, D, lambda0, sigma, k, En, Er, Em, perHR, ",
+        ("date, time, detector, source, nx, ny, spacex, spacey, ndetectors, noccasions, ",
+            "nrepeats, distribution, detectfn, D, lambda0, sigma, detperHR, k, En, Er, Em, ",
             "rotRSE, CF, route, cost, simfn,  nrepl, simtime, simRSE, simRSEse,",
             "simRB, simRBse"))
     )
@@ -2339,7 +2339,7 @@ server <- function(input, output, session) {
 
     output$summarytable <- renderTable({
         tmp <- t(sumrv$value)
-        colnames(tmp) <- paste0('Scenario', 1:ncol(tmp))
+        if (ncol(tmp)>0) colnames(tmp) <- paste0('Scenario', 1:ncol(tmp))
         tmp <- cbind(Field=colnames(sumrv$value), tmp)
         # sumrv$value
         tmp }, spacing = "xs"
