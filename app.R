@@ -1,4 +1,4 @@
-# app.R 2018-12-12
+# app.R 2018-12-19
 # renamed from secrdesignapp.R
 
 library(secrdesign)
