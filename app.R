@@ -4,7 +4,7 @@
 library(secrdesign)
 pver <- packageVersion('secrdesign')
 if (compareVersion(as.character(pver), '2.5.5') < 0)
-    stop("secrdesignapp 1.0 requires secrdesign version 2.5.5 or later",
+    stop("secrdesignapp 1.1 requires secrdesign version 2.5.5 or later",
          call. = FALSE)
 
 # requires package rgdal to read shapefiles
@@ -19,7 +19,7 @@ ui <- fluidPage(
     br(),
     navlistPanel(id = "navlist", widths = c(2,10), well=TRUE,
                  
-                 "secrdesign app 1.0",
+                 "secrdesign app 1.1",
                  
                  tabPanel("Design",
                           fluidRow(
@@ -38,7 +38,7 @@ ui <- fluidPage(
                                              tabPanel("Grid",
                                                       br(),
                                                       fluidRow(
-                                                          column(6, numericInput("ny",
+                                                          column(5, numericInput("ny",
                                                                                  "rows", # y dimension:",
                                                                                  value = 8,
                                                                                  min = 1,
@@ -54,14 +54,14 @@ ui <- fluidPage(
                                                                                  width = 80))
                                                       ),
                                                       fluidRow(
-                                                          column(6,numericInput("spy",
-                                                                                "row spacing (m)",
+                                                          column(5,numericInput("spy",
+                                                                                "row space (m)",
                                                                                 value = 20,
                                                                                 min = 1,
                                                                                 max = 10000,
                                                                                 step = 1)),
                                                           column(6,numericInput("spx",
-                                                                                "col spacing (m)",
+                                                                                "col space (m)",
                                                                                 value = 20,
                                                                                 min = 1,
                                                                                 max = 10000,
@@ -69,13 +69,14 @@ ui <- fluidPage(
                                                       ),
 
                                                       fluidRow(
-                                                          column(6, checkboxInput("hollow", "Hollow", FALSE))
+                                                          column(5, checkboxInput("hollow", "Hollow", FALSE)),
+                                                          column(6, actionButton("suggestbtn", "Suggest spacing"))
                                                       )
                                              ),
                                              tabPanel("Line",
                                                       br(),
                                                       fluidRow(
-                                                          column(6, numericInput("nline",
+                                                          column(8,numericInput("nline",
                                                                                  "number of detectors",
                                                                                  value = 20,
                                                                                  min = 1,
@@ -91,35 +92,34 @@ ui <- fluidPage(
                                                                                 max = 10000,
                                                                                 step = 1))
                                                       ),
-                                                      helpText(HTML("Warning: results with linear arrays may be highly biased if home ranges are elongated and aligned"))),
-                                             # tabPanel("Pgrid",
-                                             #          br(),
-                                             #          fluidRow(
-                                             #              column(6,numericInput("sppgrid",
-                                             #                                    "spacing (m)",
-                                             #                                    value = 20,
-                                             #                                    min = 1,
-                                             #                                    max = 10000,
-                                             #                                    step = 1))),
-                                             #          fileInput("polyfilename", "",
-                                             #                    accept = c('.shp','.dbf','.sbn','.sbx',
-                                             #                               '.shx',".prj"), multiple = TRUE)
-                                             #
-                                             #          ),
+                                                      actionButton("suggestlinebtn", "Suggest spacing"),
+                                                      helpText(HTML("Warning: results with linear arrays may be highly biased if home ranges are elongated and aligned"))
+                                             ),
                                              tabPanel("File", values = "File",
                                                       fileInput("trapfilename", "",   # Detector layout file
                                                                 accept = "text/plain"),
                                                       helpText(HTML(paste0("Requires text file with detector ID ",
                                                                            "and x-y coordinates in three columns,",
                                                                            " as for secr::read.traps")))
+                                             ),
+                                             tabPanel("Region",
+                                                      fileInput("regionfilename", "Boundary file(s)",
+                                                                accept = c('.shp','.dbf','.sbn','.sbx',
+                                                                           '.shx',".prj", ".txt"), multiple = TRUE),
+                                                      # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
+                                                      
+                                                      fluidRow(
+                                                          column(6,numericInput("sppgrid",
+                                                                                "spacing (m)",
+                                                                                value = 200,
+                                                                                min = 0,
+                                                                                max = 20000,
+                                                                                step = 10))),
+                                                      checkboxInput("randomorigin", "Random origin", FALSE),
+                                                      checkboxInput("gridascluster", "Clustered", FALSE),
+                                                      helpText(HTML("Use 'Grid' to define clusters"))
                                              )
                                          )
-                                     ),
-
-                                     fluidRow(
-                                         column(4, actionButton("resetbtn", "All defaults")),
-                                         
-                                         column(6, actionButton("suggestbtn", "Suggest spacing"))
                                      )
                               ),
 
@@ -177,13 +177,14 @@ ui <- fluidPage(
                                                                  max = 100,
                                                                  step = 1,
                                                                  width = 220),
-                                                    helpText(HTML("Repeated arrays"))
+                                                    uiOutput('clusterhelp')
                                                 )),
                                          column(6,
                                                 wellPanel(
                                                     radioButtons("distributionbtn", label = "Distribution of n",
                                                                  choices = c("Poisson", "Binomial"))
-                                                )
+                                                ),
+                                                actionButton("resetbtn", "All defaults")
                                          )
                                          
                                      ),
@@ -192,7 +193,6 @@ ui <- fluidPage(
                                          column(5, actionButton("simulatebtn2", "Simulate",  width = 120)),
                                          column(5, actionButton("appendbtn", "Add to summary",  width = 150))
                                      )
-                                     
                               ),
                               
                               column (4,
@@ -499,19 +499,11 @@ ui <- fluidPage(
                                          checkboxInput("lockxy", "Couple row and column dimensions", TRUE)
                                      ),
 
-                                     h2("RSE correction factor"),
+                                     h2("Systematic grid across region"),
                                      wellPanel(
-                                         sliderInput("CFslider", "",
-                                                     min = 0.8,
-                                                     max = 2.0,
-                                                     value = 1,
-                                                     step = 0.001,
-                                                     pre = "CF ",
-                                                     post = "",
-                                                     width = 340),
-                                         checkboxInput("updateCFbox", "Update from simulations",
-                                                       value = TRUE,
-                                                       width = 180)
+                                         radioButtons("edgemethod", label = "Cluster edge method",
+                                                      choices = c("clip", "anyinside", "allinside"),
+                                                      selected = "clip")
                                      ),
 
                                      h2("Habitat mask"),
@@ -536,17 +528,18 @@ ui <- fluidPage(
                                              radioButtons("maskshapebtn", label = "Shape",
                                                           choices = c("Rectangular", "Rounded"), 
                                                           selected = "Rounded")
-                                         )
+                                         ),
+                                         checkboxInput("polygonbox", "Clip to region",
+                                                   value = FALSE,
+                                                   width = 180)
                                          )
                                      ),
                                      
-                                     checkboxInput("polygonbox", "Clip to polygon",
-                                                   value = FALSE,
-                                                   width = 180),
-                                     fileInput("habpolyfilename", "Polygon shapefile (all parts)",
+                                     
+                                     fileInput("habpolyfilename", "Region shapefile (all parts)",
                                                accept = c('.shp','.dbf','.sbn','.sbx',
-                                                          '.shx',".prj"), multiple = TRUE),
-                                     helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)"))
+                                                          '.shx',".prj", ".txt"), multiple = TRUE),
+                                     helpText(HTML("(.txt or at least xxx.shp, xxx.dbf, and xxx.shx)"))
                                      
                               ),
                           
@@ -662,6 +655,20 @@ ui <- fluidPage(
                                                           step = 1,
                                                           width = 180))
                                              )
+                                     ),
+                                     h2("RSE correction factor"),
+                                     wellPanel(
+                                         sliderInput("CFslider", "",
+                                                     min = 0.8,
+                                                     max = 2.0,
+                                                     value = 1,
+                                                     step = 0.001,
+                                                     pre = "CF ",
+                                                     post = "",
+                                                     width = 340),
+                                         checkboxInput("updateCFbox", "Update from simulations",
+                                                       value = TRUE,
+                                                       width = 180)
                                      )
                               )
                           )
@@ -908,6 +915,11 @@ server <- function(input, output, session) {
         trps
     }
     ##############################################################################
+
+    nrepeats <- function() {
+        if (input$arrayinput=='Region') 1 else input$nrepeats
+    }
+    ##############################################################################
     
     n.eq.r <- function () {
         ## find minimum at n = r
@@ -932,9 +944,9 @@ server <- function(input, output, session) {
         else {
             nminr <- function(R) {
                 if (input$arrayinput == "Grid") {
-                    array <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
-                                       spacex = input$spx*R, spacey = input$spy*R,
-                                       hollow = input$hollow)
+                        array <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
+                                           spacex = input$spx*R, spacey = input$spy*R,
+                                           hollow = input$hollow)
                 }
                 else if (input$arrayinput == "Line") {
                     array <- make.grid(nx = input$nline, ny = 1, detector = input$detector,
@@ -971,7 +983,7 @@ server <- function(input, output, session) {
             fitargs$distribution <- tolower(input$distributionbtn)
         scen <- make.scenarios(
             noccasions = input$noccasions,
-            nrepeats = input$nrepeats,
+            nrepeats = nrepeats(),
             D = input$D,
             lambda0 = input$lambda0,
             sigma = input$sigma,
@@ -1022,7 +1034,7 @@ server <- function(input, output, session) {
                 traps = grid(),
                 detectpar = list(lambda0 = input$lambda0, sigma = input$sigma),
                 noccasions = input$noccasions,
-                nrepeats = input$nrepeats,
+                nrepeats = nrepeats(),
                 detectfn = input$detectfn,
                 fittedmodel = NULL,
                 xsigma = input$habxsigma,
@@ -1044,7 +1056,7 @@ server <- function(input, output, session) {
                 traps = grid(),
                 detectpar = list(lambda0 = input$lambda0, sigma = input$sigma),
                 noccasions = input$noccasions,
-                nrepeats = input$nrepeats,
+                nrepeats = nrepeats(),
                 detectfn = input$detectfn,
                 fittedmodel = NULL,
                 xsigma = input$habxsigma,
@@ -1091,7 +1103,16 @@ server <- function(input, output, session) {
             helptext <- "count proximity detector; integer # detections per animal per occasion"
         helpText(HTML(helptext))
     })
+    ##############################################################################
     
+    output$clusterhelp <- renderUI({
+        helptext <- "One array"
+        if (input$arrayinput!='Region' & input$nrepeats>1)
+            helptext <- "Repeated arrays"
+        else if (input$arrayinput=='Region')
+            helptext <- "Not applicable"
+        helpText(HTML(helptext))
+    })
     ##############################################################################
     
     output$uipopN <- renderUI({
@@ -1161,14 +1182,43 @@ server <- function(input, output, session) {
                 #
                 # }
                 # else
-                trps <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
-                                  spacex = input$spx, spacey = input$spy,
-                                  hollow = input$hollow, ID = "numxb")
+                    trps <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
+                                      spacex = input$spx, spacey = input$spy,
+                                      hollow = input$hollow, ID = "numxb")
             }
             else if (input$arrayinput == "Line") {
                 trps <- make.grid(nx = input$nline, ny = 1, detector = input$detector,
                                   spacing = input$spline)
             }
+            else if (input$arrayinput=='Region') {
+                if (is.null(region())) {
+                    
+                }
+                else {
+                if (input$randomorigin) 
+                    origin <- NULL
+                else {
+                    origin <- sp::bbox(region())[,1] + input$sppgrid/2
+                }
+                if (input$gridascluster) {
+                    cluster <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
+                                         spacex = input$spx, spacey = input$spy,
+                                         hollow = input$hollow, ID = "numxb")
+                    trps <- make.systematic(spacing = input$sppgrid, 
+                                            cluster = cluster, 
+                                            region = region(),
+                                            origin = origin,
+                                            edgemethod = input$edgemethod)
+                }
+                else {
+                    cluster <- make.grid(1,1, detector = input$detector)
+                    trps <- make.systematic(cluster = cluster, 
+                                            region = region(), 
+                                            origin = origin, 
+                                            spacing = input$sppgrid)
+                }
+                }
+
             # else if (input$arrayinput == "Pgrid") {
             #     inFile <- input$polyfilename
             #     if (is.null(inFile))
@@ -1203,8 +1253,9 @@ server <- function(input, output, session) {
             #         else removeNotification("biggrid")
             #         trps <- make.systematic(region = poly, spacing = input$sppgrid, detector = input$detector)
             #     }
-            # }
-            else {
+            # }                
+            }
+            else if (input$arrayinput == 'File') {
                 inFile <- input$trapfilename
                 if (!is.null(inFile)) {
                     filename <- input$trapfilename[1,"datapath"]
@@ -1214,6 +1265,7 @@ server <- function(input, output, session) {
                     if (!inherits(trps, "traps")) stop ("invalid trap file")
                 }
             }
+            else stop ("unrecognised array input")
             
             if (is.null(trps)) {
                 hideTab(inputId = "navlist", target = "Costing")
@@ -1230,15 +1282,19 @@ server <- function(input, output, session) {
         }
     )
     ##############################################################################
-
-    poly <- reactive( {
-        if (input$polygonbox) {
-            inFile <- input$habpolyfilename
-            if (is.null(inFile))
-                poly <- NULL
+    
+    readpolygon <- function (fileupload) {
+        if (is.null(fileupload))
+            poly <- NULL
+        else {
+            myshape <- fileupload
+            dsnname <- dirname(myshape[1,4])
+            if (tolower(tools::file_ext(myshape[1,1])) == "txt") {
+                coord <- read.table(myshape[1,4])
+                poly <- secr:::boundarytoSP(coord[,1:2])
+            }
             else {
-                myshape <- input$habpolyfilename
-                dsnname <- dirname(myshape[1,4])
+                
                 for ( i in 1:nrow(myshape)) {
                     file.rename(myshape[i,4], paste0(dsnname,"/",myshape[i,1]))}
                 filename <- list.files(dsnname, pattern="*.shp", full.names=FALSE)
@@ -1250,18 +1306,75 @@ server <- function(input, output, session) {
                     stop("need package rgdal to read shapefiles")
                 poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
                 
-                if (sum (pointsInPolygon(grid(), poly)) == 0) {
-                    showNotification("No detectors in polygon - ignoring Clip to polygon",
-                                     type = "warning", id = "noclip", duration = 5)
-                    poly <- NULL
-                }
-                
+                # temporarily block 2019-01-06                
+                # if (sum (pointsInPolygon(grid(), poly)) == 0) {
+                #     showNotification("No detectors in polygon - ignoring Clip to polygon",
+                #                      type = "warning", id = "noclip", duration = 5)
+                #     poly <- NULL
+                # }
             }
         }
-        else poly <- NULL
-        return(poly)
-    })
+        poly   
+    }
     
+    poly <- reactive( {
+        if (input$polygonbox) {
+            readpolygon(input$habpolyfilename)
+        }
+        else {
+            NULL
+        }
+    }
+    )
+    
+    region <- reactive( { 
+        if (input$arrayinput == 'Region') {
+            readpolygon(input$regionfilename) 
+        }
+        else {
+            NULL
+        }
+    }
+    )
+    
+    # region <- reactive( {
+    #     if (input$arrayinput == 'Region') {
+    #         inFile <- input$regionfilename
+    #         if (is.null(inFile))
+    #             poly <- NULL
+    #         else {
+    #             myshape <- input$regionfilename
+    #             dsnname <- dirname(myshape[1,4])
+    #             if (tolower(tools::file_ext(myshape[1,1])) == "txt") {
+    #                 coord <- read.table(myshape[1,4])
+    #                 poly <- secr:::boundarytoSP(coord[,1:2])
+    #             }
+    #             else {
+    #                 for ( i in 1:nrow(myshape)) {
+    #                     file.rename(myshape[i,4], paste0(dsnname,"/",myshape[i,1]))}
+    #                 filename <- list.files(dsnname, pattern="*.shp", full.names=FALSE)
+    #                 layername <- tools::file_path_sans_ext(basename(filename))
+    #                 
+    #                 if (is.null(filename))
+    #                     stop("provide valid filenames")
+    #                 if (!requireNamespace("rgdal"))
+    #                     stop("need package rgdal to read shapefiles")
+    #                 poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
+    #             }
+    #             
+    #             # temporarily block 2019-01-06                
+    #             # if (sum (pointsInPolygon(grid(), poly)) == 0) {
+    #             #     showNotification("No detectors in polygon - ignoring Clip to polygon",
+    #             #                      type = "warning", id = "noclip", duration = 5)
+    #             #     poly <- NULL
+    #             # }
+    #             
+    #         }
+    #     }
+    #     else poly <- NULL
+    #     return(poly)
+    # })
+    # 
     mask <- reactive( {
         rotrv$current <- FALSE
         pxyrv$value <- NULL
@@ -1320,7 +1433,8 @@ server <- function(input, output, session) {
         if (is.null(trps)) return (NULL)
         invalidateOutputs()
         msk <- mask()
-        scen <- make.scenarios(trapsindex = 1, noccasions = input$noccasions, nrepeats = input$nrepeats,
+        scen <- make.scenarios(trapsindex = 1, noccasions = input$noccasions, 
+                               nrepeats = nrepeats(),
                                D = input$D, sigma = input$sigma, lambda0 = input$lambda0, detectfn = input$detectfn)
         scensum <- scenarioSummary(scen,
                                    trapset = trps,
@@ -1363,7 +1477,7 @@ server <- function(input, output, session) {
         
         nrmval <- nrm()
         invalidateOutputs()
-        
+
         df <- data.frame(
             date = format(Sys.time(), "%Y-%m-%d"),
             time = format(Sys.time(), "%H:%M:%S"),
@@ -1375,7 +1489,7 @@ server <- function(input, output, session) {
             spacex = if (input$arrayinput=="Grid") input$spx else
                 if (input$arrayinput=="Line") input$spline else NA,
             spacey = if (input$arrayinput=="Grid") input$spy else NA,
-            ndetectors = nrow(grid()) * input$nrepeats,
+            ndetectors = nrow(grid()) * nrepeats(),
             noccasions = input$noccasions,
             nrepeats = input$nrepeats,
             distribution = input$distributionbtn,
@@ -1398,7 +1512,7 @@ server <- function(input, output, session) {
             # pervist = input$pervisit,
             # perdetn = input$perdetection,
             
-            route = round(gridpathlength()/1000 * input$nrepeats,3),
+            route = round(gridpathlength()/1000 * nrepeats(),3),
             cost = round(nrmval$totalcost, 2)
         )
         
@@ -1522,17 +1636,25 @@ server <- function(input, output, session) {
     
     ##############################################################################
 
+    observeEvent(input$nrepeats, {
+        if (input$arrayinput=='Region' & input$nrepeats>1)
+            updateNumericInput(session, "nrepeats", value = 1)
+    })
+    
     observeEvent(input$suggestbtn, {
+        ## Grid
         ## E[n] == E[r]
-        if (input$arrayinput %in% c("Grid", "Line"))
-            optimalspacing <- n.eq.r()
-        if (input$arrayinput == "Grid") {
-            updateNumericInput(session, "spy", value = optimalspacing)
-            updateNumericInput(session, "spx", value = optimalspacing)
-        }
-        else if (input$arrayinput == "Line") {
-            updateNumericInput(session, "spline", value = optimalspacing)
-        }
+        optimalspacing <- n.eq.r()
+        updateNumericInput(session, "spy", value = optimalspacing)
+        updateNumericInput(session, "spx", value = optimalspacing)
+    })
+    ##############################################################################
+
+    observeEvent(input$suggestlinebtn, {
+        ## Line
+        ## E[n] == E[r]
+        optimalspacing <- n.eq.r()
+        updateNumericInput(session, "spline", value = optimalspacing)
     })
 
     ##############################################################################
@@ -1549,6 +1671,10 @@ server <- function(input, output, session) {
         updateNumericInput(session, "spx", value = 20)
         updateNumericInput(session, "spline", value = 20)
         updateCheckboxInput(session, "hollow", value = FALSE )
+        
+        updateCheckboxInput(session, "sppgrid", value = 200 )
+        updateCheckboxInput(session, "gridascluster", value = FALSE )
+        updateCheckboxInput(session, "randomorigin", value = FALSE )
 
         ## parameters
         updateNumericInput(session, "D", value = 5)
@@ -1595,13 +1721,17 @@ server <- function(input, output, session) {
         ## options
         # updateTextInput(session, "savefilename", value = "log.txt")
         # updateCheckboxInput(session, "appendbox", value = TRUE)
+        
+        ## detector array
         updateCheckboxInput(session, "lockxy", value = TRUE)
+        updateCheckboxInput(session, "randomorigin", value = FALSE)
+        updateRadioButtons(session, "edgemethod", "Cluster edge method", selected = "clip")
 
         ## habitat        
         updateNumericInput(session, "habxsigma", value = 4)
         updateNumericInput(session, "habnx", value = 64)
         updateRadioButtons(session, "maskshapebtn", selected = "Rounded")
-        updateCheckboxInput(session, "polygonbox", "Clip to polygon", value = FALSE)
+        updateCheckboxInput(session, "polygonbox", "Clip to region", value = FALSE)
         
         
         updateNumericInput(session, "pxyborder", value = 3)
@@ -1635,14 +1765,13 @@ server <- function(input, output, session) {
     
     observeEvent(input$spacingbtn, {
         ## inp <- oS2()
-        
         if (input$spacingsimbox) {
             
             ## time check 2018-12-05
             methodfactor <- 1 + ((input$method != "none") * 4)
             functionfactor <- 1 + ((input$packagebtn != "openCR.fit") * 3)
             detectorfactor <- switch(input$detector, proximity = 1, multi = 0.6, count = 4)
-            time <- nrow(mask()) * nrow(grid()) / 1e9 * input$nrepeats * 
+            time <- nrow(mask()) * nrow(grid()) / 1e9 * nrepeats() * 
                 nrm()$En * input$noccasions * input$nrepl * 
                 length(seq(input$fromR, input$toR, input$simbyR)) *
                 methodfactor * functionfactor * detectorfactor
@@ -1663,14 +1792,13 @@ server <- function(input, output, session) {
     ##############################################################################
 
     observeEvent(c(input$simulatebtn, input$simulatebtn2), {
-        
         ## use test to block initial execution when simulatebtn2 goes from NULL to 0
         if ((input$simulatebtn + input$simulatebtn2>0) & !is.null(grid())) {
             removeNotification("lownr")
             methodfactor <- 1 + ((input$method != "none") * 4)
             functionfactor <- 1 + ((input$packagebtn != "openCR.fit") * 3)
             detectorfactor <- switch(input$detector, proximity = 1, multi = 0.6, count = 4)
-            time <- nrow(mask()) * nrow(grid()) / 4.5e9 * input$nrepeats * 
+            time <- nrow(mask()) * nrow(grid()) / 4.5e9 * nrepeats() * 
                 nrm()$En * input$noccasions * input$nrepl * 
                 methodfactor * functionfactor * detectorfactor
             if (time > 0.2)
@@ -1732,12 +1860,32 @@ server <- function(input, output, session) {
     })
     
     ##############################################################################
+
+    # observeEvent(input$fillregion, {
+    #     if (input$fillregion & is.null(poly())) {
+    #         showModal(modalDialog(
+    #             title = "Systematic grid across region",
+    #             "First specify region shapefile in Options | Habitat mask",
+    #             easyClose = TRUE, footer = NULL, size = 's'
+    #         ))
+    #         updateCheckboxInput(session, "fillregion", value = FALSE )
+    #     }
+    # })
+    
+    ##############################################################################
     
     observeEvent(input$arrayinput, {
         if (input$arrayinput=="Line") CF <- 1.3
         else if (input$arrayinput=="Grid" & input$hollow) CF <- 1.2
         else CF <- 1.0
         updateSliderInput(session, "CFslider", value = CF)
+        # if (input$arrayinput=='Region' & is.null(region())) {
+        #     showModal(modalDialog(
+        #         title = "Systematic grid across region",
+        #         "First specify region shapefile",
+        #         easyClose = TRUE, footer = NULL, size = 's'
+        #     ))
+        # }
     })
     
     ##############################################################################
@@ -1854,7 +2002,6 @@ server <- function(input, output, session) {
             else
                 simulationargs <- ""
             
-            
             paste0(
                 "library(secrdesign)\n\n",
                 
@@ -1862,7 +2009,7 @@ server <- function(input, output, session) {
                 
                 "oS <- optimalSpacing(D = ", input$D, ", traps = array,\n",
                 "    detectpar = list(lambda0 = ", input$lambda0, ", sigma = ", input$sigma, "),\n",
-                "    detectfn = '", input$detectfn, "', noccasions = ", input$noccasions, ", nrepeats = ", input$nrepeats, ",\n",
+                "    detectfn = '", input$detectfn, "', noccasions = ", input$noccasions, ", nrepeats = ", nrepeats(), ",\n",
                 "    R = seq(", input$fromR, ", ", input$toR, ", ", input$byR, "), CF = ", round(input$CFslider,3), ", ",
                 "distribution = '", tolower(input$distributionbtn), "'",  
                 simulationargs,
@@ -1913,8 +2060,7 @@ server <- function(input, output, session) {
                     "', detector = '", input$detector, "')\n"
                 )
             }
-            
-            D  <- input$D * input$nrepeats
+            D  <- input$D * nrepeats()
             Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
             distncode <- if (input$packagebtn == "secr.fit")
                 paste0("details = list(distribution = '", tolower(input$distributionbtn), "')")
@@ -1931,7 +2077,7 @@ server <- function(input, output, session) {
                 
                 "scen <- make.scenarios(",
                 "noccasions = ", input$noccasions, ", ",
-                "nrepeats = ", input$nrepeats, ",\n    ",
+                "nrepeats = ", nrepeats(), ",\n    ",
                 "D = ", input$D, ", ",
                 "sigma = ", input$sigma, ", ",
                 "lambda0 = ", input$lambda0, ", ",
@@ -1972,9 +2118,17 @@ server <- function(input, output, session) {
         gr <- grid()
         if (!is.null(gr)) {
             gridlength <- max(dist(gr))
+            if (input$arrayinput=='Region') {
+                ncluster <- length(unique(clusterID(gr)))
+                clustertext <- paste0( " in ", ncluster, " clusters")
+                cr <- "\n"
+            }
+            else {
+                clustertext <- cr <- ""
+            }
             ratio <- round(gridlength/input$sigma,1)
-            paste0(nrow(gr), " ", input$detector, " detectors; diameter ", round(gridlength,1), " m (",
-                   ratio, " sigma)")
+            paste0(nrow(gr), " ", input$detector, " detectors", clustertext, 
+                   "; ", cr, "diameter ", round(gridlength,1), " m (", ratio, " sigma)")
         }
         else ""
     })
@@ -1983,8 +2137,8 @@ server <- function(input, output, session) {
     output$nrmPrint <- renderText({
         nrmval <- nrm()
         if (is.null(nrmval)) return (NULL)
-        star <- if (nrmval$nrepeats>1) "*" else ""
-        nrepeatstr <- if (nrmval$nrepeats>1) paste0("\n* ", nrmval$nrepeats, " arrays") else ""
+        star <- if (nrepeats()>1) "*" else ""
+        nrepeatstr <- if (nrepeats()>1) paste0("\n* ", nrepeats(), " arrays") else ""
         Pxyval <- Pxy()
         
         coststr <- if (is.null(nrmval$totalcost) | (nrmval$totalcost<=0))
@@ -2028,13 +2182,13 @@ server <- function(input, output, session) {
             nocc1 <- input$noccasions + 1
             paste0(
                 "  Travel     = $",
-                round(costs$travel,2), "  (", round(gridpathlength()/1000  * nocc1 * input$nrepeats,3), ' km)\n',
+                round(costs$travel,2), "  (", round(gridpathlength()/1000  * nocc1 * nrepeats(),3), ' km)\n',
                 "  Arrays     = $",
-                round(costs$arrays,2), "  (", input$nrepeats, ") \n",
+                round(costs$arrays,2), "  (", nrepeats(), ") \n",
                 "  Detectors  = $",
-                round(costs$detectors,2), "  (", nrow(grid()) * input$nrepeats, ") \n",
+                round(costs$detectors,2), "  (", nrow(grid()) * nrepeats(), ") \n",
                 "  Visits     = $",
-                round(costs$visits,2), "  (", nrow(grid()) * nocc1 * input$nrepeats , ") \n",
+                round(costs$visits,2), "  (", nrow(grid()) * nocc1 * nrepeats() , ") \n",
                 "  Detections = $",
                 round(costs$detections,2), "  (", round(costs$En+costs$Er,1), ')\n\n',
                 "  Total      = $",
@@ -2116,7 +2270,14 @@ server <- function(input, output, session) {
         tmpgrid <- grid()
         if (is.null(tmpgrid)) return (NULL)
         par(mar=c(1,2,2,2))
-        plot (tmpgrid, border = spacing(tmpgrid), gridlines = FALSE, bty='o', xaxs='i', yaxs='i')
+        if (input$arrayinput=='Region') {
+            sp::plot(region())
+            plot (tmpgrid, add = TRUE)
+            
+        }
+        else {
+            plot (tmpgrid, border = spacing(tmpgrid), gridlines = FALSE, bty='o', xaxs='i', yaxs='i')
+        }
     })
     ##############################################################################
 
