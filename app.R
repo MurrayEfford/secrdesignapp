@@ -32,6 +32,7 @@ ui <- fluidPage(
                                                                    selected = "proximity", width = 110)),
                                              column(6, uiOutput('detectorhelp'))
                                          ),
+                                         br(),
                                          tabsetPanel(
                                              type = "pills", id = "arrayinput", selected = "Grid",
                                              
@@ -109,12 +110,13 @@ ui <- fluidPage(
                                                       # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
                                                       
                                                       fluidRow(
-                                                          column(6,numericInput("sppgrid",
+                                                          column(5,numericInput("sppgrid",
                                                                                 "spacing (m)",
                                                                                 value = 200,
                                                                                 min = 0,
                                                                                 max = 20000,
-                                                                                step = 10))),
+                                                                                step = 10)),
+                                                          column(7, uiOutput('clusteroverlap'))),
                                                       checkboxInput("randomorigin", "Random origin", FALSE),
                                                       checkboxInput("gridascluster", "Clustered", FALSE),
                                                       helpText(HTML("Use 'Grid' to define clusters"))
@@ -1115,6 +1117,16 @@ server <- function(input, output, session) {
     })
     ##############################################################################
     
+    output$clusteroverlap <- renderUI({
+        helptext <- ""
+        if ((input$arrayinput=='Region') & input$gridascluster) {
+            if ((input$spx * input$nx >= input$sppgrid) |
+                (input$spy * input$ny >= input$sppgrid))
+                helptext <- "Warning: clusters overlap"
+        }
+        helpText(HTML(helptext))
+    })
+    
     output$uipopN <- renderUI({
         if (!is.null(poprv$v))
             helpText(HTML(paste0("Number in mask = ", nrow(pop()))))
@@ -1287,16 +1299,14 @@ server <- function(input, output, session) {
         if (is.null(fileupload))
             poly <- NULL
         else {
-            myshape <- fileupload
-            dsnname <- dirname(myshape[1,4])
-            if (tolower(tools::file_ext(myshape[1,1])) == "txt") {
-                coord <- read.table(myshape[1,4])
+            if (tolower(tools::file_ext(fileupload[1,1])) == "txt") {
+                coord <- read.table(fileupload[1,4])
                 poly <- secr:::boundarytoSP(coord[,1:2])
             }
             else {
-                
-                for ( i in 1:nrow(myshape)) {
-                    file.rename(myshape[i,4], paste0(dsnname,"/",myshape[i,1]))}
+                dsnname <- dirname(fileupload[1,4])
+                for ( i in 1:nrow(fileupload)) {
+                    file.rename(fileupload[i,4], paste0(dsnname,"/",fileupload[i,1]))}
                 filename <- list.files(dsnname, pattern="*.shp", full.names=FALSE)
                 layername <- tools::file_path_sans_ext(basename(filename))
                 
@@ -1316,6 +1326,7 @@ server <- function(input, output, session) {
         }
         poly   
     }
+    ##############################################################################
     
     poly <- reactive( {
         if (input$polygonbox) {
@@ -1326,6 +1337,7 @@ server <- function(input, output, session) {
         }
     }
     )
+    ##############################################################################
     
     region <- reactive( { 
         if (input$arrayinput == 'Region') {
@@ -1336,45 +1348,8 @@ server <- function(input, output, session) {
         }
     }
     )
-    
-    # region <- reactive( {
-    #     if (input$arrayinput == 'Region') {
-    #         inFile <- input$regionfilename
-    #         if (is.null(inFile))
-    #             poly <- NULL
-    #         else {
-    #             myshape <- input$regionfilename
-    #             dsnname <- dirname(myshape[1,4])
-    #             if (tolower(tools::file_ext(myshape[1,1])) == "txt") {
-    #                 coord <- read.table(myshape[1,4])
-    #                 poly <- secr:::boundarytoSP(coord[,1:2])
-    #             }
-    #             else {
-    #                 for ( i in 1:nrow(myshape)) {
-    #                     file.rename(myshape[i,4], paste0(dsnname,"/",myshape[i,1]))}
-    #                 filename <- list.files(dsnname, pattern="*.shp", full.names=FALSE)
-    #                 layername <- tools::file_path_sans_ext(basename(filename))
-    #                 
-    #                 if (is.null(filename))
-    #                     stop("provide valid filenames")
-    #                 if (!requireNamespace("rgdal"))
-    #                     stop("need package rgdal to read shapefiles")
-    #                 poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
-    #             }
-    #             
-    #             # temporarily block 2019-01-06                
-    #             # if (sum (pointsInPolygon(grid(), poly)) == 0) {
-    #             #     showNotification("No detectors in polygon - ignoring Clip to polygon",
-    #             #                      type = "warning", id = "noclip", duration = 5)
-    #             #     poly <- NULL
-    #             # }
-    #             
-    #         }
-    #     }
-    #     else poly <- NULL
-    #     return(poly)
-    # })
-    # 
+    ##############################################################################
+
     mask <- reactive( {
         rotrv$current <- FALSE
         pxyrv$value <- NULL
@@ -2053,6 +2028,52 @@ server <- function(input, output, session) {
                     "detector = '", input$detector, "')\n"
                 )
             }
+            else if (input$arrayinput == "Region") {
+                regionfilename <- input$regionfilename[1,1]
+                if (tolower(tools::file_ext(regionfilename)) == "txt") {
+                    regioncode <- paste0( 
+                        "coord <- read.table('", regionfilename, "')\n",
+                        "region <- secr:::boundarytoSP(coord)\n")
+                }
+                else {
+                    # regioncode <- paste0(
+                    #     "layername <- '", tools::file_path_sans_ext(basename(regionfilename)), "'\n",
+                    #     "region <- rgdal::readOGR(layer = layername)\n"
+                    # )
+                    regioncode <- paste0(
+                        #"layername <- '", tools::file_path_sans_ext(basename(regionfilename)), "'\n",
+                        "region <- rgdal::readOGR(dsn = '", 
+                            tools::file_path_sans_ext(basename(regionfilename)), 
+                        ".shp')\n"
+                    )
+                }
+                
+                if (input$randomorigin) 
+                    origincode <- "NULL"
+                else {
+                    origincode <- paste0("sp::bbox(region)[,1] + ", input$sppgrid/2)
+                }
+                
+                if (input$gridascluster) {
+                    arraycode <- paste0( 
+                        regioncode,
+                        "cluster <- make.grid(nx = ", input$nx, ", ny = ", input$ny, 
+                            ", detector = '", input$detector, "', \n",
+                            "    spacex = ", input$spx, ", spacey = ", input$spy, ", ",
+                            "hollow = ", input$hollow, ")\n",
+                        "array <- make.systematic(spacing = ", input$sppgrid, ", ",
+                            "cluster = cluster, ", "region = region,\n",
+                            "    origin = ", origincode, ", edgemethod = '", input$edgemethod, "')\n")
+                }
+                else {
+                    arraycode <- paste0( 
+                        regioncode,
+                        "cluster <- make.grid(nx = 1, ny = 1, detector = '", input$detector, "')\n",
+                        "array <- make.systematic(spacing = ", input$sppgrid, ", ",
+                        "cluster = cluster, region = region,\n",
+                        "    origin = ", origincode, ")\n")
+                }
+            }
             else { # input$arrayinput=="File"
                 arraycode <- paste0(
                     "array <- read.traps ('",
@@ -2118,7 +2139,7 @@ server <- function(input, output, session) {
         gr <- grid()
         if (!is.null(gr)) {
             gridlength <- max(dist(gr))
-            if (input$arrayinput=='Region') {
+            if (input$arrayinput=='Region' & input$gridascluster) {
                 ncluster <- length(unique(clusterID(gr)))
                 clustertext <- paste0( " in ", ncluster, " clusters")
                 cr <- "\n"
