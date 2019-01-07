@@ -27,10 +27,10 @@ ui <- fluidPage(
                                      h2("Detector array"),
                                      wellPanel(
                                          fluidRow(
-                                             column(6, selectInput("detector", "Detector type",
+                                             column(5, selectInput("detector", "Detector type",
                                                                    choices = c("multi","proximity","count"),
                                                                    selected = "proximity", width = 110)),
-                                             column(6, uiOutput('detectorhelp'))
+                                             column(7, uiOutput('detectorhelp'))
                                          ),
                                          br(),
                                          tabsetPanel(
@@ -101,23 +101,48 @@ ui <- fluidPage(
                                                                 accept = "text/plain"),
                                                       helpText(HTML(paste0("Requires text file with detector ID ",
                                                                            "and x-y coordinates in three columns,",
-                                                                           " as for secr::read.traps")))
+                                                                           " as for secr::read.traps"))),
+                                                      textInput("args", "Optional arguments for read.traps()",
+                                                                value = "", placeholder = "e.g., skip = 1, sep = ','")
                                              ),
                                              tabPanel("Region",
                                                       fileInput("regionfilename", "Boundary file(s)",
                                                                 accept = c('.shp','.dbf','.sbn','.sbx',
                                                                            '.shx',".prj", ".txt"), multiple = TRUE),
                                                       # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
+                                                      uiOutput("shapefile"),
                                                       
-                                                      fluidRow(
-                                                          column(5,numericInput("sppgrid",
-                                                                                "spacing (m)",
-                                                                                value = 200,
-                                                                                min = 0,
-                                                                                max = 20000,
-                                                                                step = 10)),
-                                                          column(7, uiOutput('clusteroverlap'))),
-                                                      checkboxInput("randomorigin", "Random origin", FALSE),
+                                                      wellPanel(
+                                                          tabsetPanel(
+                                                              type = "tabs", id = "regiontype", selected = "Systematic",
+                                                              
+                                                              tabPanel("Systematic",
+                                                                       
+                                                                       br(),
+                                                                       fluidRow(
+                                                                           column(5,numericInput("sppgrid",
+                                                                                                 "spacing (m)",
+                                                                                                 value = 200,
+                                                                                                 min = 0,
+                                                                                                 max = 20000,
+                                                                                                 step = 10)),
+                                                                       column(6, br(), checkboxInput("randomorigin", "Random origin", FALSE))),
+                                                                       uiOutput('clusteroverlap')),
+                                                              
+                                                              tabPanel("Random",
+                                                                       # br(),
+                                                                       fluidRow(
+                                                                           column(5, radioButtons("randomtype", label = "",
+                                                                                                  choices = c("SRS", "GRTS"), selected = "SRS")),
+                                                                           column(6, br(), numericInput("numpgrid",
+                                                                                                        "number",
+                                                                                                        value = 20,
+                                                                                                        min = 0,
+                                                                                                        max = 20000,
+                                                                                                        step = 5))),
+                                                                   uiOutput('randomtext')
+                                                          )
+                                                      )),
                                                       checkboxInput("gridascluster", "Clustered", FALSE),
                                                       helpText(HTML("Use 'Grid' to define clusters"))
                                              )
@@ -498,12 +523,14 @@ ui <- fluidPage(
 
                                      h2("Detector array"),
                                      wellPanel(
-                                         checkboxInput("lockxy", "Couple row and column dimensions", TRUE)
-                                     ),
+                                         checkboxInput("lockxy", "Couple row and column dimensions", TRUE),
+                                         numericInput("maxdetectors", "Maximum number of detectors",
+                                                          min = 0,
+                                                          max = 20000,
+                                                          value = 1000,
+                                                          step = 100),
 
-                                     h2("Systematic grid across region"),
-                                     wellPanel(
-                                         radioButtons("edgemethod", label = "Cluster edge method",
+                                         radioButtons("edgemethod", label = "Method for clusters at edge of region",
                                                       choices = c("clip", "anyinside", "allinside"),
                                                       selected = "clip")
                                      ),
@@ -531,14 +558,14 @@ ui <- fluidPage(
                                                           choices = c("Rectangular", "Rounded"), 
                                                           selected = "Rounded")
                                          ),
-                                         checkboxInput("polygonbox", "Clip to region",
+                                         checkboxInput("polygonbox", "Clip to polygon(s)",
                                                    value = FALSE,
                                                    width = 180)
                                          )
                                      ),
                                      
                                      
-                                     fileInput("habpolyfilename", "Region shapefile (all parts)",
+                                     fileInput("habpolyfilename", "Polygon shapefile (all parts)",
                                                accept = c('.shp','.dbf','.sbn','.sbx',
                                                           '.shx',".prj", ".txt"), multiple = TRUE),
                                      helpText(HTML("(.txt or at least xxx.shp, xxx.dbf, and xxx.shx)"))
@@ -679,7 +706,7 @@ ui <- fluidPage(
                           withMathJax(includeMarkdown("help.rmd"))
                  ),
                  tabPanel("About",
-                          h2("secrdesign app 1.0"), br(),
+                          h2("secrdesign app 1.1"), br(),
                           
                           h5(paste("This Shiny application provides an interface to the R package 'secrdesign', version", 
                                    packageDescription("secrdesign")$Version), "."),
@@ -691,7 +718,7 @@ ui <- fluidPage(
                           
                           h5("Citation"),
                           h5("[The preferred citation for this package is not finalised]"),
-                          h5("Efford, M. G. 2018. Interactive design of spatially explicit capture-recapture studies. In prep.")
+                          h5("Efford, M. G. 2019. Interactive design of spatially explicit capture-recapture studies. In prep.")
                  )
                
     )
@@ -1127,6 +1154,27 @@ server <- function(input, output, session) {
         helpText(HTML(helptext))
     })
     
+    output$randomtext <- renderUI({
+        helptext <- ""
+        if (input$arrayinput=='Region' & input$regiontype=="Random") {
+            if (input$randomtype == "SRS")
+                helptext <- "Simple random sample"
+            else if (input$randomtype == "GRTS")
+                helptext <- "Generalised random tessellation stratified sample of Stevens & Olsen (2004)"
+        }
+        helpText(HTML(helptext))
+    })
+    
+    output$shapefile <- renderUI({
+        helptext <- ""
+        if (!is.null(region())) {
+            pos <- grep(".shp", input$regionfilename[,1])
+            if (length(pos)>0)
+            helptext <- paste0(input$regionfilename[pos,1])
+        }
+        helpText(HTML(helptext))
+    })
+    
     output$uipopN <- renderUI({
         if (!is.null(poprv$v))
             helpText(HTML(paste0("Number in mask = ", nrow(pop()))))
@@ -1183,6 +1231,7 @@ server <- function(input, output, session) {
             rotrv$current <- FALSE
             pxyrv$value <- NULL
             trps <- NULL
+            removeNotification("badgrid")
             
             if (input$arrayinput == "Grid") {
                 # generate array based on input$nx, ny from ui.R
@@ -1207,65 +1256,72 @@ server <- function(input, output, session) {
                     
                 }
                 else {
-                if (input$randomorigin) 
-                    origin <- NULL
-                else {
-                    origin <- sp::bbox(region())[,1] + input$sppgrid/2
+                    if (input$randomorigin) 
+                        origin <- NULL
+                    else {
+                        origin <- sp::bbox(region())[,1] + input$sppgrid/2
+                    }
+                    if (input$gridascluster) {
+                        cluster <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
+                                             spacex = input$spx, spacey = input$spy,
+                                             hollow = input$hollow, ID = "numxb")
+                    }
+                    else {
+                        cluster <- make.grid(1, 1, detector = input$detector)
+                    }
+                    if (input$regiontype == "Random") {   # randompoint
+                        ntrps <- input$numpgrid
+                        if (ntrps > 0)
+                            trps <- trap.builder(n = ntrps, 
+                                                 method = input$randomtype,
+                                                 region = region(),
+                                                 cluster = cluster,
+                                                 edgemethod = input$edgemethod)
+                    }
+                    else {
+                        trps <- make.systematic(spacing = input$sppgrid, 
+                                                cluster = cluster, 
+                                                region = region(),
+                                                origin = origin,
+                                                edgemethod = input$edgemethod)
+                    }
                 }
-                if (input$gridascluster) {
-                    cluster <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
-                                         spacex = input$spx, spacey = input$spy,
-                                         hollow = input$hollow, ID = "numxb")
-                    trps <- make.systematic(spacing = input$sppgrid, 
-                                            cluster = cluster, 
-                                            region = region(),
-                                            origin = origin,
-                                            edgemethod = input$edgemethod)
-                }
-                else {
-                    cluster <- make.grid(1,1, detector = input$detector)
-                    trps <- make.systematic(cluster = cluster, 
-                                            region = region(), 
-                                            origin = origin, 
-                                            spacing = input$sppgrid)
-                }
-                }
-
-            # else if (input$arrayinput == "Pgrid") {
-            #     inFile <- input$polyfilename
-            #     if (is.null(inFile))
-            #         return(NULL)
-            #     else {
-            #         myshape <- input$polyfilename
-            #         cat ('input$polyfilename \n')
-            #         print(myshape)
-            #         dsnname <- dirname(myshape[1,4])
-            #         for ( i in 1:nrow(myshape)) {
-            #             file.rename(myshape[i,4], paste0(dsnname,"/",myshape[i,1]))}
-            #         filename <- list.files(dsnname, pattern="*.shp", full.names=FALSE)
-            #         layername <- tools::file_path_sans_ext(basename(filename))
-            #         #layername <- tools::file_path_sans_ext(basename(myshape$name))
-            #
-            #         if (is.null(filename))
-            #             stop("provide valid filename")
-            #         cat ('dsnname ', dsnname, '\n')
-            #         cat ('layername ', layername, '\n')
-            #         poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
-            #
-            #         # datasource <- paste0(myshape$datapath, '/', myshape$name)
-            #         # cat ('datasource ', datasource, '\n')
-            #         # poly <- rgdal::readOGR(datasource)
-            #         # poly <- rgdal::readOGR('c:/density secr 3.1/package data/ovpossum/ovforest.shp')
-            #
-            #         if ((rgeos::gArea(poly) / input$sppgrid^2) > 1000) {
-            #             showNotification("> 1000 detectors; try again",
-            #                              type = "warning", id = "biggrid", duration = 5)
-            #             return(NULL)
-            #         }
-            #         else removeNotification("biggrid")
-            #         trps <- make.systematic(region = poly, spacing = input$sppgrid, detector = input$detector)
-            #     }
-            # }                
+                
+                # else if (input$arrayinput == "Pgrid") {
+                #     inFile <- input$polyfilename
+                #     if (is.null(inFile))
+                #         return(NULL)
+                #     else {
+                #         myshape <- input$polyfilename
+                #         cat ('input$polyfilename \n')
+                #         print(myshape)
+                #         dsnname <- dirname(myshape[1,4])
+                #         for ( i in 1:nrow(myshape)) {
+                #             file.rename(myshape[i,4], paste0(dsnname,"/",myshape[i,1]))}
+                #         filename <- list.files(dsnname, pattern="*.shp", full.names=FALSE)
+                #         layername <- tools::file_path_sans_ext(basename(filename))
+                #         #layername <- tools::file_path_sans_ext(basename(myshape$name))
+                #
+                #         if (is.null(filename))
+                #             stop("provide valid filename")
+                #         cat ('dsnname ', dsnname, '\n')
+                #         cat ('layername ', layername, '\n')
+                #         poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
+                #
+                #         # datasource <- paste0(myshape$datapath, '/', myshape$name)
+                #         # cat ('datasource ', datasource, '\n')
+                #         # poly <- rgdal::readOGR(datasource)
+                #         # poly <- rgdal::readOGR('c:/density secr 3.1/package data/ovpossum/ovforest.shp')
+                #
+                #         if ((rgeos::gArea(poly) / input$sppgrid^2) > 1000) {
+                #             showNotification("> 1000 detectors; try again",
+                #                              type = "warning", id = "biggrid", duration = 5)
+                #             return(NULL)
+                #         }
+                #         else removeNotification("biggrid")
+                #         trps <- make.systematic(region = poly, spacing = input$sppgrid, detector = input$detector)
+                #     }
+                # }                
             }
             else if (input$arrayinput == 'File') {
                 inFile <- input$trapfilename
@@ -1273,21 +1329,40 @@ server <- function(input, output, session) {
                     filename <- input$trapfilename[1,"datapath"]
                     if (is.null(filename))
                         stop("provide valid filename")
-                    trps <- read.traps (filename, detector = input$detector)
-                    if (!inherits(trps, "traps")) stop ("invalid trap file")
+                    args <- input$args
+                    if (args != "")
+                        args <- paste0(", ", args)
+                    readtrapscall <- paste0("read.traps (filename, detector = input$detector", args, ")")
+                    trps <- try(eval(parse(text = readtrapscall)))
+                    if (!inherits(trps, "traps")) {
+                        trps <- NULL
+                        showNotification("invalid trap file or arguments; try again",
+                              type = "warning", id = "badgrid", duration = NULL)
+                    }
                 }
             }
             else stop ("unrecognised array input")
             
+            if (!is.null(trps) && (nrow(trps) > input$maxdetectors)) {
+                showNotification(paste0("more than ", input$maxdetectors, " detectors; try again"),
+                                  type = "warning", id = "biggrid", duration = 5)
+                trps <- NULL
+            }
+            
+            if (is.null(trps) || input$arrayinput == "Region") {
+                hideTab(inputId = "navlist", target = "Spacing")
+            }
+            else {
+                showTab(inputId = "navlist", target = "Spacing")
+            }
+                
             if (is.null(trps)) {
                 hideTab(inputId = "navlist", target = "Costing")
-                hideTab(inputId = "navlist", target = "Spacing")
                 hideTab(inputId = "navlist", target = "Simulation")
                 return (NULL)
             }
             else {
                 showTab(inputId = "navlist", target = "Costing")
-                showTab(inputId = "navlist", target = "Spacing")
                 showTab(inputId = "navlist", target = "Simulation")
                 addsequence (trps, input$routetype)
             }
@@ -2156,7 +2231,10 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$nrmPrint <- renderText({
+        removeNotification("lownr")
+        showNotification("Updating...", type = "warning", id = "updating", duration = NULL)
         nrmval <- nrm()
+        removeNotification("updating")
         if (is.null(nrmval)) return (NULL)
         star <- if (nrepeats()>1) "*" else ""
         nrepeatstr <- if (nrepeats()>1) paste0("\n* ", nrepeats(), " arrays") else ""
@@ -2167,12 +2245,22 @@ server <- function(input, output, session) {
         else
             paste0( "\nTotal cost = $", sprintf("%.2f", nrmval$totalcost), star)
         
-        if (nrmval$En<20 | nrmval$Er<20) {
-            showNotification("Low E(n) or E(r) - simulate to check RSE",
-                             closeButton = TRUE, type = "warning", id = "lownr", duration = NULL)
-        }
-        else
+        if (nrmval$Em<5) {
             removeNotification("lownr")
+            showNotification("Pathological design - E(m) less than 5",
+                             type = "warning", id = "zeronm", duration = NULL)
+        }
+        else {
+            removeNotification("zeronm")
+            if (nrmval$En<20 | nrmval$Er<20) {
+                showNotification("Low E(n) or E(r) - simulate to check RSE",
+                                 type = "warning", id = "lownr", duration = NULL)
+            }
+            else {
+                removeNotification("lownr")
+            }
+        }
+        
         paste0(
             
             "Expected number of individuals detected n = ", 
