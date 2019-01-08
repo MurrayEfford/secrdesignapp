@@ -112,11 +112,17 @@ ui <- fluidPage(
                                                                            '.shx',".prj", ".txt"), multiple = TRUE),
                                                       # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
                                                       uiOutput("shapefile"),
-                                                      wellPanel(class = "mypanel", 
-                                                                fluidRow(
-                                                                    column(12, checkboxInput("gridascluster", "Clustered   -- define clusters with 'Grid'"))
-                                                                )
-                                                      ),
+                                                      wellPanel(class = "mypanel",
+                                                                fluidRow(column(7, radioButtons("clustertype", label = "Cluster type",
+                                                                                   choices = c("Single detector", "Grid", "Line"), 
+                                                                                   selected = "Single detector")),
+                                                                         column(5, numericInput(
+                                                                             "rotation",
+                                                                             "Rotation (deg)",
+                                                                             value = 0,
+                                                                             min = 0,
+                                                                             max = 360,
+                                                                             step = 5)))),
                                                       
                                                       wellPanel(class = "mypanel", 
                                                           tabsetPanel(
@@ -1155,7 +1161,7 @@ server <- function(input, output, session) {
     
     output$clusteroverlap <- renderUI({
         helptext <- ""
-        if ((input$arrayinput=='Region') & input$gridascluster) {
+        if ((input$arrayinput=='Region') & input$clustertype == "Grid") {
             if ((input$spx * input$nx >= input$sppgrid) |
                 (input$spy * input$ny >= input$sppgrid))
                 helptext <- "Warning: clusters overlap"
@@ -1261,14 +1267,21 @@ server <- function(input, output, session) {
                     else {
                         origin <- sp::bbox(region())[,1] + input$sppgrid/2
                     }
-                    if (input$gridascluster) {
+                    if (input$clustertype == "Grid") {
                         cluster <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
                                              spacex = input$spx, spacey = input$spy,
                                              hollow = input$hollow, ID = "numxb")
                     }
+                    else if (input$clustertype == "Line") {
+                        cluster <- make.grid(nx = input$nline, ny = 1, detector = input$detector,
+                                             spacing = input$spline)
+                    }
                     else {
                         cluster <- make.grid(1, 1, detector = input$detector)
                     }
+                    if (input$clustertype != "Single detector")
+                        cluster <- rotate (cluster, input$rotation)
+                    
                     if (input$regiontype == "Random") {   # randompoint
                         ntrps <- input$numpgrid
                         if (ntrps > 0)
@@ -1678,6 +1691,8 @@ server <- function(input, output, session) {
     observeEvent(input$resetbtn, {
 
         ## array
+        
+        ## grid
         updateSelectInput(session, "detector", selected = "proximity")
         updateTabsetPanel(session, "arrayinput", selected = "Grid")
         updateNumericInput(session, "ny", value = 8)
@@ -1685,18 +1700,21 @@ server <- function(input, output, session) {
         updateNumericInput(session, "spy", value = 20)
         updateNumericInput(session, "spx", value = 20)
         updateCheckboxInput(session, "hollow", value = FALSE )
-
+        
+        ## line
         updateNumericInput(session, "nline", value = 20)
         updateNumericInput(session, "spline", value = 20)
         
         ## region
         updateTabsetPanel(session, inputId = "regiontype", selected = "Systematic")
         updateCheckboxInput(session, "sppgrid", value = 200 )
-        updateCheckboxInput(session, "gridascluster", value = FALSE )
+        updateCheckboxInput(session, "clustertype", value = "Single detector" )
+        updateNumericInput(session, "rotation", value = 0)
         updateCheckboxInput(session, "randomorigin", value = FALSE )
         updateRadioButtons(session, "randomtype", selected = "SRS")
         updateNumericInput(session, "numpgrid", value = 20)
-
+        
+        ## file
         updateTextInput(session, "args", "Optional arguments for read.traps()",
                         value = "", placeholder = "e.g., skip = 1, sep = ','")
 
@@ -2101,38 +2119,56 @@ server <- function(input, output, session) {
                 }
                 
                 
-                if (input$gridascluster) {
+                if (input$clustertype == "Grid") {
                     clustercode <- paste0("cluster <- make.grid(nx = ", input$nx, ", ny = ", input$ny, 
                                           ", detector = '", input$detector, "', \n",
                                           "    spacex = ", input$spx, ", spacey = ", input$spy, ", ",
                                           "hollow = ", input$hollow, ")\n")
-                    edgemethodcode <- paste0(", edgemethod = '", input$edgemethod, "'")
+                }
+                else if (input$clustertype == "Line") {
+                    clustercode <- paste0("cluster <- make.grid(nx = ", input$nline, 
+                                          ", ny = 1, detector = '", input$detector, "', \n",
+                                          "    spacing = ", input$spline, ")\n")
                 }
                 else {
                     if (input$regiontype == "Systematic")
                         clustercode <- paste0("cluster <- make.grid(nx = 1, ny = 1, detector = '", 
-                                          input$detector, "')\n")
+                                              input$detector, "')\n")
                     else
                         clustercode <- ""
-                    edgemethodcode <- ""
                 }
+                
+                if (input$clustertype %in% c("Grid", "Line")) {
+                    edgemethodcode <- paste0(", edgemethod = '", input$edgemethod, "'")
+                    if (input$rotation != 0)
+                        rotatecode <- paste0("cluster <- rotate(cluster, ", input$rotation, ")\n")
+                    else 
+                        rotatecode <- ""
+                }
+                else {
+                    edgemethodcode <- ""
+                    rotatecode <- ""
+                }
+                
                 
                 if (input$regiontype == "Systematic") {
                     arraycode <- paste0( 
                         regioncode,
                         clustercode,
+                        rotatecode,
                         "array <- make.systematic(spacing = ", input$sppgrid, ", ",
                         "region = region, cluster = cluster, \n",
                         "    origin = ", origincode, edgemethodcode, ")\n")
                 }
                 else if (input$regiontype == "Random") {
-                    if (input$gridascluster)
+                    if (input$clustertype %in% c("Grid", "Line"))
                         clusterarg <- ",\n    cluster = cluster"
                     else 
                         clusterarg <- ""
                     arraycode <- paste0( 
                         regioncode,
                         clustercode,
+                        rotatecode,
                         "array <- trap.builder(n = ", input$numpgrid, ", ",
                         "method = '", input$randomtype, "', ",
                         "region = region", clusterarg, 
@@ -2206,7 +2242,7 @@ server <- function(input, output, session) {
         gr <- grid()
         if (!is.null(gr)) {
             gridlength <- max(dist(gr))
-            if (input$arrayinput=='Region' & input$gridascluster) {
+            if (input$arrayinput=='Region' & input$clustertype %in% c("Grid", "Line")) {
                 ncluster <- length(unique(clusterID(gr)))
                 clustertext <- paste0( " in ", ncluster, " clusters")
                 cr <- "\n"
