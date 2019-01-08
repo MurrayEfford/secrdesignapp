@@ -16,6 +16,7 @@ linewidth <- 2  # for various plots
 # Define UI 
 ui <- fluidPage(
     includeCSS("secrdesignstyle.css"),
+    tags$head(tags$style(".mypanel{margin-top:5px; margin-bottom:10px; padding-bottom: 5px;}")),
     br(),
     navlistPanel(id = "navlist", widths = c(2,10), well=TRUE,
                  
@@ -25,7 +26,7 @@ ui <- fluidPage(
                           fluidRow(
                               column(3, offset = 0,
                                      h2("Detector array"),
-                                     wellPanel(
+                                     wellPanel(class = "mypanel", 
                                          fluidRow(
                                              column(5, selectInput("detector", "Detector type",
                                                                    choices = c("multi","proximity","count"),
@@ -77,16 +78,13 @@ ui <- fluidPage(
                                              tabPanel("Line",
                                                       br(),
                                                       fluidRow(
-                                                          column(8,numericInput("nline",
+                                                          column(6,numericInput("nline",
                                                                                  "number of detectors",
-                                                                                 value = 20,
-                                                                                 min = 1,
-                                                                                 max = 100,
-                                                                                 step = 1))
-
-                                                      ),
-                                                      fluidRow(
-                                                          column(6,numericInput("spline",
+                                                                                value = 20,
+                                                                                min = 1,
+                                                                                max = 100,
+                                                                                step = 1)),
+                                                          column(5,numericInput("spline",
                                                                                 "spacing (m)",
                                                                                 value = 20,
                                                                                 min = 1,
@@ -94,9 +92,11 @@ ui <- fluidPage(
                                                                                 step = 1))
                                                       ),
                                                       actionButton("suggestlinebtn", "Suggest spacing"),
+                                                      br(),br(),
                                                       helpText(HTML("Warning: results with linear arrays may be highly biased if home ranges are elongated and aligned"))
                                              ),
                                              tabPanel("File", values = "File",
+                                                      br(),
                                                       fileInput("trapfilename", "",   # Detector layout file
                                                                 accept = "text/plain"),
                                                       helpText(HTML(paste0("Requires text file with detector ID ",
@@ -106,13 +106,19 @@ ui <- fluidPage(
                                                                 value = "", placeholder = "e.g., skip = 1, sep = ','")
                                              ),
                                              tabPanel("Region",
+                                                      br(),
                                                       fileInput("regionfilename", "Boundary file(s)",
                                                                 accept = c('.shp','.dbf','.sbn','.sbx',
                                                                            '.shx',".prj", ".txt"), multiple = TRUE),
                                                       # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
                                                       uiOutput("shapefile"),
+                                                      wellPanel(class = "mypanel", 
+                                                                fluidRow(
+                                                                    column(12, checkboxInput("gridascluster", "Clustered   -- define clusters with 'Grid'"))
+                                                                )
+                                                      ),
                                                       
-                                                      wellPanel(
+                                                      wellPanel(class = "mypanel", 
                                                           tabsetPanel(
                                                               type = "tabs", id = "regiontype", selected = "Systematic",
                                                               
@@ -126,7 +132,8 @@ ui <- fluidPage(
                                                                                                  min = 0,
                                                                                                  max = 20000,
                                                                                                  step = 10)),
-                                                                       column(6, br(), checkboxInput("randomorigin", "Random origin", FALSE))),
+                                                                           column(6, br(), checkboxInput("randomorigin", "Random origin", FALSE))
+                                                                       ),
                                                                        uiOutput('clusteroverlap')),
                                                               
                                                               tabPanel("Random",
@@ -139,12 +146,11 @@ ui <- fluidPage(
                                                                                                         value = 20,
                                                                                                         min = 0,
                                                                                                         max = 20000,
-                                                                                                        step = 5))),
-                                                                   uiOutput('randomtext')
-                                                          )
-                                                      )),
-                                                      checkboxInput("gridascluster", "Clustered", FALSE),
-                                                      helpText(HTML("Use 'Grid' to define clusters"))
+                                                                                                        step = 5))
+                                                                       ),
+                                                                       uiOutput('randomtext')
+                                                              )
+                                                          ))
                                              )
                                          )
                                      )
@@ -153,7 +159,7 @@ ui <- fluidPage(
                               column(3, offset = 0,
                                      
                                      h2("Parameters"),
-                                     wellPanel(
+                                     wellPanel(class = "mypanel", 
                                          
                                          fluidRow(
                                              column(6, numericInput("D",
@@ -186,10 +192,12 @@ ui <- fluidPage(
                                                                     width = 180)))
                                      ),
                                      
-                                     h2("General design variables"),
+                                     h2("General"),
+                                     fluidRow(column(12,textInput("title", "Note for Summary", value = "", 
+                                                                  placeholder = "anything you like"))),
                                      fluidRow(
                                          column(6,
-                                                wellPanel(
+                                                wellPanel(class = "mypanel", 
                                                     numericInput("noccasions",
                                                                  "Occasions",
                                                                  value = 5,
@@ -207,17 +215,18 @@ ui <- fluidPage(
                                                     uiOutput('clusterhelp')
                                                 )),
                                          column(6,
-                                                wellPanel(
+                                                wellPanel(class = "mypanel", 
                                                     radioButtons("distributionbtn", label = "Distribution of n",
                                                                  choices = c("Poisson", "Binomial"))
                                                 ),
+                                                br(),
                                                 actionButton("resetbtn", "All defaults")
                                          )
                                          
                                      ),
                                      
                                      fluidRow(
-                                         column(5, actionButton("simulatebtn2", "Simulate",  width = 120)),
+                                         column(6, actionButton("simulatebtn2", "Simulate",  width = 120)),
                                          column(5, actionButton("appendbtn", "Add to summary",  width = 150))
                                      )
                               ),
@@ -290,7 +299,7 @@ ui <- fluidPage(
                           fluidRow(
                               column(3,
                                      h2("Unit cost"),
-                                     wellPanel(
+                                     wellPanel(class = "mypanel", 
                                          numericInput("perkm",
                                                       "Travel per km $",
                                                       value = 0,
@@ -329,7 +338,7 @@ ui <- fluidPage(
                               ),
                               column(3, offset = 0,
                                      h2("Route"),
-                                     wellPanel(
+                                     wellPanel(class = "mypanel", 
                                          radioButtons("routetype", label = "Type",
                                                       choices = c("Sequential", "Manual", "SumSpacing")),
                                          #   choices = c("Sequential", "SumSpacing", "TSP", "Manual")),
@@ -380,7 +389,7 @@ ui <- fluidPage(
                                      h2("Simulation control"),
                                      fluidRow(
                                          column(8,
-                                                wellPanel(
+                                                wellPanel(class = "mypanel", 
                                                     radioButtons("packagebtn", label = "Fit simulated data",
                                                                  choices = c("openCR.fit", "secr.fit"))
                                                 )
@@ -389,7 +398,7 @@ ui <- fluidPage(
                                      ),
                                      fluidRow(
                                          column(8,
-                                                wellPanel(
+                                                wellPanel(class = "mypanel", 
                                                     
                                                     numericInput("nrepl",
                                                                  "Number of replicates",
@@ -522,7 +531,7 @@ ui <- fluidPage(
                               column(3,
 
                                      h2("Detector array"),
-                                     wellPanel(
+                                     wellPanel(class = "mypanel", 
                                          checkboxInput("lockxy", "Couple row and column dimensions", TRUE),
                                          numericInput("maxdetectors", "Maximum number of detectors",
                                                           min = 0,
@@ -537,7 +546,7 @@ ui <- fluidPage(
 
                                      h2("Habitat mask"),
                                      fluidRow(
-                                         column(6, wellPanel(
+                                         column(6, wellPanel(class = "mypanel", 
                                              numericInput("habxsigma", "Buffer width (multiple of sigma)",
                                                           min = 0,
                                                           max = 20,
@@ -553,7 +562,7 @@ ui <- fluidPage(
                                              )
                                          ),
                                          
-                                         column(6, wellPanel(
+                                         column(6, wellPanel(class = "mypanel", 
                                              radioButtons("maskshapebtn", label = "Shape",
                                                           choices = c("Rectangular", "Rounded"), 
                                                           selected = "Rounded")
@@ -575,12 +584,12 @@ ui <- fluidPage(
 
                               column(3,
                                      # h2("Population plot"),
-                                     # wellPanel(
+                                     # wellPanel(class = "mypanel", 
                                      # 
                                      # ),
 
                                      h2("Pxy contour plot"),
-                                     wellPanel(
+                                     wellPanel(class = "mypanel", 
                                          numericInput("pxyborder", "Border (spacing units)",
                                                       min = 0,
                                                       max = 10,
@@ -604,7 +613,7 @@ ui <- fluidPage(
                                                        width = 180)
                                      ),
                                      h2("Spacing plot"),
-                                     wellPanel(
+                                     wellPanel(class = "mypanel", 
                                          "Spacing relative to sigma", br(), br(),
                                          fluidRow(
                                              column (6, numericInput("fromR",
@@ -641,7 +650,7 @@ ui <- fluidPage(
 
                               column(3,
                                      h2("Power plot"),
-                                     wellPanel(
+                                     wellPanel(class = "mypanel", 
                                          fluidRow(
                                              column(8, radioButtons("powerplotbtn", label = "Plot style",
                                                       choices = c("Null hypothesis power", "Confidence interval"))),
@@ -686,7 +695,7 @@ ui <- fluidPage(
                                              )
                                      ),
                                      h2("RSE correction factor"),
-                                     wellPanel(
+                                     wellPanel(class = "mypanel", 
                                          sliderInput("CFslider", "",
                                                      min = 0.8,
                                                      max = 2.0,
@@ -1234,18 +1243,9 @@ server <- function(input, output, session) {
             removeNotification("badgrid")
             
             if (input$arrayinput == "Grid") {
-                # generate array based on input$nx, ny from ui.R
-                # if (input$random) {
-                #     trps <- trap.builder (n = input$nx * input$ny, detector = input$detector,
-                #                           region = matrix(ncol = 2,
-                #                                           c(0,0,input$nx * input$spx, input$nx * input$spx,
-                #                                             0, input$ny * input$spy, input$ny * input$spy, 0)))
-                #
-                # }
-                # else
-                    trps <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
-                                      spacex = input$spx, spacey = input$spy,
-                                      hollow = input$hollow, ID = "numxb")
+                trps <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
+                                  spacex = input$spx, spacey = input$spy,
+                                  hollow = input$hollow, ID = "numxb")
             }
             else if (input$arrayinput == "Line") {
                 trps <- make.grid(nx = input$nline, ny = 1, detector = input$detector,
@@ -1253,7 +1253,7 @@ server <- function(input, output, session) {
             }
             else if (input$arrayinput=='Region') {
                 if (is.null(region())) {
-                    
+                    trps <- NULL
                 }
                 else {
                     if (input$randomorigin) 
@@ -1287,41 +1287,6 @@ server <- function(input, output, session) {
                     }
                 }
                 
-                # else if (input$arrayinput == "Pgrid") {
-                #     inFile <- input$polyfilename
-                #     if (is.null(inFile))
-                #         return(NULL)
-                #     else {
-                #         myshape <- input$polyfilename
-                #         cat ('input$polyfilename \n')
-                #         print(myshape)
-                #         dsnname <- dirname(myshape[1,4])
-                #         for ( i in 1:nrow(myshape)) {
-                #             file.rename(myshape[i,4], paste0(dsnname,"/",myshape[i,1]))}
-                #         filename <- list.files(dsnname, pattern="*.shp", full.names=FALSE)
-                #         layername <- tools::file_path_sans_ext(basename(filename))
-                #         #layername <- tools::file_path_sans_ext(basename(myshape$name))
-                #
-                #         if (is.null(filename))
-                #             stop("provide valid filename")
-                #         cat ('dsnname ', dsnname, '\n')
-                #         cat ('layername ', layername, '\n')
-                #         poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
-                #
-                #         # datasource <- paste0(myshape$datapath, '/', myshape$name)
-                #         # cat ('datasource ', datasource, '\n')
-                #         # poly <- rgdal::readOGR(datasource)
-                #         # poly <- rgdal::readOGR('c:/density secr 3.1/package data/ovpossum/ovforest.shp')
-                #
-                #         if ((rgeos::gArea(poly) / input$sppgrid^2) > 1000) {
-                #             showNotification("> 1000 detectors; try again",
-                #                              type = "warning", id = "biggrid", duration = 5)
-                #             return(NULL)
-                #         }
-                #         else removeNotification("biggrid")
-                #         trps <- make.systematic(region = poly, spacing = input$sppgrid, detector = input$detector)
-                #     }
-                # }                
             }
             else if (input$arrayinput == 'File') {
                 inFile <- input$trapfilename
@@ -1531,6 +1496,7 @@ server <- function(input, output, session) {
         df <- data.frame(
             date = format(Sys.time(), "%Y-%m-%d"),
             time = format(Sys.time(), "%H:%M:%S"),
+            note = input$title,
             detector = input$detector,
             source = input$arrayinput,
             nx = if (input$arrayinput=="Grid") input$nx else
@@ -1612,7 +1578,7 @@ server <- function(input, output, session) {
     
     sumrv <- reactiveValues(
         value = read.csv(text = paste
-        ("date, time, detector, source, nx, ny, spacex, spacey, ndetectors, noccasions, ",
+        ("date, time, note, detector, source, nx, ny, spacex, spacey, ndetectors, noccasions, ",
             "nrepeats, distribution, detectfn, D, lambda0, sigma, detperHR, k, En, Er, Em, ",
             "rotRSE, CF, route, cost, simfn,  nrepl, simtime, simRSE, simRSEse,",
             "simRB, simRBse"))
@@ -1716,15 +1682,23 @@ server <- function(input, output, session) {
         updateTabsetPanel(session, "arrayinput", selected = "Grid")
         updateNumericInput(session, "ny", value = 8)
         updateNumericInput(session, "nx", value = 8)
-        updateNumericInput(session, "nline", value = 20)
         updateNumericInput(session, "spy", value = 20)
         updateNumericInput(session, "spx", value = 20)
-        updateNumericInput(session, "spline", value = 20)
         updateCheckboxInput(session, "hollow", value = FALSE )
+
+        updateNumericInput(session, "nline", value = 20)
+        updateNumericInput(session, "spline", value = 20)
         
+        ## region
+        updateTabsetPanel(session, inputId = "regiontype", selected = "Systematic")
         updateCheckboxInput(session, "sppgrid", value = 200 )
         updateCheckboxInput(session, "gridascluster", value = FALSE )
         updateCheckboxInput(session, "randomorigin", value = FALSE )
+        updateRadioButtons(session, "randomtype", selected = "SRS")
+        updateNumericInput(session, "numpgrid", value = 20)
+
+        updateTextInput(session, "args", "Optional arguments for read.traps()",
+                        value = "", placeholder = "e.g., skip = 1, sep = ','")
 
         ## parameters
         updateNumericInput(session, "D", value = 5)
@@ -1733,6 +1707,8 @@ server <- function(input, output, session) {
         updateNumericInput(session, "sigma", value = 25)
 
         ## general
+        updateTextInput(session, "title", "Note for Summary", value = "", 
+                        placeholder = "anything you like")
         updateNumericInput(session, "noccasions", value = 5)
         updateNumericInput(session, "nrepeats", value = 1)
         updateTabsetPanel(session, "tabs", selected = "Array")
@@ -2107,19 +2083,14 @@ server <- function(input, output, session) {
                 regionfilename <- input$regionfilename[1,1]
                 if (tolower(tools::file_ext(regionfilename)) == "txt") {
                     regioncode <- paste0( 
-                        "coord <- read.table('", regionfilename, "')\n",
-                        "region <- secr:::boundarytoSP(coord)\n")
+                        "coord <- read.table('", regionfilename, "')   # read boundary coordinates\n",
+                        "region <- secr:::boundarytoSP(coord)  # convert to SpatialPolygons\n")
                 }
                 else {
-                    # regioncode <- paste0(
-                    #     "layername <- '", tools::file_path_sans_ext(basename(regionfilename)), "'\n",
-                    #     "region <- rgdal::readOGR(layer = layername)\n"
-                    # )
                     regioncode <- paste0(
-                        #"layername <- '", tools::file_path_sans_ext(basename(regionfilename)), "'\n",
                         "region <- rgdal::readOGR(dsn = '", 
                             tools::file_path_sans_ext(basename(regionfilename)), 
-                        ".shp')\n"
+                        ".shp')    # region from shapefile\n"
                     )
                 }
                 
@@ -2129,25 +2100,46 @@ server <- function(input, output, session) {
                     origincode <- paste0("sp::bbox(region)[,1] + ", input$sppgrid/2)
                 }
                 
+                
                 if (input$gridascluster) {
-                    arraycode <- paste0( 
-                        regioncode,
-                        "cluster <- make.grid(nx = ", input$nx, ", ny = ", input$ny, 
-                            ", detector = '", input$detector, "', \n",
-                            "    spacex = ", input$spx, ", spacey = ", input$spy, ", ",
-                            "hollow = ", input$hollow, ")\n",
-                        "array <- make.systematic(spacing = ", input$sppgrid, ", ",
-                            "cluster = cluster, ", "region = region,\n",
-                            "    origin = ", origincode, ", edgemethod = '", input$edgemethod, "')\n")
+                    clustercode <- paste0("cluster <- make.grid(nx = ", input$nx, ", ny = ", input$ny, 
+                                          ", detector = '", input$detector, "', \n",
+                                          "    spacex = ", input$spx, ", spacey = ", input$spy, ", ",
+                                          "hollow = ", input$hollow, ")\n")
+                    edgemethodcode <- paste0(", edgemethod = '", input$edgemethod, "'")
                 }
                 else {
+                    if (input$regiontype == "Systematic")
+                        clustercode <- paste0("cluster <- make.grid(nx = 1, ny = 1, detector = '", 
+                                          input$detector, "')\n")
+                    else
+                        clustercode <- ""
+                    edgemethodcode <- ""
+                }
+                
+                if (input$regiontype == "Systematic") {
                     arraycode <- paste0( 
                         regioncode,
-                        "cluster <- make.grid(nx = 1, ny = 1, detector = '", input$detector, "')\n",
+                        clustercode,
                         "array <- make.systematic(spacing = ", input$sppgrid, ", ",
-                        "cluster = cluster, region = region,\n",
-                        "    origin = ", origincode, ")\n")
+                        "region = region, cluster = cluster, \n",
+                        "    origin = ", origincode, edgemethodcode, ")\n")
                 }
+                else if (input$regiontype == "Random") {
+                    if (input$gridascluster)
+                        clusterarg <- ",\n    cluster = cluster"
+                    else 
+                        clusterarg <- ""
+                    arraycode <- paste0( 
+                        regioncode,
+                        clustercode,
+                        "array <- trap.builder(n = ", input$numpgrid, ", ",
+                        "method = '", input$randomtype, "', ",
+                        "region = region", clusterarg, 
+                        edgemethodcode, ")\n")
+                }
+                else stop ("unknown regiontype")
+                
             }
             else { # input$arrayinput=="File"
                 arraycode <- paste0(
@@ -2231,10 +2223,16 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$nrmPrint <- renderText({
-        removeNotification("lownr")
-        showNotification("Updating...", type = "warning", id = "updating", duration = NULL)
+                progress <- Progress$new(session, min=1, max=15)
+        on.exit(progress$close())
+        progress$set(message = 'Updating...',
+                     detail = '')
+
+        
+        # removeNotification("lownr")
+        # showNotification("Updating...", type = "warning", id = "updating", duration = NULL)
         nrmval <- nrm()
-        removeNotification("updating")
+        # removeNotification("updating")
         if (is.null(nrmval)) return (NULL)
         star <- if (nrepeats()>1) "*" else ""
         nrepeatstr <- if (nrepeats()>1) paste0("\n* ", nrepeats(), " arrays") else ""
@@ -2378,7 +2376,7 @@ server <- function(input, output, session) {
         # draw the grid
         tmpgrid <- grid()
         if (is.null(tmpgrid)) return (NULL)
-        par(mar=c(1,2,2,2))
+        par(mar=c(1,1,1,1))
         if (input$arrayinput=='Region') {
             sp::plot(region())
             plot (tmpgrid, add = TRUE)
