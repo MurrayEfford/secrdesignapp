@@ -112,17 +112,6 @@ ui <- fluidPage(
                                                                            '.shx',".prj", ".txt"), multiple = TRUE),
                                                       # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
                                                       uiOutput("shapefile"),
-                                                      wellPanel(class = "mypanel",
-                                                                fluidRow(column(7, radioButtons("clustertype", label = "Cluster type",
-                                                                                   choices = c("Single detector", "Grid", "Line"), 
-                                                                                   selected = "Single detector")),
-                                                                         column(5, numericInput(
-                                                                             "rotation",
-                                                                             "Rotation (deg)",
-                                                                             value = 0,
-                                                                             min = 0,
-                                                                             max = 360,
-                                                                             step = 5)))),
                                                       
                                                       wellPanel(class = "mypanel", 
                                                           tabsetPanel(
@@ -145,7 +134,7 @@ ui <- fluidPage(
                                                               tabPanel("Random",
                                                                        # br(),
                                                                        fluidRow(
-                                                                           column(5, radioButtons("randomtype", label = "",
+                                                                           column(6, radioButtons("randomtype", label = "",
                                                                                                   choices = c("SRS", "GRTS"), selected = "SRS")),
                                                                            column(6, br(), numericInput("numpgrid",
                                                                                                         "number",
@@ -154,9 +143,34 @@ ui <- fluidPage(
                                                                                                         max = 20000,
                                                                                                         step = 5))
                                                                        ),
-                                                                       uiOutput('randomtext')
+                                                                       fluidRow(
+                                                                           column(12, uiOutput('randomtext'))
+                                                                           
+                                                                       )
+                                                                           
                                                               )
-                                                          ))
+                                                          )),
+                                                      wellPanel(class = "mypanel",
+                                                                fluidRow(column(6, radioButtons("clustertype", label = "Cluster type",
+                                                                                   choices = c("Single detector", "Grid", "Line"), 
+                                                                                   selected = "Single detector")),
+                                                                         column(6, 
+                                                                                numericInput(
+                                                                                    "rotation",
+                                                                                    "Rotation (deg)",
+                                                                                    value = 0,
+                                                                                    min = 0,
+                                                                                    max = 360,
+                                                                                    step = 5),
+                                                                                numericInput(
+                                                                                    "seedpgrid", 
+                                                                                    "Random seed",
+                                                                                    value = 0,
+                                                                                    min = 0, 
+                                                                                    max = 1000000000,
+                                                                                    step = 1)
+                                                                         )))
+                                                      
                                              )
                                          )
                                      )
@@ -199,8 +213,7 @@ ui <- fluidPage(
                                      ),
                                      
                                      h2("General"),
-                                     fluidRow(column(12,textInput("title", "Note for Summary", value = "", 
-                                                                  placeholder = "anything you like"))),
+                                     
                                      fluidRow(
                                          column(6,
                                                 wellPanel(class = "mypanel", 
@@ -217,24 +230,28 @@ ui <- fluidPage(
                                                                  min = 1,
                                                                  max = 100,
                                                                  step = 1,
-                                                                 width = 220),
-                                                    uiOutput('clusterhelp')
+                                                                 width = 220)
+                                                    # uiOutput('clusterhelp')
                                                 )),
                                          column(6,
                                                 wellPanel(class = "mypanel", 
                                                     radioButtons("distributionbtn", label = "Distribution of n",
                                                                  choices = c("Poisson", "Binomial"))
-                                                ),
-                                                br(),
-                                                actionButton("resetbtn", "All defaults")
+                                                )
                                          )
-                                         
                                      ),
+                                     fluidRow(column(12,textInput("title", "Note for Summary", value = "", 
+                                                                  placeholder = "anything you like"))),
                                      
+                                     h2("Actions"),
+
                                      fluidRow(
-                                         column(6, actionButton("simulatebtn2", "Simulate",  width = 120)),
-                                         column(5, actionButton("appendbtn", "Add to summary",  width = 150))
-                                     )
+                                         column(5, actionButton("simulatebtn2", "Simulate",  width = 140)),
+                                         column(6, actionButton("appendbtn", "Add to summary",  width = 140))
+                                     ),
+                                     br(),
+                                     fluidRow(
+                                         column(8, actionButton("resetbtn", "Reset all", width = 140)))
                               ),
                               
                               column (4,
@@ -1262,8 +1279,15 @@ server <- function(input, output, session) {
                     trps <- NULL
                 }
                 else {
-                    if (input$randomorigin) 
+                    if (input$randomorigin || input$regiontype == "Random") {
+                        if (input$seedpgrid>0)
+                            set.seed(input$seedpgrid)
+                        else
+                            set.seed(NULL)
+                    }
+                    if (input$randomorigin) {
                         origin <- NULL
+                    }
                     else {
                         origin <- sp::bbox(region())[,1] + input$sppgrid/2
                     }
@@ -1509,7 +1533,7 @@ server <- function(input, output, session) {
         df <- data.frame(
             date = format(Sys.time(), "%Y-%m-%d"),
             time = format(Sys.time(), "%H:%M:%S"),
-            note = input$title,
+            note = if (simrv$current) paste(input$title, "sim") else input$title,
             detector = input$detector,
             source = input$arrayinput,
             nx = if (input$arrayinput=="Grid") input$nx else
@@ -1713,6 +1737,7 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "randomorigin", value = FALSE )
         updateRadioButtons(session, "randomtype", selected = "SRS")
         updateNumericInput(session, "numpgrid", value = 20)
+        updateNumericInput(session, "seedpgrid", value = 0)
         
         ## file
         updateTextInput(session, "args", "Optional arguments for read.traps()",
@@ -2150,12 +2175,22 @@ server <- function(input, output, session) {
                     rotatecode <- ""
                 }
                 
+                if (input$regiontype == "Random" || input$randomorigin) {
+                    if (input$seedpgrid>0)
+                        seed <- as.character(input$seedpgrid)
+                    else seed <- "NULL"
+                    seedcode <- paste0("set.seed(", seed, ")\n")
+                }
+                else {
+                    seedcode <- ""
+                }
                 
                 if (input$regiontype == "Systematic") {
                     arraycode <- paste0( 
                         regioncode,
                         clustercode,
                         rotatecode,
+                        seedcode,
                         "array <- make.systematic(spacing = ", input$sppgrid, ", ",
                         "region = region, cluster = cluster, \n",
                         "    origin = ", origincode, edgemethodcode, ")\n")
@@ -2165,10 +2200,12 @@ server <- function(input, output, session) {
                         clusterarg <- ",\n    cluster = cluster"
                     else 
                         clusterarg <- ""
+                    
                     arraycode <- paste0( 
                         regioncode,
                         clustercode,
                         rotatecode,
+                        seedcode,
                         "array <- trap.builder(n = ", input$numpgrid, ", ",
                         "method = '", input$randomtype, "', ",
                         "region = region", clusterarg, 
