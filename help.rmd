@@ -88,11 +88,11 @@ For a rectangular grid the options are:
 
 The **secr** function `make.grid` forms a rectangular detector layout. By default, column settings are equal to row settings; to alter this either change the column settings *after* the row setings, or see Options to uncouple rows and columns. The order of detectors is column-boustrophedonical (`make.grid` argument ID = "numxb"), so connecting them in sequence gives a plausible route. See `?make.grid` for more.
 
-The 'Suggest spacing' button finds the spacing with E(n) = E(r) and sets this for the current grid.
+The 'Suggest spacing' button finds the spacing with \(\mbox E (n) = \mbox E (r)\) and sets this for the current grid.
                 
 ### Line
 
-For a line the options are simply the number of detectors and the spacing. Lines are implemented with `make.grid` as for grids. The 'Suggest spacing' button finds the spacing with E(n) = E(r) and sets this for the current line.
+For a line the options are simply the number of detectors and the spacing. Lines are implemented with `make.grid` as for grids. The 'Suggest spacing' button finds the spacing with \(\mbox E (n) = \mbox E (r)\) and sets this for the current line.
 
 ### File
 
@@ -100,7 +100,7 @@ This uses a text file in the format for **secr** function `read.traps`. The file
 
 ### Region
 
-A region is a study area within which detectors will be placed either systematically on a square grid or at random. For both systematic and random options the elements may be a single detector or a cluster of detectors (Grid or Line). The region boundary may be provided either as a single text file ("xxx.txt") with two columns for the x and y coordinates of the perimeter, or as an ESRI polygon shapefile with at least three component files ("xxx.shp", "xxx.dbf" and "xxx.shx" where "xxx" is arbitrary). See Options | detector array to control the clipping of clusters that cross the boundary of the region.
+A region is a study area within which detectors will be placed either systematically on a square grid or at random. For both systematic and random options the elements may be a single detector or a cluster of detectors (Grid or Line). The region boundary may be provided either as a single text file ("xxx.txt") with two columns for the x and y coordinates of the perimeter, or as an ESRI polygon shapefile with at least three component files ("xxx.shp", "xxx.dbf" and "xxx.shx" where "xxx" is arbitrary). See Options | Detector array to control the clipping of clusters that cross the boundary of the region.
 
 #### Systematic
 
