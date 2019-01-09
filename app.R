@@ -2076,9 +2076,14 @@ server <- function(input, output, session) {
     ##############################################################################
 
     observeEvent(input$arrayinput, {
-        if (input$arrayinput=="Line") CF <- 1.3
-        else if (input$arrayinput=="Grid" & input$hollow) CF <- 1.2
-        else CF <- 1.0
+        if (input$arrayinput=="Line" || 
+            (input$arrayinput=="Region" & input$clustertype=="Line")) 
+            CF <- 1.3
+        else if ((input$arrayinput=="Grid" & input$hollow) ||
+                 (input$arrayinput=="Region" & input$clustertype=="Grid" & input$hollow))
+            CF <- 1.2
+        else 
+            CF <- 1.0
         updateSliderInput(session, "CFslider", value = CF)
     })
     
