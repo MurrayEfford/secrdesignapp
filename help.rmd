@@ -88,11 +88,11 @@ For a rectangular grid the options are:
 
 The **secr** function `make.grid` forms a rectangular detector layout. By default, column settings are equal to row settings; to alter this either change the column settings *after* the row setings, or see Options to uncouple rows and columns. The order of detectors is column-boustrophedonical (`make.grid` argument ID = "numxb"), so connecting them in sequence gives a plausible route. See `?make.grid` for more.
 
-The 'Suggest spacing' button finds the spacing with \(\mbox E (n) = \mbox E (r)\) and sets this for the current grid.
+The 'Suggest spacing' button finds the spacing with \(\small \mbox E (n) = \mbox E ( r )\) and sets this for the current grid.
                 
 ### Line
 
-For a line the options are simply the number of detectors and the spacing. Lines are implemented with `make.grid` as for grids. The 'Suggest spacing' button finds the spacing with \(\mbox E (n) = \mbox E (r)\) and sets this for the current line.
+For a line the options are simply the number of detectors and the spacing. Lines are implemented with `make.grid` as for grids. The 'Suggest spacing' button finds the spacing with \(\small \mbox E (n) = \mbox E ( r )\) and sets this for the current line.
 
 ### File
 
