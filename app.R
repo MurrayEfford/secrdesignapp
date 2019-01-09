@@ -7,6 +7,7 @@ if (compareVersion(as.character(pver), '2.5.5') < 0)
          call. = FALSE)
 
 # requires package rgdal to read shapefiles
+# requires package sp for bbox and plot method for SpatialPolygons
 # requires package parallel for max cores in simulate options (distributed with base R)
 # requires package tools for file path when reading shapefiles (distributed with base R)
 

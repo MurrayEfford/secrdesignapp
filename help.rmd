@@ -1,7 +1,7 @@
 ---
-title: "secrdesign app 1.0"
+title: "secrdesign app 1.1"
 author: "Murray Efford"
-date: '2018-12-10'
+date: '2019-01-09'
 output:
   pdf_document:
     toc: yes
@@ -13,7 +13,7 @@ output:
 
 # An interactive app for designing spatially explicit capture--recapture studies
 
-## Murray Efford 2018-12-10
+## Murray Efford 2019-01-09
 
 # Contents
   [Introduction](#introduction)  
@@ -37,7 +37,7 @@ The approximation is biased low for some layouts, especially when sample size is
 
 Tip: on small displays, running your browser in full-screen mode will avoid the need to scroll down (often F11 will get you there; otherwise try the options menu).
 
-IMPORTANT NOTE: Maximising precision is only one component of study design. Sampling must also be representative of the population in the region of interest. Linear arrays are unreliable when home ranges are elongated in a common direction ([Efford 2018b](#references)).
+IMPORTANT NOTE: Maximising precision is only one component of study design. Sampling must also be representative of the population in the region of interest. Linear arrays are unreliable when home ranges are elongated in a common direction ([Efford 2019](#references)).
 
 # Design  <a name="designspecs"></a>
 
@@ -52,10 +52,14 @@ IMPORTANT NOTE: Maximising precision is only one component of study design. Samp
   </tr>
 </table> 
 <br>
-Options for detector type follow **secr** ([Efford (2018c)](#references)): "multi" refers to a multi-catch trap; "proximity" to binary proximity detectors, and "count" to detectors that yield integer counts. Counts are assumed to be Poisson-distributed.
+Options for detector type follow **secr** ([Efford (2018b)](#references)): "multi" refers to a multi-catch trap; "proximity" to binary proximity detectors, and "count" to detectors that yield integer counts. Counts are assumed to be Poisson-distributed.
 <br>
 
-The detector layout may be specified as a rectangular grid or line (via `make.grid`), or read from a file. For a rectangular grid the options are:
+The detector layout ('Array') may be specified as a rectangular grid or line (via `make.grid`), read from a file, or as a systematic or random array within a region. Code for generating an array according to the current settings is shown on the Simulation page.
+
+### Grid
+
+For a rectangular grid the options are:
 
 <table style="width:40%">
   <tr>
@@ -84,8 +88,35 @@ The detector layout may be specified as a rectangular grid or line (via `make.gr
 
 The **secr** function `make.grid` forms a rectangular detector layout. By default, column settings are equal to row settings; to alter this either change the column settings *after* the row setings, or see Options to uncouple rows and columns. The order of detectors is column-boustrophedonical (`make.grid` argument ID = "numxb"), so connecting them in sequence gives a plausible route. See `?make.grid` for more.
 
-<!-- A further option 'Pgrid' constructs a grid within a polygon. The polygon boundary is input from a file. -->
-                          
+The 'Suggest spacing' button finds the spacing with E(n) = E(r) and sets this for the current grid.
+                
+### Line
+
+For a line the options are simply the number of detectors and the spacing. Lines are implemented with `make.grid` as for grids. The 'Suggest spacing' button finds the spacing with E(n) = E(r) and sets this for the current line.
+
+### File
+
+This uses a text file in the format for **secr** function `read.traps`. The file typically should have three columns (trapID, x, y) with no headers. Optional arguments separated by commas may be used to customise input (e.g., skip, which is passed through `read.traps` to `read.table`).
+
+### Region
+
+A region is a study area within which detectors will be placed either systematically on a square grid or at random. For both systematic and random options the elements may be a single detector or a cluster of detectors (Grid or Line). The region boundary may be provided either as a single text file ("xxx.txt") with two columns for the x and y coordinates of the perimeter, or as an ESRI polygon shapefile with at least three component files ("xxx.shp", "xxx.dbf" and "xxx.shx" where "xxx" is arbitrary). See Options | detector array to control the clipping of clusters that cross the boundary of the region.
+
+#### Systematic
+
+A systematic array is specified by the cluster design, the spacing between cluster centres and the origin. By default the origin is fixed at (+sp/2, +sp/2) relative to the lower left corner of the bounding box of the region, where sp is the array spacing. Alternately the origin may be chosen at random within a square of side sp. 
+
+#### Random
+
+Two algorithms are offered for random placement - a simple random sample of points (SRS) or a balanced spatial sample as described by Stevens and Olsen (2004) and implemented in package **spsurvey** (Kincaid and Olsen 2018).
+
+#### Rotation
+
+Clusters are rotated by the specified number of degrees (there's not much to gain from this).
+
+#### Random seed
+Choosing a random origin or random array results in a set of locations that changes whenever one of the detector options changes. For repeatable randomisation set the random seed to an integer greater than zero.
+
 ## Parameters
             
 <table style="width:50%">
@@ -123,8 +154,8 @@ See the [Detectfn](#detectfnplot) plot for the effect of given lambda0 and sigma
     <td>number of sampling occasions (times detectors were checked)</td>
   </tr>
   <tr>
-    <td>Clusters</td>
-    <td>number of replicate identical arrays</td>
+    <td>Arrays</td>
+    <td>number of replicate identical arrays (not for Region array)</td>
   </tr>
   <tr>
     <td>Distribution</td>
@@ -136,23 +167,16 @@ See the [Detectfn](#detectfnplot) plot for the effect of given lambda0 and sigma
 
 A study may be extended by sampling on more occasions. The number of recaptures $r$ increases indefinitely, but the number of distinct individuals $n$ levels off.
 
+Setting Arrays > 1 is a useful way to predict the outcome from multiple clusters when no region has been specified.
 Replicating the sampling effort at many independent locations within the same population increases both $r$ and $n$. Using multiple clusters (repeated arrays) is also a way to sample a large region. We assume clusters are far enough apart that no animal is detected on more than one cluster (array).
     
 <a name="distribution"></a>
 
 The Distribution radio button toggles between two models for the number of detected individuals $n$. The "Binomial" option corresponds to fixed number $N$ in the masked area and a binomial point process for the distribution of activity centres.  The "Poisson" option corresponds to Poisson $N$ and a Poisson point process for activity centres. The chosen distribution is used in [simulations](#simulation) for both generating data and fitting a model.
 
-## Action buttons
+## Actions
 
 <table style="width:40%">
-  <tr>
-    <td>All defaults</td>
-    <td>Reset all input options to defaults</td>
-  </tr>
-  <tr>
-    <td>Suggest spacing</td>
-    <td>Finds spacing with E(n) = E(r) and sets this for current grid or line</td>
-  </tr>
   <tr>
     <td>Simulate</td>
     <td>Simulate current scenario with settings on Simulation page</td>
@@ -161,12 +185,16 @@ The Distribution radio button toggles between two models for the number of detec
     <td>Add to summary</td>
     <td>Transfer scenario and results to summary table</td>
   </tr>
+  <tr>
+    <td>Reset all</td>
+    <td>Reset all input options to defaults</td>
+  </tr>
 </table> 
 
 <br>
 
-'Suggest spacing' does not apply when the detector array is input from a file.
-                
+Simulation output is shown on the Simulation page and added to the Summary by default.
+
 ## Results  <a name="nrmspecs"></a>
 
 *Values in the Results window are updated automatically when the inputs change.*
@@ -212,6 +240,8 @@ least once ([Borchers and Efford 2008](#references)). \(a\) varies with the numb
 7\. See explanation below. <br>
 8\. The diameter of an array is the greatest distance between two detectors. Arrays less than \(5\sigma\) in diameter may not be large enough to estimate sigma reliably. <br>
 
+Many of the Results require integration over possible animal locations. This is approximated by summing pixels in the 'habitat mask' defined in Options | Habitat mask. The mask specification is usually not critical, but you may wish to play (e.g., cut nx to 32 for faster refresh). 
+
 The relative standard error RSE (aka CV) is a measure of estimator precision. \(\small \mbox{RSE}(\hat D) = \mbox{SE} (\hat D) / \hat D \). For a particular design the precision may be predicted approximately from the expected values of \(n\) and \(r\) -- this is the "rule-of-thumb" RSE. The approximation is intended for Poisson-distributed $n$ (see [Distribution](#distribution)). Sampling variance is predictably less when $n$ is binomial; the binomial $\mbox{RSE}_B$ for a given Poisson $\mbox{RSE}_P$ depends on the effective sampling area $a$ and total mask area $A$ as follows
 $$\mbox{RSE}_B = \sqrt {\mbox{RSE}_P^2 - 1 / (DA)}.$$
 This adjustment is applied whenever a binomial distribution is selected.
@@ -224,7 +254,7 @@ The raw "rule-of-thumb" RSE is further adjusted by a correction factor specified
 
 ### Array
 
-Detector layout as input from file or constructed with `make.grid`
+A plot of the current detector layout. Coordinates may be viewed or output to a text file with the 'Save' link; the code used to generate the array is included in the header. The file is in a format suitable for `secr::read.traps`.
 
 ### Detectfn   <a name="detectfnplot"></a>
 
@@ -250,7 +280,7 @@ Effect size is the ratio of final density \(\small D_2\) to initial density \(\s
 
 The curve is initially computed for the rule-of-thumb RSE from the current design. Use the slider to vary this. Especially, consider adding a safety margin for underestimation of RSE.
 
-The default method assumes that \(\small \mbox{RSE}(\hat D)\) is the same in the initial and final surveys. It is more likely that \(\small \mbox{RSE}(\hat D)\) will increase as density declines. An adjustment is applied to the final RSE when the 'Adjust RSE' box is ticked:  \( \small \mbox{RSE}(\hat D_2) =   \sqrt {D_1/D_2} \mbox{RSE}(\hat D_1) \).
+The default method assumes that \(\small \mbox{RSE}(\hat D)\) is the same in the initial and final surveys. It is more likely that \(\small \mbox{RSE}(\hat D)\) will increase as density declines. An adjustment is applied to the final RSE when the 'Adjust RSE' box is ticked:  \(\small \mbox{RSE}(\hat D_2) =   \sqrt {D_1/D_2} \mbox{RSE}(\hat D_1) \).
 
 #### Confidence interval for population change
 
@@ -265,7 +295,7 @@ As an alternative to conventional power analysis we can construct intervals for 
 <table style="width:40%">
   <tr>
     <td>Travel per km $ </td>
-    <td> within-array </td>
+    <td> travel from detector to detector within an array </td>
   </tr>
   <tr>
     <td>Cost per array $</td>
@@ -274,6 +304,10 @@ As an alternative to conventional power analysis we can construct intervals for 
   <tr>
     <td>Cost per detector $ </td>
     <td> one-off cost of purchase and installation </td>
+  </tr>
+  <tr>
+    <td>Cost per visit $ </td>
+    <td> fixed cost per occasion, including set-up occasion </td>
   </tr>
   <tr>
     <td>Cost per detection $ </td>
@@ -327,9 +361,9 @@ Code is provided for users who want to go further. Multiple scenarios may be eva
 
 ### Fit simulated data
 
-**secrdesign** >= 2.5.5 allows a choice between two functions for fitting closed-population SECR models: `secr.fit` in package **secr** and `openCR.fit` in package **openCR** ([Efford 2018d](#references)). The default is to use the faster multi-threaded code in `openCR.fit` (for this it is best to leave ncores = 1).
+**secrdesign** >= 2.5.5 allows a choice between two functions for fitting closed-population SECR models: `secr.fit` in package **secr** and `openCR.fit` in package **openCR** ([Efford 2018c](#references)). The default is to use the faster multi-threaded code in `openCR.fit` (for this it is best to leave ncores = 1).
 
-`method = 'none'` by-passes maximisation and evaluates the Hessian (and hence the variance-covariance matrix) at the true values of the parameters. This is a fast way to predict \( \small \mbox{RSE}(\hat D) \); it is apparently reliable and requires few replicates. Bias is not estimated.
+`method = 'none'` by-passes maximisation and evaluates the Hessian (and hence the variance-covariance matrix) at the true values of the parameters. This is a fast way to predict \(\small \mbox{RSE}(\hat D)\); it is apparently reliable and requires few replicates. Bias is not estimated.
 
 If the 'Add to summary' box is ticked then simulation results are added automatically to the [Summary](#summary) table.
 
@@ -392,7 +426,9 @@ If the 'Add to summary' box is ticked then simulation results are added automati
 
 # Spacing  <a name="spacingspecs"></a>
 
-*This page evaluates the effect of detector spacing on precision and total cost. The array geometry is fixed on the* [Design](#designspecs) *page. A numerical search is performed for the array spacing that minimises the rule-of-thumb \( \small \mbox{RSE}(\hat D) \).*
+This page evaluates the effect of detector spacing on precision and total cost. The array geometry is fixed on the [Design](#designspecs) page. A numerical search is performed for the array spacing that minimises the rule-of-thumb \(\small \mbox{RSE}(\hat D) \).
+
+The Spacing tab is hidden when the detector array is of the File or Region types. The effect of using multiple clusters with a particular geometry may be emulated by setting the Array number.
 
 ## Standalone R code
 
@@ -453,15 +489,20 @@ Efford, M. G. (2018a) secrdesign: Sampling design for spatially explicit
   capture--recapture. R package version 2.5.5.
   https://CRAN.R-project.org/package=secrdesign
 
-Efford, M. G. (2018b) Non-circular home ranges and the estimation of population density. *Ecology* (in press).
+Efford, M. G. (2018b) secr: Spatially explicit capture--recapture models. R package version 3.1.8. https://CRAN.R-project.org/package=secr
 
-Efford, M. G. (2018c) secr: Spatially explicit capture--recapture models. R package version 3.1.8. https://CRAN.R-project.org/package=secr
+Efford, M. G. (2018c) openCR: Open population capture--recapture models. R package version 1.3.0. https://CRAN.R-project.org/package=openCR
 
-Efford, M. G. (2018d) openCR: Open population capture--recapture models. R package version 1.3.0. https://CRAN.R-project.org/package=openCR
+Efford, M. G. (2019) Non-circular home ranges and the estimation of population density. *Ecology* (in press).
 
 Efford, M. G., Dawson, D. K., Jhala, Y. V. and Qureshi, Q. (2016) 
 Density-dependent home-range size revealed by spatially explicit 
 capture--recapture. *Ecography* **39**, 676--688. 
+
+Kincaid, T. M. and Olsen, A. R. (2018) spsurvey: Spatial Survey Design and Analysis. R package version 3.4. https://CRAN.R-project.org/package=spsurvey.
+
+Stevens, D. L. Jr and Olsen, A. R. (2004) Spatially balanced sampling of natural resources. 
+*Journal of the American Statistical Association* **99**, 262--278.
 
 ----------------------------------------------------
 
