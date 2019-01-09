@@ -2,7 +2,7 @@
 
 secrdesignapp is a partial interactive interface to the R package [secrdesign 2.5.5](https://CRAN.R-project.org/package=secrdesign). See the Help tab for details.
 
-Version 1.1 is in progress. The main new feature is support for systematic and random arrays within study area polygon(s). The help has yet to be updated.
+Version 1.1 is a beta release. The main new feature is support for systematic and random designs within a region of interest. 
 
 Click this link to run secrdesignapp 1.0 in your web browser from a University of Otago server:
 
