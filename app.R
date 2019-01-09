@@ -721,9 +721,12 @@ ui <- fluidPage(
                                                      pre = "CF ",
                                                      post = "",
                                                      width = 340),
-                                         checkboxInput("updateCFbox", "Update from simulations",
+                                         fluidRow(
+                                             column(8, checkboxInput("updateCFbox", "Update from simulations",
                                                        value = TRUE,
-                                                       width = 180)
+                                                       width = 180)),
+                                             column(4, actionButton("resetCFbtn", "Reset"))
+                                         )
                                      )
                               )
                           )
@@ -2075,7 +2078,7 @@ server <- function(input, output, session) {
     
     ##############################################################################
 
-    observeEvent(input$arrayinput, {
+    observeEvent(c(input$arrayinput, input$resetCFbtn), {
         if (input$arrayinput=="Line" || 
             (input$arrayinput=="Region" & input$clustertype=="Line")) 
             CF <- 1.3
