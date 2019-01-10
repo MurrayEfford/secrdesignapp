@@ -16,6 +16,7 @@ linewidth <- 2  # for various plots
 # Define UI 
 ui <- fluidPage(
     includeCSS("secrdesignstyle.css"),
+     withMathJax(),
     tags$head(tags$style(".mypanel{margin-top:5px; margin-bottom:10px; padding-bottom: 5px;}")),
     br(),
     navlistPanel(id = "navlist", widths = c(2,10), well=TRUE,
@@ -240,8 +241,8 @@ ui <- fluidPage(
                                                 )
                                          )
                                      ),
-                                     fluidRow(column(12,textInput("title", "Note for Summary", value = "", 
-                                                                  placeholder = "anything you like"))),
+                                     fluidRow(column(12,textInput("title", "Note", value = "", 
+                                                                  placeholder = "scenario text for Summary"))),
                                      
                                      h2("Actions"),
 
@@ -1910,8 +1911,8 @@ server <- function(input, output, session) {
         updateNumericInput(session, "sigma", value = 25)
 
         ## general
-        updateTextInput(session, "title", "Note for Summary", value = "", 
-                        placeholder = "anything you like")
+        updateTextInput(session, "title", "Note", value = "", 
+                        placeholder = "scenario text for Summary")
         updateNumericInput(session, "noccasions", value = 5)
         updateNumericInput(session, "nrepeats", value = 1)
         updateTabsetPanel(session, "tabs", selected = "Array")
