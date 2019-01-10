@@ -264,7 +264,8 @@ ui <- fluidPage(
                                                    plotOutput("arrayPlot", height = 340),
                                                    fluidRow(
                                                        column(11, verbatimTextOutput("ntrapPrint")),
-                                                       column(1, br(),downloadLink("downloadArray", "Save"))
+                                                       column(1, br(), conditionalPanel("output.ntrapPrint!= ''",
+                                                                                        downloadLink("downloadArray", "Save")))
                                                    )
                                           ),
                                           tabPanel("Detectfn", plotOutput("detnPlot", height = 320)),
@@ -410,7 +411,9 @@ ui <- fluidPage(
                                                 actionButton("simulatebtn", "Click to execute", width = 200))
                                      ),
                                      h2("Results"),
-                                     verbatimTextOutput("simPrint")
+                                     fluidRow(
+                                         column(9, verbatimTextOutput("simPrint"))
+                                     )
                               ),
                               column(3,
                                      h2("Simulation control"),
@@ -485,10 +488,15 @@ ui <- fluidPage(
                                          )
                                      ),
                                      br(),
-                                     br(),
                                      h2("Results"),
                                      verbatimTextOutput("spacingPrint"),
-                                     verbatimTextOutput("spacingPrint2")
+                                     fluidRow(
+                                         column(9, verbatimTextOutput("spacingPrint2"))
+                                     ),
+                                     fluidRow(
+                                         column(2, conditionalPanel("output.validspacing==true",
+                                                                    downloadLink("downloadSpacing", "Save")))
+                                     )
                               ),
                               column(5,
                                      br(),
@@ -1466,8 +1474,11 @@ server <- function(input, output, session) {
     ## pop
     ## Pxy
     ## nrm
+    ## validspacing
     
     ##############################################################################
+
+    output$validspacing <- reactive({rotrv$current})   ## for conditionalPanel                                  
 
     arraypathlength <- reactive({
         trps <- array()
@@ -2704,6 +2715,15 @@ server <- function(input, output, session) {
         }
     )
 
+    output$downloadSpacing <- downloadHandler(
+        filename = "spacing.RData",
+        content = function(file) {
+            spacingOutput <- rotrv$output
+            save(spacingOutput, file = file)
+        }
+    )
+    outputOptions(output, "validspacing", suspendWhenHidden = FALSE)  
+ 
     ##############################################################################
     # tidy end of session - app closes in R
     

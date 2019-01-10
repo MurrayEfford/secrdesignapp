@@ -450,6 +450,14 @@ This code shows how `optimalSpacing` may be used to evaluate spacings. An intern
 
 <br>
 
+Use the 'Save' link to generate an RData file containing the object returned by `secrdesign::optimalSpacing`. The object is named ``spacingOutput`` with class `c('optimalSpacing', 'list')` for which there is a plot method. Rule-of-thumb results are in component `rotRSE` and simulation results, if any, are in component `simRSE`. Use the results in an R session like this:
+```{r, eval = FALSE}
+load("spacing.RData")
+str(spacingOutput)
+spacingOutput$rotRSE
+plot(spacingOutput)
+```
+
 ## Tabbed plots
 
 ### RSE
