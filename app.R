@@ -258,7 +258,11 @@ ui <- fluidPage(
                               
                               column (4,
                                       h2("Results"),
-                                      verbatimTextOutput("nrmPrint"),
+                                      fluidRow(
+                                          column(11, verbatimTextOutput("nrmPrint")),
+                                          column(1, conditionalPanel("output.nrmPrint!= ''",
+                                                                     downloadLink("downloadnrmcode", "R")))
+                                      ),
                                       br(),
                                       tabsetPanel(
                                           tabPanel("Array",
@@ -788,6 +792,8 @@ server <- function(input, output, session) {
     ## readpolygon
     ## addtosummary
     ## arraycode
+    ## maskcode
+    ## nrmcode
     
     ##############################################################################
     
@@ -1369,6 +1375,71 @@ server <- function(input, output, session) {
     }
     ##############################################################################
 
+    maskcode <- function (arrayname, polyname) {
+        type <- if (input$maskshapebtn == 'Rectangular') 'traprect' else 'trapbuffer'
+        buffer <- as.character(round(input$habxsigma * input$sigma,2))
+        if (!input$polygonbox) {
+            polycode <- ""
+        }
+        else {
+            polyfilename <- input$habpolyfilename[1,1]
+            if (tolower(tools::file_ext(polyfilename)) == "txt") {
+                polycode <- paste0( 
+                    "coord <- read.table('", polyfilename, "')   # read boundary coordinates\n",
+                    "poly <- secr:::boundarytoSP(coord)  # convert to SpatialPolygons\n")
+            }
+            else {
+                polycode <- paste0(
+                    "poly <- rgdal::readOGR(dsn = '", 
+                    tools::file_path_sans_ext(basename(polyfilename)), 
+                    ".shp')    # polygon(s) from shapefile\n"
+                )
+            }
+        }
+        paste0(polycode,
+               "mask <- make.mask (", arrayname, 
+               ", buffer = ", buffer, 
+               ", nx = ", input$habnx, 
+               ", type = '", type, "'",  
+               if (polycode == "") "" else ", poly = poly",
+               ")\n")
+    }
+    ##############################################################################
+
+    nrmcode <- function() {
+        pathl <- as.character(arraypathlength()/1000)
+        detfn <- input$detectfn
+        if (is.character(detfn)) detfn <- paste0("'", detfn, "'")
+        costcode <- if (nrm()$totalcost==0) ""
+        else paste0(
+            ",\n    unitcost = list(perkm = ", input$perkm, ", ",
+            "perarray = ", input$perarray, ", ",
+            "perdetector = ", input$perdetector, ",\n",
+            "                    pervisit = ", input$pervisit, ", ",
+            "perdetection = ", input$perdetection, ")",
+            ",\n    routelength = ", pathl,  ", costing = TRUE")
+        paste0(
+            "# R code to generate main results\n",
+            "library(secrdesign)\n\n",
+            "# array type : ", input$arrayinput, "\n",
+            arraycode(),
+            "\n",
+            maskcode("array"),
+            "\n",
+            "scen <- make.scenarios(trapsindex = 1, noccasions = ", input$noccasions, ", ", 
+            "nrepeats = ", nrepeats(), ",\n    D = ", input$D, ", sigma = ", input$sigma, ", ",
+                "lambda0 = ", input$lambda0, ", detectfn = ", detfn, ")\n\n",
+            
+            "scensum <- scenarioSummary(scen, trapset = array, mask = mask, CF = ", 
+            round(input$CFslider, 3), 
+            costcode, ")\n\n",
+            "# scensum is a dataframe with one row and columns for En, Er etc.\n",
+            "# see ?scenarioSummary for details")
+    }
+    ##############################################################################
+    
+
+
     ## renderUI
 
     ## persqkm
@@ -1664,7 +1735,7 @@ server <- function(input, output, session) {
     }
     )
     ##############################################################################
-    
+
     pop <- reactive(
         {
             poprv$v
@@ -2303,15 +2374,12 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$nrmPrint <- renderText({
-                progress <- Progress$new(session, min=1, max=15)
+        progress <- Progress$new(session, min = 1, max = 15)
         on.exit(progress$close())
         progress$set(message = 'Updating...',
                      detail = '')
 
-        # removeNotification("lownr")
-        # showNotification("Updating...", type = "warning", id = "updating", duration = NULL)
         nrmval <- nrm()
-        # removeNotification("updating")
         if (is.null(nrmval)) return (NULL)
         star <- if (nrepeats()>1) "*" else ""
         nrepeatstr <- if (nrepeats()>1) paste0("\n* ", nrepeats(), " arrays") else ""
@@ -2727,6 +2795,14 @@ server <- function(input, output, session) {
             spacingOutput <- rotrv$output
             save(spacingOutput, file = file)
         }
+    )
+    output$downloadnrmcode <- downloadHandler(
+        filename = "nrmcode.R",
+        content = function(file) {
+            nrmtext <- nrmcode()
+            cat(nrmtext, file = file)
+        }
+        , contentType = "text/R"
     )
     outputOptions(output, "validspacing", suspendWhenHidden = FALSE)  
  
