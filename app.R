@@ -1025,10 +1025,10 @@ server <- function(input, output, session) {
     }
     ##############################################################################
     
-        readpolygon <- function (fileupload) {
-        if (is.null(fileupload))
-            poly <- NULL
-        else {
+    readpolygon <- function (fileupload) {
+        poly <- NULL
+        if (!is.null(fileupload))
+        {
             if (tolower(tools::file_ext(fileupload[1,1])) == "txt") {
                 coord <- read.table(fileupload[1,4])
                 poly <- secr:::boundarytoSP(coord[,1:2])
@@ -1039,19 +1039,20 @@ server <- function(input, output, session) {
                     file.rename(fileupload[i,4], paste0(dsnname,"/",fileupload[i,1]))}
                 filename <- list.files(dsnname, pattern="*.shp", full.names=FALSE)
                 layername <- tools::file_path_sans_ext(basename(filename))
-                
-                if (is.null(filename))
-                    stop("provide valid filenames")
-                if (!requireNamespace("rgdal"))
-                    stop("need package rgdal to read shapefiles")
-                poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
-                
-                # temporarily block 2019-01-06                
-                # if (sum (pointsInPolygon(array(), poly)) == 0) {
-                #     showNotification("No detectors in polygon - ignoring Clip to polygon",
-                #                      type = "warning", id = "noclip", duration = 5)
-                #     poly <- NULL
-                # }
+                if (is.null(filename) || 
+                    !(any(grepl(".shp", fileupload[,1])) &&
+                      any(grepl(".dbf", fileupload[,1])) &&
+                      any(grepl(".shx", fileupload[,1])))) {
+                    showNotification("need shapefile components .shp, .dbf, .shx",
+                                     type = "error", id = "nofile", duration = NULL)
+                }
+                else  if (!requireNamespace("rgdal"))
+                    showNotification("need package rgdal to read shapefile", type = "error", id = "norgdal", duration = NULL)
+                else {
+                    removeNotification(id = "nofile")
+                    removeNotification(id = "norgdal")
+                    poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
+                }
             }
         }
         poly   
@@ -2090,6 +2091,10 @@ server <- function(input, output, session) {
     ##############################################################################
 
     observeEvent(c(input$arrayinput, input$resetCFbtn), {
+        if (input$arrayinput != "Region") {
+            removeNotification(id = "nofile")
+            removeNotification(id = "norgdal")
+        }
         if (input$arrayinput=="Line" || 
             (input$arrayinput=="Region" & input$clustertype=="Line")) 
             CF <- 1.3

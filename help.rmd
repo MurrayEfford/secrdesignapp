@@ -100,7 +100,12 @@ This uses a text file in the format for **secr** function `read.traps`. The file
 
 ### Region
 
-A region is a study area within which detectors will be placed either systematically on a square grid or at random. For both systematic and random options the elements may be a single detector or a cluster of detectors (Grid or Line). The region boundary may be provided either as a single text file ("xxx.txt") with two columns for the x and y coordinates of the perimeter, or as an ESRI polygon shapefile with at least three component files ("xxx.shp", "xxx.dbf" and "xxx.shx" where "xxx" is arbitrary). See Options | Detector array to control the clipping of clusters that cross the boundary of the region.
+A region is a study area within which detectors will be placed either systematically on a square grid or at random. For both systematic and random options the elements may be a single detector or a cluster of detectors (Grid or Line). The region boundary may be provided as either
+
+* a single text file (.txt) with two columns for the x and y coordinates of the perimeter, or 
+* an ESRI polygon shapefile with at least three component files (.shp, .dbf and .shx) selected together. 
+
+See Options | Detector array to control the clipping of clusters that cross the boundary of the region.
 
 #### Systematic
 
