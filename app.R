@@ -404,148 +404,150 @@ ui <- fluidPage(
                           )
                  ),
                  #################################################################################################
-
+                 
                  tabPanel("Simulation",
                           fluidRow(
-                              column(6,
-                                     h2("Standalone R code"),
-                                     verbatimTextOutput("simcodePrint"),
-                                     
-                                     fluidRow(
-                                         column(5,
-                                                actionButton("simulatebtn", "Click to execute", width = 200))
-                                     ),
-                                     h2("Results"),
-                                     fluidRow(
-                                         column(9, verbatimTextOutput("simPrint"))
-                                     )
-                              ),
-                              column(3,
+                              column(5,
                                      h2("Simulation control"),
                                      fluidRow(
-                                         column(8,
+                                         column(5, 
                                                 wellPanel(class = "mypanel", 
-                                                    radioButtons("packagebtn", label = "Fit simulated data",
-                                                                 choices = c("openCR.fit", "secr.fit"))
+                                                          radioButtons("packagebtn", label = "Fit simulated data", 
+                                                                       choices = c("openCR.fit", "secr.fit")),
+                                                          selectInput("method", "Method",
+                                                                      choices = c("Newton-Raphson", "Nelder-Mead", "none"),
+                                                                      selected = "none", width=160),
+                                                          checkboxInput("simappendbox", "Add to Summary", TRUE)
                                                 )
-                                         )
-                                         
-                                     ),
-                                     fluidRow(
-                                         column(8,
+                                         ),
+                                         column(7,
                                                 wellPanel(class = "mypanel", 
-                                                    
-                                                    numericInput("nrepl",
-                                                                 "Number of replicates",
-                                                                 min = 1,
-                                                                 max = 1000,
-                                                                 value = 5,
-                                                                 step = 1,
-                                                                 width = 180),
-                                                    numericInput("ncores",
-                                                                 "Number of cores",
-                                                                 min = 1,
-                                                                 max = parallel::detectCores(),
-                                                                 value = 1,
-                                                                 step = 1,
-                                                                 width = 180),
-                                                    numericInput("seed",
-                                                                 "Random seed",
-                                                                 min = 0,
-                                                                 max = 1e10,
-                                                                 value = 0,
-                                                                 step = 1,
-                                                                 width = 180),
-                                                    numericInput("simnx",
-                                                                 "nx",
-                                                                 min = 10,
-                                                                 max = 1000,
-                                                                 value = 32,
-                                                                 step = 1,
-                                                                 width = 180),
-                                                    selectInput("method", "method",
-                                                                choices = c("Newton-Raphson", "Nelder-Mead", "none"),
-                                                                selected = "none", width=160),
-                                                    checkboxInput("simappendbox", "Add to Summary", TRUE)
-                                                    
-                                                )
-                                         )
+                                                          
+                                                          fluidRow(
+                                                              column(6, numericInput("nrepl",
+                                                                                     "Number of replicates",
+                                                                                     min = 1,
+                                                                                     max = 1000,
+                                                                                     value = 5,
+                                                                                     step = 1,
+                                                                                     width = 180)),
+                                                              column(6, numericInput("ncores",
+                                                                                     "Number of cores",
+                                                                                     min = 1,
+                                                                                     max = parallel::detectCores(),
+                                                                                     value = 1,
+                                                                                     step = 1,
+                                                                                     width = 180))),
+                                                          fluidRow(
+                                                              column(6, numericInput("seed",
+                                                                                     "Random seed",
+                                                                                     min = 0,
+                                                                                     max = 1e10,
+                                                                                     value = 0,
+                                                                                     step = 1,
+                                                                                     width = 180)),
+                                                              column(6, numericInput("simnx",
+                                                                                     "nx",
+                                                                                     min = 10,
+                                                                                     max = 1000,
+                                                                                     value = 32,
+                                                                                     step = 1,
+                                                                                     width = 180)))
+                                                ),
+                                                                                                          
+                                                br(),
+                                                actionButton("simulatebtn", "Click to execute", width = 200)
+
                                      )
-                              )
-                          )
-                 ),
-
-                 #################################################################################################
-
-                 tabPanel("Spacing",
-                          fluidRow(
-                              column(5,
+                                     ),
+                                     
                                      h2("Standalone R code"),
-                                     verbatimTextOutput("spacingcodePrint"),
-
-                                     fluidRow(
-                                         column(6, 
-                                                actionButton("spacingbtn", "Click to execute", width = 200)
-                                         ),
-                                         column(6, 
-                                                checkboxInput("spacingsimbox", "with simulations", value = FALSE, width = 200),
-                                                helpText(HTML('See Simulation for control options'))
-                                         )
-                                     ),
-                                     br(),
-                                     h2("Results"),
-                                     verbatimTextOutput("spacingPrint"),
-                                     fluidRow(
-                                         column(9, verbatimTextOutput("spacingPrint2"))
-                                     ),
-                                     fluidRow(
-                                         column(2, conditionalPanel("output.validspacing==true",
-                                                                    downloadLink("downloadSpacing", "Save")))
-                                     )
-                              ),
-                              column(5,
-                                     br(),
-                                     tabsetPanel(
-                                         type = "pills", id = "spacingtabs",
-                                         tabPanel("RSE",
-                                                  fluidRow(
-                                                      column(6,
-                                                             # Show a plot of the rule-of-thumb RSE
-                                                             plotOutput("RSEPlot", width = "520px", height = "400px")
-                                                      )
-                                                  )
-                                         ),
-                                         tabPanel("nrm",
-                                                  fluidRow(
-                                                      br(),
-                                                      column(1),
-                                                      column(11,verbatimTextOutput("nrmlegend"))
-                                                  ),
-                                                  fluidRow(
-                                                      column(6,
-                                                             # Show a plot of the expected number of detections vs spacing
-                                                             plotOutput("nrmPlot", width = "520px", height = "400px")
-                                                      )
-                                                  )
-                                         ),
-                                         tabPanel("Cost",
-                                                  fluidRow(
-                                                      column(6,
-                                                             # Show a plot of the cost vs spacing
-                                                             plotOutput("costPlot", width = "520px", height = "400px")
-                                                      )
-                                                  )
-
-
-                                         )
-                                     )
-                              )
+                                     verbatimTextOutput("simcodePrint")
+                                     
+                          ),
+                          column(5,
+                                 h2("Results"),
+                                 fluidRow(
+                                     column(9, verbatimTextOutput("simPrint"))
+                                 )
                           )
+                          )
+    ),
+    
+    #################################################################################################
+    
+    tabPanel("Spacing",
+             fluidRow(
+                 column(5,
+                        fluidRow(
+                            column(12, h2("Standalone R code"),
+                            verbatimTextOutput("spacingcodePrint"))
+                        ),
+                        
+                        fluidRow(
+                            column(6, 
+                                   actionButton("spacingbtn", "Click to execute", width = 200)
+                            ),
+                            column(6, 
+                                   checkboxInput("spacingsimbox", "with simulations", value = FALSE, width = 200),
+                                   helpText(HTML('See Simulation for control options'))
+                            )
+                        )
                  ),
-                 #################################################################################################
-
-                 tabPanel("Summary",
-                          fluidRow(
+                 column(5,
+                        h2("Results"),
+                        fluidRow(
+                            column(10, verbatimTextOutput("spacingPrint")),
+                            column(2, conditionalPanel("output.validspacing==true",
+                                                       downloadLink("downloadSpacing", "Save oS")))
+                        ),
+                        
+                        fluidRow(
+                            column(9, verbatimTextOutput("spacingPrint2"))
+                        ),
+                        br(),
+                        tabsetPanel(
+                            type = "pills", id = "spacingtabs",
+                            tabPanel("RSE",
+                                     fluidRow(
+                                         column(6,
+                                                # Show a plot of the rule-of-thumb RSE
+                                                plotOutput("RSEPlot", width = "520px", height = "400px")
+                                         )
+                                     )
+                            ),
+                            tabPanel("nrm",
+                                     fluidRow(
+                                         br(),
+                                         column(1),
+                                         column(11,verbatimTextOutput("nrmlegend"))
+                                     ),
+                                     fluidRow(
+                                         column(6,
+                                                # Show a plot of the expected number of detections vs spacing
+                                                plotOutput("nrmPlot", width = "520px", height = "400px")
+                                         )
+                                     )
+                            ),
+                            tabPanel("Cost",
+                                     fluidRow(
+                                         column(6,
+                                                # Show a plot of the cost vs spacing
+                                                plotOutput("costPlot", width = "520px", height = "400px")
+                                         )
+                                     )
+                                     
+                                     
+                            )
+                        )
+                 )
+             )
+                 
+             ),
+             #################################################################################################
+             
+             tabPanel("Summary",
+                      fluidRow(
                               column(12,
                                      # h2("Results"),
                                      div(tableOutput("summarytable"), style = "font-size:80%")
