@@ -519,8 +519,7 @@ ui <- fluidPage(
                             tabPanel("nrm",
                                      fluidRow(
                                          br(),
-                                         column(1),
-                                         column(11,verbatimTextOutput("nrmlegend"))
+                                         column(10,verbatimTextOutput("nrmlegend"))
                                      ),
                                      fluidRow(
                                          column(6,
