@@ -2066,10 +2066,16 @@ server <- function(input, output, session) {
     observeEvent(input$suggestbtn, {
         ## Grid
         ## E[n] == E[r]
-        optimalspacing <- n.eq.r()
-        if (!is.na(optimalspacing)) {
-            updateNumericInput(session, "spy", value = optimalspacing)
-            updateNumericInput(session, "spx", value = optimalspacing)
+        if (!input$autorefresh) {
+            showNotification("enable auto refresh",
+                             type = "error", id = "nosuggest")
+        }
+        else {
+            optimalspacing <- n.eq.r()
+            if (!is.na(optimalspacing)) {
+                updateNumericInput(session, "spy", value = optimalspacing)
+                updateNumericInput(session, "spx", value = optimalspacing)
+            }
         }
     })
     ##############################################################################
@@ -2077,9 +2083,15 @@ server <- function(input, output, session) {
     observeEvent(input$suggestlinebtn, {
         ## Line
         ## E[n] == E[r]
+        if (!input$autorefresh) {
+            showNotification("enable auto refresh",
+                             type = "error", id = "nosuggestline")
+        }
+        else {
         optimalspacing <- n.eq.r()
         if (!is.na(optimalspacing)) {
             updateNumericInput(session, "spline", value = optimalspacing)
+        }
         }
     })
 
