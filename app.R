@@ -113,7 +113,7 @@ ui <- fluidPage(
                                                       br(),
                                                       fileInput("regionfilename", "Boundary file(s)",
                                                                 accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                           '.shx',".prj", ".txt"), multiple = TRUE),
+                                                                           '.shx',".prj", ".txt", ".rdata"), multiple = TRUE),
                                                       # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
                                                       uiOutput("shapefile"),
                                                       
@@ -571,26 +571,28 @@ ui <- fluidPage(
 
                                      h2("Detector array"),
                                      wellPanel(class = "mypanel", 
-                                         checkboxInput("lockxy", "Couple row and column dimensions", TRUE),
-                                         numericInput("maxdetectors", "Maximum number of detectors",
-                                                          min = 0,
-                                                          max = 20000,
-                                                          value = 1000,
-                                                          step = 100),
-
-                                         radioButtons("edgemethod", label = "Method for clusters at edge of region",
-                                                      choices = c("clip", "anyinside", "allinside"),
-                                                      selected = "clip"),
-                                         numericInput("maxupload", "Maximum file upload Mb",
-                                                      min = 5,
-                                                      max = 100,
-                                                      value = 10,
-                                                      step = 5),
-                                         radioButtons("areaunit", label = "Area units",
-                                                      choices = c("ha", "km^2"),
-                                                      selected = "ha")
+                                               checkboxInput("lockxy", "Couple row and column dimensions", TRUE),
+                                               fluidRow(
+                                                   column(5, radioButtons("areaunit", label = "Area units",
+                                                                          choices = c("ha", "km^2"),
+                                                                          selected = "ha")),
+                                                   column(7,numericInput("maxdetectors", "Maximum detectors",
+                                                                         min = 0,
+                                                                         max = 20000,
+                                                                         value = 1000,
+                                                                         step = 100))
+                                               ),
+                                               
+                                               radioButtons("edgemethod", label = "Method for clusters at edge of region",
+                                                            choices = c("clip", "anyinside", "allinside"),
+                                                            selected = "clip"),
+                                               numericInput("maxupload", "Maximum file upload Mb",
+                                                            min = 5,
+                                                            max = 100,
+                                                            value = 10,
+                                                            step = 5)
                                      ),
-
+                                     
                                      h2("Habitat mask"),
                                      fluidRow(
                                          column(6, wellPanel(class = "mypanel", 
@@ -1092,6 +1094,15 @@ server <- function(input, output, session) {
                 coord <- read.table(fileupload[1,4])
                 poly <- secr:::boundarytoSP(coord[,1:2])
             }
+            else if (tolower(tools::file_ext(fileupload[1,1])) == "rdata") {
+                objlist <- load(fileupload[1,4])
+                obj <- get(objlist[1])
+                if (is.matrix(obj))
+                    poly <- secr:::boundarytoSP(obj[,1:2])
+                else if (inherits(obj, "SpatialPolygons"))
+                    poly <- obj
+                else stop("unrecognised boundary object in ", objlist[1])
+            }
             else {
                 dsnname <- dirname(fileupload[1,4])
                 for ( i in 1:nrow(fileupload)) {
@@ -1324,14 +1335,23 @@ server <- function(input, output, session) {
                 regionfilename <- input$regionfilename[1,1]
                 if (tolower(tools::file_ext(regionfilename)) == "txt") {
                     regioncode <- paste0( 
+                        "# coordinates from text file\n",
                         "coord <- read.table('", regionfilename, "')   # read boundary coordinates\n",
                         "region <- secr:::boundarytoSP(coord)  # convert to SpatialPolygons\n")
                 }
+                else if (tolower(tools::file_ext(regionfilename)) == "rdata") {
+                    objlist <- load(input$regionfilename[1,4])
+                    regioncode <- paste0( 
+                        "# SpatialPolygons from RData file\n",
+                        "objlist <- load('", input$regionfilename[1,1], "')\n",
+                        "region <- get(objlist[1]) \n")
+                }
                 else {
                     regioncode <- paste0(
+                        "# ESRI polygon shapefile\n",
                         "region <- rgdal::readOGR(dsn = '", 
                         tools::file_path_sans_ext(basename(regionfilename)), 
-                        ".shp')    # region from shapefile\n"
+                        ".shp')\n"
                     )
                 }
                 
@@ -1388,8 +1408,8 @@ server <- function(input, output, session) {
                         rotatecode,
                         seedcode,
                         "array <- make.systematic(spacing = ", input$sppgrid, ", ",
-                        "region = region, cluster = cluster, \n",
-                        "    origin = ", origincode, edgemethodcode, ")\n")
+                        "region = region, \n", 
+                        "    cluster = cluster, origin = ", origincode, edgemethodcode, ")\n")
                 }
                 else if (input$regiontype == "Random") {
                     if (input$clustertype %in% c("Grid", "Line"))
@@ -1571,9 +1591,14 @@ server <- function(input, output, session) {
     output$shapefile <- renderUI({
         helptext <- ""
         if (!is.null(region())) {
-            pos <- grep(".shp", input$regionfilename[,1])
+            pos <- grep(".shp", tolower(input$regionfilename[,1]))
             if (length(pos)>0)
             helptext <- paste0(input$regionfilename[pos,1])
+            pos <- grep(".rdata", tolower(input$regionfilename[,1]))
+            if (length(pos)>0) {
+                objlist <- load(input$regionfilename[1,4])
+                helptext <- paste0(objlist[1])
+            }
         }
         helpText(HTML(helptext))
     })
@@ -2461,7 +2486,10 @@ server <- function(input, output, session) {
             else {
                 clustertext <- cr <- ""
             }
-            ratio <- round(glength/input$sigma,1)
+            if (glength/input$sigma > 100) 
+                ratio <- round(glength/input$sigma)
+            else 
+                ratio <- round(glength/input$sigma,1)
             paste0(nrow(gr), " ", input$detector, " detectors", clustertext, 
                    "; ", cr, "diameter ", lengthstr(glength), " (", ratio, " sigma)")
         }

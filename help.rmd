@@ -1,7 +1,7 @@
 ---
 title: "secrdesign app 1.1"
 author: "Murray Efford"
-date: '2019-01-09'
+date: '2019-01-12'
 output:
   pdf_document:
     toc: yes
@@ -13,7 +13,7 @@ output:
 
 # An interactive app for designing spatially explicit capture--recapture studies
 
-## Murray Efford 2019-01-09
+## Murray Efford 2019-01-12
 
 # Contents
   [Introduction](#introduction)  
@@ -103,6 +103,7 @@ This uses a text file in the format for **secr** function `read.traps`. The file
 A region is a study area within which detectors will be placed either systematically on a square grid or at random. For both systematic and random options the elements may be a single detector or a cluster of detectors (Grid or Line). The region boundary may be provided as either
 
 * a single text file (.txt) with two columns for the x and y coordinates of the perimeter, or 
+* a binary file saved from R (.RData) in which the first object inherits from **sp** class SpatialPolygons, or 
 * an ESRI polygon shapefile with at least three component files (.shp, .dbf and .shx) selected together. 
 
 See Options | Detector array to control the clipping of clusters that cross the boundary of the region.
@@ -178,6 +179,8 @@ Replicating the sampling effort at many independent locations within the same po
 <a name="distribution"></a>
 
 The Distribution radio button toggles between two models for the number of detected individuals $n$. The "Binomial" option corresponds to fixed number $N$ in the masked area and a binomial point process for the distribution of activity centres.  The "Poisson" option corresponds to Poisson $N$ and a Poisson point process for activity centres. The chosen distribution is used in [simulations](#simulation) for both generating data and fitting a model.
+
+The 'Auto refresh' box may be unchecked to delay updating until you have fully specified a scenario. This can save a lot of time.
 
 ## Actions
 
