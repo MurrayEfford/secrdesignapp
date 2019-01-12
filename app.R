@@ -303,7 +303,12 @@ ui <- fluidPage(
                                                    helpText(HTML("p.(x) is the probability an animal at point x will be detected at least once"))
                                           ),
                                           tabPanel("Power",
-                                                   plotOutput("powerPlot", height = 320, click = "CIclick"),
+                                                   fluidRow(
+                                                       column(9, plotOutput("powerPlot", height = 320, click = "CIclick")),
+                                                       column(3, br(), conditionalPanel("input.powertype==true",
+                                                           numericInput("xpos", "% change", min = -100, max = 250, step = 1, 
+                                                                              value = 0, width = 70)))
+                                                   ),
                                                    fluidRow(
                                                        column(8,
                                                               sliderInput("RSEslider", "",
@@ -315,13 +320,9 @@ ui <- fluidPage(
                                                                           post = "%",
                                                                           width = 340)),
                                                        column(4,
-                                                              # br(),
-                                                              # checkboxInput("penalisedRSEbox", "Use penalised RSE",
-                                                              #               value = TRUE,
-                                                              #               width = 130),
                                                               checkboxInput("powertype", "95% CI",
-                                                                            value = FALSE,
-                                                                            width = 130),
+                                                                                     value = TRUE,
+                                                                                     width = 130),
                                                               ## uiOutput('CIpct'),
                                                               checkboxInput("adjustRSEbox", "Adjust final RSE",
                                                                             value = TRUE,
@@ -727,7 +728,7 @@ ui <- fluidPage(
                                                                     min = 0.001,
                                                                     max = 0.200,
                                                                     value = 0.05,
-                                                                    step = 0.01,
+                                                                    step = 0.001,
                                                                     width = 120))
                                          ),
                                          fluidRow(
@@ -1404,7 +1405,7 @@ server <- function(input, output, session) {
                 }
                 
                 if (input$clustertype %in% c("Grid", "Line")) {
-                    edgemethodcode <- paste0(", edgemethod = '", input$edgemethod, "'")
+                    edgemethodcode <- paste0(",\n    edgemethod = '", input$edgemethod, "'")
                     if (input$rotation != 0)
                         rotatecode <- paste0("cluster <- rotate(cluster, ", input$rotation, ")\n")
                     else 
@@ -1984,7 +1985,7 @@ server <- function(input, output, session) {
 
     ## reactiveValues
     
-    ## simrv, rotrv, RSErv, pxyrv : logical
+    ## simrv, rotrv, RSErv, pxyrv, setrv : logical
     ## sumrv : summary table
     ## poprv
     ## manualroute
@@ -1995,6 +1996,7 @@ server <- function(input, output, session) {
     rotrv <- reactiveValues(current = FALSE, output = NULL)
     RSErv <- reactiveValues(current = FALSE, value = NULL, adjRSE = NULL)
     pxyrv <- reactiveValues(current = FALSE, xy = NULL, value = NULL)
+    setrv <- reactiveValues(resetting = FALSE)
     poprv <- reactiveValues(v = 0)  # used to invalidate and re-plot popn
     CIrv  <- reactiveValues(x = NULL, y1 = NULL, y2 = NULL)
     manualroute <- reactiveValues(seq = NULL)
@@ -2120,8 +2122,10 @@ server <- function(input, output, session) {
     
     observeEvent(input$resetbtn, {
 
-        ## array
+        setrv$resetting <- TRUE  ## suppresses auto adjust D in observeEvent(input$areaunit,...)
         
+        ## array
+
         ## grid
         updateSelectInput(session, "detector", selected = "proximity")
         updateTabsetPanel(session, "arrayinput", selected = "Grid")
@@ -2162,7 +2166,7 @@ server <- function(input, output, session) {
         updateNumericInput(session, "nrepeats", value = 1)
         updateTabsetPanel(session, "tabs", selected = "Array")
         updateRadioButtons(session, "distributionbtn", "Distribution", selected = "Poisson")
-        updateCheckboxInput(session, "autoinput", "Auto input", TRUE)
+        updateCheckboxInput(session, "autorefresh", "Auto refresh", TRUE)
 
         ## pop plot
         updateCheckboxInput(session, "showHRbox", "Display 95% home range", value = FALSE)
@@ -2172,6 +2176,7 @@ server <- function(input, output, session) {
         ## power plot
         updateCheckboxInput(session, "adjustRSEbox", "Adjust final RSE", value = TRUE)
         updateCheckboxInput(session, "powertype", "95% CI", value = TRUE)
+        updateNumericInput(session, "xpos", value = 0)
 
         ## costing
         updateNumericInput(session, "perkm", value = 0)
@@ -2227,7 +2232,7 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "updateCFbox", value = TRUE)
         
         updateRadioButtons(session, "powerplotbtn", selected = "Null hypothesis power")
-        updateCheckboxInput(session, "powertype", value = FALSE)
+        updateCheckboxInput(session, "powertype", value = TRUE)
         updateNumericInput(session, "alpha", value = 0.05)
         updateNumericInput(session, "target", value = 80)
         updateSelectInput(session, "testtype", selected = "two.sided")
@@ -2237,6 +2242,8 @@ server <- function(input, output, session) {
         updateNumericInput(session, "toR", value = 4)
         updateNumericInput(session, "byR", value = 0.2)
         updateNumericInput(session, "simbyR", value = 0.4)
+
+        invalidateOutputs()
 
     })
 
@@ -2253,18 +2260,25 @@ server <- function(input, output, session) {
     ##############################################################################
     
     observeEvent(input$areaunit, ignoreInit = TRUE, {
-        if (input$areaunit=="ha") {
-            newD <- input$D/100
+        if (!setrv$resetting) {
+            if (input$areaunit=="ha") {
+                newD <- input$D/100
+            }
+            else {
+                newD <- input$D*100
+            }
+            updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"), value = newD)
         }
-        else {
-            newD <- input$D*100
-        }
-        updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"), value = newD)
+        setrv$resetting <- FALSE
     })
     
     observeEvent(input$alpha, {
         updateCheckboxInput(session, "powertype", label = paste0(
         round(100 *(1-input$alpha), 1), "% CI"))
+    })
+    
+    observeEvent(input$xpos, {
+        CIrv$x <- input$xpos
     })
     
     observeEvent(input$spacingbtn, {
@@ -2418,7 +2432,8 @@ server <- function(input, output, session) {
     observeEvent(input$CIclick, {
         invalidateOutputs()
         if (input$powertype) {
-            CIrv$x <- input$CIclick$x
+            CIrv$x <- round(input$CIclick$x)
+            updateNumericInput(session, "xpos", value = CIrv$x)
         }
     })
     
@@ -2794,8 +2809,13 @@ server <- function(input, output, session) {
                       las=1, col = 'red', lwd = linewidth,
                       xaxs='i', yaxs='i')
         mtext(side = 2, line = 3.7, expression(paste("Detection hazard   ", lambda [0])))
-        p <- seq(0,1,0.05)
-        axis(4, at = 1 - exp(-p), label = p, xpd = FALSE, las = 1)
+        
+        if (input$lambda0 <= 0.7) 
+            p <- seq(0,1,0.05)
+        else 
+            p <- seq(0,1,0.1)
+
+        axis(4, at = -log(1 - p), label = p, xpd = FALSE, las = 1)
         mtext(side = 4, line = 3.7, "Detection probability")
     })
     ##############################################################################
@@ -2910,12 +2930,14 @@ server <- function(input, output, session) {
             powLU <- plotpowerCI(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
                                  estimatedRange = c(input$minEffect, input$maxEffect+headroom),
                                adjustRSE = input$adjustRSEbox, alpha = input$alpha)
-            if (!is.null(CIrv$x)) {
-                CIrv$y1 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,1,1], xout = CIrv$x)$y*100-100
-                CIrv$y2 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,2,1], xout = CIrv$x)$y*100-100
-                segments(CIrv$x, CIrv$y1, CIrv$x, CIrv$y2, lwd= linewidth, col = "blue")
-                text(rep(CIrv$x,2)+5, c(CIrv$y1, CIrv$y2)+1, round(c(CIrv$y1, CIrv$y2)), adj = 0, cex = 0.9, col = "blue")
-                text(CIrv$x, par()$usr[4]*1.05, round(CIrv$x), cex = 0.8, xpd = TRUE, col = "darkgreen")
+            x <- CIrv$x
+            if (is.null(x)) x <- 0
+            {
+                y1 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,1,1], xout = x)$y*100-100
+                y2 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,2,1], xout = x)$y*100-100
+                segments(x, y1, x, y2, lwd= linewidth, col = "blue")
+                text(rep(x,2)+5, c(y1, y2)+1, round(c(y1, y2)), adj = 0, cex = 0.9, col = "blue")
+                # text(x, par()$usr[4]*1.05, round(x), cex = 0.8, xpd = TRUE)
             }
         }
         else {
