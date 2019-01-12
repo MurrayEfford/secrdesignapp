@@ -11,6 +11,9 @@ if (compareVersion(as.character(pver), '2.5.5') < 0)
 # requires package parallel for max cores in simulate options (distributed with base R)
 # requires package tools for file path when reading shapefiles (distributed with base R)
 
+# interrupt
+# see http://htmlpreview.github.io/?https://github.com/fellstat/ipc/blob/master/inst/doc/shinymp.html
+
 linewidth <- 2  # for various plots 
 
 # Define UI 
@@ -61,13 +64,13 @@ ui <- fluidPage(
                                                                                 "row space (m)",
                                                                                 value = 20,
                                                                                 min = 1,
-                                                                                max = 10000,
+                                                                                max = 100000,
                                                                                 step = 1)),
                                                           column(6,numericInput("spx",
                                                                                 "col space (m)",
                                                                                 value = 20,
                                                                                 min = 1,
-                                                                                max = 10000,
+                                                                                max = 100000,
                                                                                 step = 1))
                                                       ),
 
@@ -89,7 +92,7 @@ ui <- fluidPage(
                                                                                 "spacing (m)",
                                                                                 value = 20,
                                                                                 min = 1,
-                                                                                max = 10000,
+                                                                                max = 100000,
                                                                                 step = 1))
                                                       ),
                                                       actionButton("suggestlinebtn", "Suggest spacing"),
@@ -122,11 +125,11 @@ ui <- fluidPage(
                                                                        
                                                                        br(),
                                                                        fluidRow(
-                                                                           column(5,numericInput("sppgrid",
+                                                                           column(6,numericInput("sppgrid",
                                                                                                  "spacing (m)",
                                                                                                  value = 200,
                                                                                                  min = 0,
-                                                                                                 max = 20000,
+                                                                                                 max = 200000,
                                                                                                  step = 10)),
                                                                            column(6, br(), checkboxInput("randomorigin", "Random origin", FALSE))
                                                                        ),
@@ -189,8 +192,8 @@ ui <- fluidPage(
                                                       max = 1000,
                                                       value = 5,
                                                       step=0.1,
-                                                      width = 180),
-                                                    uiOutput('persqkm')
+                                                      width = 180)
+                                                    # uiOutput('persqkm')
                                              ),
                                          column(6, selectInput("detectfn", "Detection function",
                                                      choices = c("HHN","HEX"),
@@ -207,7 +210,7 @@ ui <- fluidPage(
                                              column(6, numericInput("sigma",
                                                                     "sigma (m)",
                                                                     min = 0,
-                                                                    max = 1000,
+                                                                    max = 100000,
                                                                     value = 25,
                                                                     step = 1,
                                                                     width = 180)))
@@ -238,7 +241,8 @@ ui <- fluidPage(
                                                 wellPanel(class = "mypanel", 
                                                     radioButtons("distributionbtn", label = "Distribution of n",
                                                                  choices = c("Poisson", "Binomial"))
-                                                )
+                                                ),
+                                                column(11, checkboxInput("autorefresh", "Auto refresh", TRUE))
                                          )
                                      ),
                                      fluidRow(column(12,textInput("title", "Note", value = "", 
@@ -576,7 +580,15 @@ ui <- fluidPage(
 
                                          radioButtons("edgemethod", label = "Method for clusters at edge of region",
                                                       choices = c("clip", "anyinside", "allinside"),
-                                                      selected = "clip")
+                                                      selected = "clip"),
+                                         numericInput("maxupload", "Maximum file upload Mb",
+                                                      min = 5,
+                                                      max = 100,
+                                                      value = 10,
+                                                      step = 5),
+                                         radioButtons("areaunit", label = "Area units",
+                                                      choices = c("ha", "km^2"),
+                                                      selected = "ha")
                                      ),
 
                                      h2("Habitat mask"),
@@ -794,8 +806,47 @@ server <- function(input, output, session) {
     ## addtosummary
     ## arraycode
     ## maskcode
-    ## nrmcode
+    ## nrmcode    
+    ## areastr    format area with units
+    ## density    density in animals / ha
     
+    ##############################################################################
+    
+    areastr <- function (area) {
+        if (area<1000) 
+            dec <- 2
+        else 
+            dec <- 0
+        if (input$areaunit == "ha") {
+            paste0(round(area, dec), " ha")
+        }
+        else {
+            paste0(round(area/100, dec), " km^2")
+        }
+    }
+    ##############################################################################
+    
+    lengthstr <- function (length) {
+        if (length<1000) 
+            dec <- 2
+        else 
+            dec <- 0
+        if (input$areaunit == "ha") {
+            paste0(round(length, dec), " m")
+        }
+        else {
+            paste0(round(length/1000, dec), " km")
+        }
+    }
+    ##############################################################################
+    
+    density <- function() {
+        ## return density in animals / hectare
+        if (input$areaunit == "ha")
+            input$D
+        else
+            input$D/100  ## per sq. km
+    }
     ##############################################################################
     
     pathlength <- function (trps, type = c("sequential", "sumspacing", "manual"),
@@ -1019,7 +1070,7 @@ server <- function(input, output, session) {
                                    spacing = input$spline*R)
             }
             msk <- make.mask(array, buffer = input$habxsigma * input$sigma, nx = input$habnx)
-            nrm <- Enrm(input$D, array, msk, detectpar, input$noccasions, input$detectfn)
+            nrm <- Enrm(density(), array, msk, detectpar, input$noccasions, input$detectfn)
             nrm[1] - nrm[2]
         }
         if (nrow(array()) > 1) {
@@ -1085,7 +1136,7 @@ server <- function(input, output, session) {
         scen <- make.scenarios(
             noccasions = input$noccasions,
             nrepeats = nrepeats(),
-            D = input$D,
+            D = density(),
             lambda0 = input$lambda0,
             sigma = input$sigma,
             detectfn = input$detectfn,
@@ -1131,7 +1182,7 @@ server <- function(input, output, session) {
         if (sims) {
             progress$set(message = 'Simulating RSE for each spacing...')
             rotrv$output <- optimalSpacing(
-                D = input$D,
+                D = density(),
                 traps = array(),
                 detectpar = list(lambda0 = input$lambda0, sigma = input$sigma),
                 noccasions = input$noccasions,
@@ -1153,7 +1204,7 @@ server <- function(input, output, session) {
         else {
             progress$set(message = 'Approximating RSE for each spacing...')
             rotrv$output <- optimalSpacing(
-                D = input$D,
+                D = density(),
                 traps = array(),
                 detectpar = list(lambda0 = input$lambda0, sigma = input$sigma),
                 noccasions = input$noccasions,
@@ -1193,11 +1244,11 @@ server <- function(input, output, session) {
             distribution = input$distributionbtn,
             detectfn = input$detectfn,
             
-            D = input$D,
+            D = density(),
             lambda0 = input$lambda0,
             sigma = input$sigma,
             detperHR = nrmval$detperHR,
-            k = round(input$D^0.5 * input$sigma / 100,3),
+            k = round(density()^0.5 * input$sigma / 100,3),
             
             En = round(nrmval$En,1),
             Er = round(nrmval$Er,1),
@@ -1428,7 +1479,7 @@ server <- function(input, output, session) {
             maskcode("array"),
             "\n",
             "scen <- make.scenarios(trapsindex = 1, noccasions = ", input$noccasions, ", ", 
-            "nrepeats = ", nrepeats(), ",\n    D = ", input$D, ", sigma = ", input$sigma, ", ",
+            "nrepeats = ", nrepeats(), ",\n    D = ", density(), ", sigma = ", input$sigma, ", ",
                 "lambda0 = ", input$lambda0, ", detectfn = ", detfn, ")\n\n",
             
             "scensum <- scenarioSummary(scen, trapset = array, mask = mask, CF = ", 
@@ -1456,7 +1507,7 @@ server <- function(input, output, session) {
 
     output$persqkm <- renderUI({
         ## display density in animals/km^2
-        Dkm <- input$D * 100
+        Dkm <- density() * 100
         Dkmtext <- paste0(Dkm, '&nbsp; animals / km<sup>2</sup>')
         helpText(HTML(Dkmtext))
     })
@@ -1565,7 +1616,7 @@ server <- function(input, output, session) {
         simrv$current <- FALSE
         rotrv$current <- FALSE
         pxyrv$value <- NULL
-        updateNumericInput(session, "D", step = 10^trunc(log10(input$D/50)))
+        updateNumericInput(session, "D", step = 10^trunc(log10(density()/50)))
     })
     
     ##############################################################################
@@ -1588,6 +1639,7 @@ server <- function(input, output, session) {
             simrv$current <- FALSE
             rotrv$current <- FALSE
             pxyrv$value <- NULL
+            if (!input$autorefresh) return(NULL)
             trps <- NULL
             removeNotification("badarray")
             if (input$arrayinput == "Grid") {
@@ -1600,6 +1652,7 @@ server <- function(input, output, session) {
                                   spacing = input$spline)
             }
             else if (input$arrayinput=='Region') {
+                
                 if (input$nrepeats>1) {
                     updateNumericInput(session, "nrepeats", value = 1)
                 }
@@ -1607,6 +1660,28 @@ server <- function(input, output, session) {
                     trps <- NULL
                 }
                 else {
+                    #########################################################
+                    ## check expected number
+                    regionarea <- polyarea(region())
+                    if (input$clustertype == "Single detector")
+                        npercluster <- 1
+                    else if (input$clustertype == "Grid")
+                        npercluster <- input$nx * input$ny
+                    else if (input$clustertype == "Line")
+                        npercluster <- input$nline
+                    
+                    if (input$regiontype == "Systematic")
+                        expectedndetector <- regionarea/(input$sppgrid/100)^2 * npercluster
+                    else
+                        expectedndetector <- input$numpgrid * npercluster
+                    if (expectedndetector > input$maxdetectors*2) {
+                        showNotification("expected N detectors exceeds limit",
+                                         type = "error", id = "toomany")
+                        
+                        return(NULL)
+                    }
+                    #########################################################
+
                     if (input$randomorigin || input$regiontype == "Random") {
                         if (input$seedpgrid>0) {
                             set.seed(input$seedpgrid)
@@ -1742,7 +1817,7 @@ server <- function(input, output, session) {
             poprv$v
             core <- array()
             if (is.null(core)) return (NULL)
-            if (input$D * maskarea(mask()) > 10000) {
+            if (density() * maskarea(mask()) > 10000) {
                 showNotification("population exceeds 10000; try again",
                                  type = "error", id = "bigpop", duration = 10)
                 return(NULL)
@@ -1750,9 +1825,9 @@ server <- function(input, output, session) {
             else removeNotification("bigpop")
             Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
             if (input$onlymaskbox)
-                pop <- sim.popn (D = input$D, core=mask(), model2D="IHP", Ndist = Ndist)
+                pop <- sim.popn (D = density(), core=mask(), model2D="IHP", Ndist = Ndist)
             else # rectangular area
-                pop <- sim.popn (D = input$D, core=core, Ndist = Ndist,
+                pop <- sim.popn (D = density(), core=core, Ndist = Ndist,
                                  buffer = input$habxsigma * input$sigma)
             pop
         }
@@ -1785,7 +1860,7 @@ server <- function(input, output, session) {
         msk <- mask()
         pathl <- arraypathlength()
         scen <- make.scenarios(trapsindex = 1, noccasions = input$noccasions, 
-                               nrepeats = nrepeats(), D = input$D, sigma = input$sigma, 
+                               nrepeats = nrepeats(), D = density(), sigma = input$sigma, 
                                lambda0 = input$lambda0, detectfn = input$detectfn)
         scensum <- scenarioSummary(scen,
                                    trapset = trps,
@@ -1915,6 +1990,8 @@ server <- function(input, output, session) {
     # appendbtn
     # summarybtn
     # nrepeats
+    # maxupload
+    # areaunit
     
     ##############################################################################
 
@@ -1977,7 +2054,7 @@ server <- function(input, output, session) {
                         value = "", placeholder = "e.g., skip = 1, sep = ','")
 
         ## parameters
-        updateNumericInput(session, "D", value = 5)
+        updateNumericInput(session, "D", "D (animals / ha)", value = 5)
         updateSelectInput(session, "detectfn", selected = "HHN")
         updateNumericInput(session, "lambda0", value = 0.2)
         updateNumericInput(session, "sigma", value = 25)
@@ -1989,6 +2066,7 @@ server <- function(input, output, session) {
         updateNumericInput(session, "nrepeats", value = 1)
         updateTabsetPanel(session, "tabs", selected = "Array")
         updateRadioButtons(session, "distributionbtn", "Distribution", selected = "Poisson")
+        updateCheckboxInput(session, "autoinput", "Auto input", TRUE)
 
         ## pop plot
         updateCheckboxInput(session, "showHRbox", "Display 95% home range", value = FALSE)
@@ -2028,6 +2106,8 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "lockxy", value = TRUE)
         updateCheckboxInput(session, "randomorigin", value = FALSE)
         updateRadioButtons(session, "edgemethod", "Cluster edge method", selected = "clip")
+        updateNumericInput(session, "maxupload", value = 10)
+        updateRadioButtons(session, "areaunit", "Area units", selected = "ha")
 
         ## habitat        
         updateNumericInput(session, "habxsigma", value = 4)
@@ -2064,6 +2144,21 @@ server <- function(input, output, session) {
         rotrv$current <- FALSE
     })
     ##############################################################################
+    
+    observeEvent(input$maxupload, {
+        options(shiny.maxRequestSize= input$maxupload*1024^2)
+    })
+    ##############################################################################
+    
+    observeEvent(input$areaunit, ignoreInit = TRUE, {
+        if (input$areaunit=="ha") {
+            newD <- input$D/100
+        }
+        else {
+            newD <- input$D*100
+        }
+        updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"), value = newD)
+    })
     
     observeEvent(input$spacingbtn, {
         ## inp <- oS2()
@@ -2270,7 +2365,7 @@ server <- function(input, output, session) {
                 
                 arraycode(), "\n",
                 
-                "oS <- optimalSpacing(D = ", input$D, ", traps = array,\n",
+                "oS <- optimalSpacing(D = ", density(), ", traps = array,\n",
                 "    detectpar = list(lambda0 = ", input$lambda0, ", sigma = ", input$sigma, "),\n",
                 "    detectfn = '", input$detectfn, "', noccasions = ", input$noccasions, ", nrepeats = ", nrepeats(), ",\n",
                 "    R = seq(", input$fromR, ", ", input$toR, ", ", input$byR, "), CF = ", round(input$CFslider,3), ", ",
@@ -2298,7 +2393,7 @@ server <- function(input, output, session) {
             ""
         }
         else {
-            D  <- input$D * nrepeats()
+            D  <- density() * nrepeats()
             Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
             distncode <- if (input$packagebtn == "secr.fit")
                 paste0("details = list(distribution = '", tolower(input$distributionbtn), "')")
@@ -2320,7 +2415,7 @@ server <- function(input, output, session) {
                 "scen <- make.scenarios(",
                 "noccasions = ", input$noccasions, ", ",
                 "nrepeats = ", nrepeats(), ",\n    ",
-                "D = ", input$D, ", ",
+                "D = ", density(), ", ",
                 "sigma = ", input$sigma, ", ",
                 "lambda0 = ", input$lambda0, ", ",
                 "detectfn = '", input$detectfn, "')\n",
@@ -2368,7 +2463,7 @@ server <- function(input, output, session) {
             }
             ratio <- round(glength/input$sigma,1)
             paste0(nrow(gr), " ", input$detector, " detectors", clustertext, 
-                   "; ", cr, "diameter ", round(glength,1), " m (", ratio, " sigma)")
+                   "; ", cr, "diameter ", lengthstr(glength), " (", ratio, " sigma)")
         }
         else ""
     })
@@ -2423,10 +2518,10 @@ server <- function(input, output, session) {
             "Median detectors per 95% home range = ", 
             nrmval$detperHR, '\n',
             "Overlap coefficient k = ",
-            round(input$D^0.5 * input$sigma / 100,3), '\n',
+            round(density()^0.5 * input$sigma / 100,3), '\n',
             
             "Effective sampling area = ",
-            round(nrmval$esa,2), ' ha', star, " (mask ", round(nrmval$maskarea,2), " ha)\n",
+            areastr(nrmval$esa), star, " (mask ", areastr(nrmval$maskarea),")\n",
             "Rule-of-thumb RSE = ",
             round(nrmval$rotRSE * 100, 1), "%", star, " (correction factor ", round(input$CFslider,3), ")",
             ## "\nRule-of-thumb RSE (binomial) = ",
