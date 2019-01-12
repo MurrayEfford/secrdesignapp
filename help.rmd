@@ -195,7 +195,7 @@ The 'Auto refresh' box may be unchecked to delay updating until you have fully s
   </tr>
   <tr>
     <td>Reset all</td>
-    <td>Reset all input options to defaults</td>
+    <td>Reset all input options to defaults (except file inputs)</td>
   </tr>
 </table> 
 

@@ -2124,6 +2124,9 @@ server <- function(input, output, session) {
 
         setrv$resetting <- TRUE  ## suppresses auto adjust D in observeEvent(input$areaunit,...)
         
+        ## DOES NOT RESET FILE INPUTS
+        ## SEE E.G. https://groups.google.com/forum/#!topic/shiny-discuss/HbTa4v612FA
+        
         ## array
 
         ## grid
