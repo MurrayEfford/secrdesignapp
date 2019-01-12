@@ -303,7 +303,7 @@ ui <- fluidPage(
                                                    helpText(HTML("p.(x) is the probability an animal at point x will be detected at least once"))
                                           ),
                                           tabPanel("Power",
-                                                   plotOutput("powerPlot", height = 320),
+                                                   plotOutput("powerPlot", height = 320, click = "CIclick"),
                                                    fluidRow(
                                                        column(8,
                                                               sliderInput("RSEslider", "",
@@ -1680,6 +1680,7 @@ server <- function(input, output, session) {
         simrv$current <- FALSE
         rotrv$current <- FALSE
         pxyrv$value <- NULL
+        CIrv$x <- NULL
         updateNumericInput(session, "D", step = 10^trunc(log10(density()/50)))
     })
     
@@ -1994,7 +1995,8 @@ server <- function(input, output, session) {
     rotrv <- reactiveValues(current = FALSE, output = NULL)
     RSErv <- reactiveValues(current = FALSE, value = NULL, adjRSE = NULL)
     pxyrv <- reactiveValues(current = FALSE, xy = NULL, value = NULL)
-    poprv <- reactiveValues( v = 0)  # used to invalidate and re-plot popn
+    poprv <- reactiveValues(v = 0)  # used to invalidate and re-plot popn
+    CIrv  <- reactiveValues(x = NULL, y1 = NULL, y2 = NULL)
     manualroute <- reactiveValues(seq = NULL)
     
     sumrv <- reactiveValues(
@@ -2409,6 +2411,15 @@ server <- function(input, output, session) {
                          noccasions = input$noccasions)
             pxyrv$xy <-xy
             pxyrv$value <- Pxy}
+    })
+    
+    ##############################################################################
+    
+    observeEvent(input$CIclick, {
+        invalidateOutputs()
+        if (input$powertype) {
+            CIrv$x <- input$CIclick$x
+        }
     })
     
     ##############################################################################
@@ -2899,14 +2910,21 @@ server <- function(input, output, session) {
             powLU <- plotpowerCI(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
                                  estimatedRange = c(input$minEffect, input$maxEffect+headroom),
                                adjustRSE = input$adjustRSEbox, alpha = input$alpha)
-            
+            if (!is.null(CIrv$x)) {
+                CIrv$y1 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,1,1], xout = CIrv$x)$y*100-100
+                CIrv$y2 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,2,1], xout = CIrv$x)$y*100-100
+                segments(CIrv$x, CIrv$y1, CIrv$x, CIrv$y2, lwd= linewidth, col = "blue")
+                text(rep(CIrv$x,2)+5, c(CIrv$y1, CIrv$y2)+1, round(c(CIrv$y1, CIrv$y2)), adj = 0, cex = 0.9, col = "blue")
+                text(CIrv$x, par()$usr[4]*1.05, round(CIrv$x), cex = 0.8, xpd = TRUE, col = "darkgreen")
+            }
         }
         else {
-        par(mar=c(4,4,3,2))
-        powLU <- plotpower(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
-                           adjustRSE = input$adjustRSEbox, alpha = input$alpha,
-                           testtype = input$testtype,
-                           targetpower = input$target)
+            CIrv$x <- NULL
+            par(mar=c(4,4,3,2))
+            powLU <- plotpower(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
+                               adjustRSE = input$adjustRSEbox, alpha = input$alpha,
+                               testtype = input$testtype,
+                               targetpower = input$target)
         }
         ## text (110, 10, paste0("RSE = ", round(100*RSE,1), "%") )
     })
