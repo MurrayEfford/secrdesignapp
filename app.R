@@ -315,14 +315,20 @@ ui <- fluidPage(
                                                                           post = "%",
                                                                           width = 340)),
                                                        column(4,
-                                                              br(),
+                                                              # br(),
                                                               # checkboxInput("penalisedRSEbox", "Use penalised RSE",
                                                               #               value = TRUE,
                                                               #               width = 130),
+                                                              checkboxInput("powertype", "95% CI",
+                                                                            value = FALSE,
+                                                                            width = 130),
+                                                              ## uiOutput('CIpct'),
                                                               checkboxInput("adjustRSEbox", "Adjust final RSE",
                                                                             value = TRUE,
                                                                             width = 130),
                                                               helpText(HTML("Scales with population")))
+                                                       
+                                                              
                                                        )
                                                    ),
                                                    type = "pills",
@@ -586,7 +592,7 @@ ui <- fluidPage(
                                                radioButtons("edgemethod", label = "Method for clusters at edge of region",
                                                             choices = c("clip", "anyinside", "allinside"),
                                                             selected = "clip"),
-                                               fileInput("exclusionfilename", "Exclusion region",
+                                               fileInput("exclusionfilename", "Excluded region",
                                                                 accept = c('.shp','.dbf','.sbn','.sbx',
                                                                            '.shx',".prj", ".txt", ".rdata"), multiple = TRUE),
                                                       uiOutput("exclusionfile"),
@@ -637,29 +643,40 @@ ui <- fluidPage(
 
                               column(3,
 
+                                     h2("Array plot"),
+                                     wellPanel(class = "mypanel", 
+                                               checkboxInput("entireregionbox", "Show entire region",
+                                                             value = TRUE,
+                                                             width = 180)
+                                     ),
+
                                      h2("Pxy contour plot"),
                                      wellPanel(class = "mypanel", 
-                                         numericInput("pxyborder", "Border (spacing units)",
-                                                      min = 0,
-                                                      max = 10,
-                                                      value = 3,
-                                                      step = 0.5,
-                                                      width = 180),
-                                         numericInput("pxynx", "Mesh dimension nx",
-                                                      min = 32,
-                                                      max = 512,
-                                                      value = 64,
-                                                      step = 32,
-                                                      width = 180),
-                                         checkboxInput("pxyfillbox", "Fill contours",
-                                                       value = TRUE,
-                                                       width = 180),
-                                         checkboxInput("pxyframebox", "Show frame",
-                                                       value = FALSE,
-                                                       width = 180),
-                                         checkboxInput("pxylabelbox", "Label contours",
-                                                       value = TRUE,
-                                                       width = 180)
+                                               fluidRow(
+                                                   column(7, numericInput("pxyborder", "Border (spacing units)",
+                                                                          min = 0,
+                                                                          max = 10,
+                                                                          value = 3,
+                                                                          step = 0.5,
+                                                                          width = 180),
+                                                          numericInput("pxynx", "Mesh dimension nx",
+                                                                       min = 32,
+                                                                       max = 512,
+                                                                       value = 64,
+                                                                       step = 32,
+                                                                       width = 180)),
+                                                   column(5,
+                                                          br(),
+                                                          checkboxInput("pxyfillbox", "Fill contours",
+                                                                        value = TRUE,
+                                                                        width = 180),
+                                                          checkboxInput("pxyframebox", "Show frame",
+                                                                        value = FALSE,
+                                                                        width = 180),
+                                                          checkboxInput("pxylabelbox", "Label contours",
+                                                                        value = TRUE,
+                                                                        width = 180))
+                                               )
                                      ),
                                      h2("Spacing plot"),
                                      wellPanel(class = "mypanel", 
@@ -700,11 +717,11 @@ ui <- fluidPage(
                               column(3,
                                      h2("Power plot"),
                                      wellPanel(class = "mypanel", 
-                                         fluidRow(
-                                             column(8, radioButtons("powerplotbtn", label = "Plot style",
-                                                      choices = c("Null hypothesis power", "Confidence interval"))),
-                                             column(4, br(), br(), uiOutput('CIpct'))
-                                         ),
+                                         # fluidRow(
+                                         #     column(8, radioButtons("powerplotbtn", label = "Plot style",
+                                         #              choices = c("Null hypothesis power", "Confidence interval"))),
+                                         #     column(4, br(), br(), uiOutput('CIpct'))
+                                         # ),
                                          fluidRow(
                                              column(6, numericInput("alpha", "alpha",
                                                                     min = 0.001,
@@ -728,14 +745,15 @@ ui <- fluidPage(
                                                                      width = 180))
                                          ),
                                          
-                                         
-                                         h3("Hypothesis test only"),
+                                         br(),
+                                         h4("Hypothesis test"),
+                                         # br(),
                                          fluidRow(
-                                             column(6,selectInput("testtype", "Test type",
+                                             column(6,selectInput("testtype", "Type",
                                                          choices = c("two.sided", "decrease", "increase"),
                                                          selected = "two.sided",
                                                          width = 140)),
-                                             column(6, numericInput("target", "target power %",
+                                             column(6, numericInput("target", "Target power %",
                                                           min = 50,
                                                           max = 99,
                                                           value = 80,
@@ -915,7 +933,7 @@ server <- function(input, output, session) {
         df$pathcost  <- costs$perkm * df$pathlength * (nocc+1) * nrep
         df$arraycost <- costs$perarray * nrep
         df$detrcost  <- costs$perdetector * nrow(trps) * nrep
-        df$visitcost <- costs$pervisit * nrow(array()) * (nocc+1) * nrep
+        df$visitcost <- costs$pervisit * nrow(detectorarray()) * (nocc+1) * nrep
         df$detncost  <- costs$perdetection * df$C
         df$totalcost <- apply(df[,c("detrcost","arraycost","pathcost","visitcost","detncost")], 1, sum)
         df
@@ -1079,7 +1097,7 @@ server <- function(input, output, session) {
             nrm <- Enrm(density(), array, msk, detectpar, input$noccasions, input$detectfn)
             nrm[1] - nrm[2]
         }
-        if (nrow(array()) > 1) {
+        if (nrow(detectorarray()) > 1) {
             R <- uniroot(nminr, interval = c(input$fromR, input$toR))$root
             if (input$arrayinput == "Grid") 
                 round(R * input$spx,1)
@@ -1141,7 +1159,7 @@ server <- function(input, output, session) {
                      detail = '')
         seed <- input$seed
         if (seed == 0) seed <- NULL
-        array <- array()
+        array <- detectorarray()
         Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
         fitargs = list(detectfn = input$detectfn, 
                        method = input$method, 
@@ -1198,7 +1216,7 @@ server <- function(input, output, session) {
             progress$set(message = 'Simulating RSE for each spacing...')
             rotrv$output <- optimalSpacing(
                 D = density(),
-                traps = array(),
+                traps = detectorarray(),
                 detectpar = list(lambda0 = input$lambda0, sigma = input$sigma),
                 noccasions = input$noccasions,
                 nrepeats = nrepeats(),
@@ -1220,7 +1238,7 @@ server <- function(input, output, session) {
             progress$set(message = 'Approximating RSE for each spacing...')
             rotrv$output <- optimalSpacing(
                 D = density(),
-                traps = array(),
+                traps = detectorarray(),
                 detectpar = list(lambda0 = input$lambda0, sigma = input$sigma),
                 noccasions = input$noccasions,
                 nrepeats = nrepeats(),
@@ -1253,7 +1271,7 @@ server <- function(input, output, session) {
             spacex = if (input$arrayinput=="Grid") input$spx else
                 if (input$arrayinput=="Line") input$spline else NA,
             spacey = if (input$arrayinput=="Grid") input$spy else NA,
-            ndetectors = nrow(array()) * nrepeats(),
+            ndetectors = nrow(detectorarray()) * nrepeats(),
             noccasions = input$noccasions,
             nrepeats = input$nrepeats,
             distribution = input$distributionbtn,
@@ -1311,7 +1329,7 @@ server <- function(input, output, session) {
     arraycode <- function (comment = FALSE) {
         # returns the R code needed to generate the specified array, 
         # as a character value
-        if (is.null(array())) {
+        if (is.null(detectorarray())) {
             code <- ""  
         }
         else {
@@ -1538,13 +1556,14 @@ server <- function(input, output, session) {
     
     ##############################################################################
 
-    output$CIpct <- renderUI({
-        ## display CI as percentage
-        if (input$powerplotbtn=="Confidence interval")
-            helpText(HTML(paste0(round(100 *(1-input$alpha), 1), "%")))
-        else 
-            helpText(HTML(""))
-    })
+    # output$CIpct <- renderUI({
+    #     ## display CI as percentage
+    #     # if (input$powerplotbtn=="Confidence interval")
+    #     if (input$powertype)
+    #         helpText(HTML(paste0(round(100 *(1-input$alpha), 1), "%")))
+    #     else 
+    #         helpText(HTML(""))
+    # })
     ##############################################################################
     
     output$detectorhelp <- renderUI({
@@ -1651,7 +1670,7 @@ server <- function(input, output, session) {
     output$validspacing <- reactive({rotrv$current})   ## for conditionalPanel                                  
 
     arraypathlength <- reactive({
-        trps <- array()
+        trps <- detectorarray()
         pathlength(trps, tolower(input$routetype), input$returnbox)
     })
     
@@ -1679,7 +1698,7 @@ server <- function(input, output, session) {
 
     ##############################################################################
 
-    array <- reactive(
+    detectorarray <- reactive(
         {
             simrv$current <- FALSE
             rotrv$current <- FALSE
@@ -1865,7 +1884,7 @@ server <- function(input, output, session) {
     mask <- reactive( {
         rotrv$current <- FALSE
         pxyrv$value <- NULL
-        make.mask (array(),
+        make.mask (detectorarray(),
                    buffer = input$habxsigma * input$sigma,
                    nx = input$habnx,
                    type = if (input$maskshapebtn=='Rectangular') 'traprect' else 'trapbuffer',
@@ -1878,7 +1897,7 @@ server <- function(input, output, session) {
     pop <- reactive(
         {
             poprv$v
-            core <- array()
+            core <- detectorarray()
             if (is.null(core)) return (NULL)
             if (density() * maskarea(mask()) > 10000) {
                 showNotification("population exceeds 10000; try again",
@@ -1900,7 +1919,7 @@ server <- function(input, output, session) {
     Pxy <- reactive({
         # DOES NOT USE poly()
         invalidateOutputs()
-        trps <- array()
+        trps <- detectorarray()
         # msk <- make.mask(trps, buffer = input$sigma * input$pxyborder, nx = input$pxynx)
         msk <- make.mask(trps, buffer = border(input$pxyborder), nx = input$pxynx)
         Pxy <- pdot(msk, trps, detectfn = input$detectfn,
@@ -1917,7 +1936,7 @@ server <- function(input, output, session) {
 
     nrm <- reactive({
         
-        trps <- array()
+        trps <- detectorarray()
         if (is.null(trps)) return (NULL)
         invalidateOutputs()
         msk <- mask()
@@ -2150,6 +2169,7 @@ server <- function(input, output, session) {
         
         ## power plot
         updateCheckboxInput(session, "adjustRSEbox", "Adjust final RSE", value = TRUE)
+        updateCheckboxInput(session, "powertype", "95% CI", value = TRUE)
 
         ## costing
         updateNumericInput(session, "perkm", value = 0)
@@ -2191,6 +2211,10 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "polygonbox", "Clip to region", value = FALSE)
         
         
+        ## array plot
+        updateCheckboxInput(session, "entireregionbox", "Show entire region", value = TRUE)
+
+        ## pxy plot
         updateNumericInput(session, "pxyborder", value = 3)
         updateNumericInput(session, "pxynx", value = 64)
         updateCheckboxInput(session, "pxyfillbox", value = TRUE)
@@ -2201,6 +2225,7 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "updateCFbox", value = TRUE)
         
         updateRadioButtons(session, "powerplotbtn", selected = "Null hypothesis power")
+        updateCheckboxInput(session, "powertype", value = FALSE)
         updateNumericInput(session, "alpha", value = 0.05)
         updateNumericInput(session, "target", value = 80)
         updateSelectInput(session, "testtype", selected = "two.sided")
@@ -2235,6 +2260,11 @@ server <- function(input, output, session) {
         updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"), value = newD)
     })
     
+    observeEvent(input$alpha, {
+        updateCheckboxInput(session, "powertype", label = paste0(
+        round(100 *(1-input$alpha), 1), "% CI"))
+    })
+    
     observeEvent(input$spacingbtn, {
         ## inp <- oS2()
         if (input$spacingsimbox) {
@@ -2243,7 +2273,7 @@ server <- function(input, output, session) {
             methodfactor <- 1 + ((input$method != "none") * 4)
             functionfactor <- 1 + ((input$packagebtn != "openCR.fit") * 3)
             detectorfactor <- switch(input$detector, proximity = 1, multi = 0.6, count = 4)
-            time <- nrow(mask()) * nrow(array()) / 1e9 * nrepeats() * 
+            time <- nrow(mask()) * nrow(detectorarray()) / 1e9 * nrepeats() * 
                 nrm()$En * input$noccasions * input$nrepl * 
                 length(seq(input$fromR, input$toR, input$simbyR)) *
                 methodfactor * functionfactor * detectorfactor
@@ -2265,12 +2295,12 @@ server <- function(input, output, session) {
 
     observeEvent(c(input$simulatebtn, input$simulatebtn2), {
         ## use test to block initial execution when simulatebtn2 goes from NULL to 0
-        if ((input$simulatebtn + input$simulatebtn2>0) & !is.null(array())) {
+        if ((input$simulatebtn + input$simulatebtn2>0) & !is.null(detectorarray())) {
             removeNotification("lownr")
             methodfactor <- 1 + ((input$method != "none") * 4)
             functionfactor <- 1 + ((input$packagebtn != "openCR.fit") * 3)
             detectorfactor <- switch(input$detector, proximity = 1, multi = 0.6, count = 4)
-            time <- nrow(mask()) * nrow(array()) / 4.5e9 * nrepeats() * 
+            time <- nrow(mask()) * nrow(detectorarray()) / 4.5e9 * nrepeats() * 
                 nrm()$En * input$noccasions * input$nrepl * 
                 methodfactor * functionfactor * detectorfactor
             if (time > 0.2)
@@ -2353,7 +2383,7 @@ server <- function(input, output, session) {
     
     observeEvent(input$click, {
         xy <- c(input$click$x, input$click$y)
-        trp <- nearesttrap(xy, array())
+        trp <- nearesttrap(xy, detectorarray())
         manualroute$seq <- c(manualroute$seq, trp)
     })
     
@@ -2361,7 +2391,7 @@ server <- function(input, output, session) {
     
     observeEvent(input$pxyclick, {
         invalidateOutputs()
-        trps <- array()
+        trps <- detectorarray()
         
         border <- border(input$pxyborder)
         
@@ -2384,7 +2414,7 @@ server <- function(input, output, session) {
     ##############################################################################
     
     observeEvent(input$appendbtn, {
-        if (!is.null(array()))
+        if (!is.null(detectorarray()))
             addtosummary()
     })
 
@@ -2417,7 +2447,7 @@ server <- function(input, output, session) {
     ##############################################################################
 
     output$spacingcodePrint <- renderText ({
-        if (is.null(array())) "" # abort if no valid array
+        if (is.null(detectorarray())) "" # abort if no valid array
         else {
             
             ## inp <- oS2()
@@ -2464,7 +2494,7 @@ server <- function(input, output, session) {
     ##############################################################################
 
     output$simcodePrint <- renderText ({
-        if (is.null(array())) {
+        if (is.null(detectorarray())) {
             ""
         }
         else {
@@ -2525,7 +2555,7 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$ntrapPrint <- renderText({
-        gr <- array()
+        gr <- detectorarray()
         glength <- attr(gr, "arrayspan")
         if (!is.null(gr)) {
             if (input$arrayinput=='Region' & input$clustertype %in% c("Grid", "Line")) {
@@ -2572,7 +2602,7 @@ server <- function(input, output, session) {
             showNotification("Pathological design - E(m) less than 5",
                              type = "warning", id = "zeronm", duration = NULL)
         }
-        else if (attr(array(), "arrayspan") < (5 * input$sigma)) {
+        else if (attr(detectorarray(), "arrayspan") < (5 * input$sigma)) {
             removeNotification("lownr")
             showNotification("Pathological design - array span < 5.sigma",
                              type = "warning", id = "zeronm", duration = NULL)
@@ -2612,7 +2642,7 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$costPrint <- renderText({
-        if (!is.null(array())) {
+        if (!is.null(detectorarray())) {
             costs <- nrm()
             nocc1 <- input$noccasions + 1
             paste0(
@@ -2622,9 +2652,9 @@ server <- function(input, output, session) {
                 "  Arrays     = $",
                 round(costs$arrays,2), "  (", nrepeats(), ") \n",
                 "  Detectors  = $",
-                round(costs$detectors,2), "  (", nrow(array()) * nrepeats(), ") \n",
+                round(costs$detectors,2), "  (", nrow(detectorarray()) * nrepeats(), ") \n",
                 "  Visits     = $",
-                round(costs$visits,2), "  (", nrow(array()) * nocc1 * nrepeats() , ") \n",
+                round(costs$visits,2), "  (", nrow(detectorarray()) * nocc1 * nrepeats() , ") \n",
                 "  Detections = $",
                 round(costs$detections,2), "  (", round(costs$En+costs$Er,1), ')\n\n',
                 "  Total      = $",
@@ -2703,11 +2733,14 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$arrayPlot <- renderPlot( height = 340, width = 340, {
-        tmpgrid <- array()
+        tmpgrid <- detectorarray()
         if (is.null(tmpgrid)) return (NULL)
         par(mar = c(1,1,1,1), xpd = TRUE)
         if (input$arrayinput=='Region') {
-            plot (tmpgrid, gridlines = FALSE)
+            if (input$entireregionbox)
+                sp::plot(region())
+            else 
+                plot (tmpgrid, gridlines = FALSE)
             if (!is.null(exclusion()))
                 sp::plot(exclusion(), add = TRUE, col = 'lightblue', border = 'lightblue')
             sp::plot(region(), add = TRUE)
@@ -2721,7 +2754,7 @@ server <- function(input, output, session) {
     ##############################################################################
 
     output$routePlot <- renderPlot( height = 320, width = 300, {
-        tmpgrid <- array()
+        tmpgrid <- detectorarray()
         if (is.null(tmpgrid)) return (NULL)
         pathl <- arraypathlength()
         seq <- attr(tmpgrid, "seq")
@@ -2757,7 +2790,7 @@ server <- function(input, output, session) {
     ##############################################################################
 
     output$popPlot <- renderPlot( height = 300, width = 380, {
-        core <- array()
+        core <- detectorarray()
         if (is.null(core)) return (NULL)
         border <- input$habxsigma * input$sigma  # consistent with mask()
         tmppop <- pop()
@@ -2796,13 +2829,13 @@ server <- function(input, output, session) {
     ##############################################################################
 
     border <- function (multiple) {
-        spc <- spacing(array()) 
+        spc <- spacing(detectorarray()) 
         if (is.null(spc) || is.na(spc)) spc <- input$sigma
         multiple * spc
     }
     
     output$pxyPlot <- renderPlot( height = 300, width = 380, {
-        core <- array()
+        core <- detectorarray()
         if (is.null(core)) return (NULL)
         invalidateOutputs()
         
@@ -2859,7 +2892,8 @@ server <- function(input, output, session) {
 
     output$powerPlot <- renderPlot( height = 320, width = 360, {
         RSE <- input$RSEslider/100
-        if (input$powerplotbtn == "Confidence interval") {
+        # if (input$powerplotbtn == "Confidence interval") {
+        if (input$powertype) {    ## confidence interval
             par(mar=c(3.5,4,2,2), mgp=c(2.4,0.7,0))
             headroom <- (input$maxEffect-input$minEffect)/4
             powLU <- plotpowerCI(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
@@ -2963,7 +2997,7 @@ server <- function(input, output, session) {
         filename = "array.txt",
         content = function(file) {
             head <- paste0("\n", arraycode(comment = TRUE))
-            write.traps(array(), header = head, file)
+            write.traps(detectorarray(), header = head, file)
         }
     )
 
