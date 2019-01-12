@@ -586,6 +586,10 @@ ui <- fluidPage(
                                                radioButtons("edgemethod", label = "Method for clusters at edge of region",
                                                             choices = c("clip", "anyinside", "allinside"),
                                                             selected = "clip"),
+                                               fileInput("exclusionfilename", "Exclusion region",
+                                                                accept = c('.shp','.dbf','.sbn','.sbx',
+                                                                           '.shx',".prj", ".txt", ".rdata"), multiple = TRUE),
+                                                      uiOutput("exclusionfile"),
                                                numericInput("maxupload", "Maximum file upload Mb",
                                                             min = 5,
                                                             max = 100,
@@ -625,7 +629,7 @@ ui <- fluidPage(
                                      
                                      fileInput("habpolyfilename", "Polygon shapefile (all parts)",
                                                accept = c('.shp','.dbf','.sbn','.sbx',
-                                                          '.shx',".prj", ".txt"), multiple = TRUE),
+                                                          '.shx',".prj", ".txt", ".rdata"), multiple = TRUE),
                                      helpText(HTML("(.txt or at least xxx.shp, xxx.dbf, and xxx.shx)"))
                                      
                               ),
@@ -1604,6 +1608,22 @@ server <- function(input, output, session) {
     })
     ##############################################################################
     
+    output$exclusionfile <- renderUI({
+        helptext <- ""
+        if (!is.null(input$exclusionfilename)) {
+            pos <- grep(".shp", tolower(input$regionfilename[,1]))
+            if (length(pos)>0)
+            helptext <- paste0(input$exclusionfilename[pos,1])
+            pos <- grep(".rdata", tolower(input$exclusionfilename[,1]))
+            if (length(pos)>0) {
+                objlist <- load(input$exclusionfilename[1,4])
+                helptext <- paste0(objlist[1])
+            }
+        }
+        helpText(HTML(helptext))
+    })
+    ##############################################################################
+    
     output$uipopN <- renderUI({
         if (!is.null(poprv$v))
             helpText(HTML(paste0("Number in mask = ", nrow(pop()))))
@@ -1747,7 +1767,8 @@ server <- function(input, output, session) {
                                                 cluster = cluster, 
                                                 region = region(),
                                                 origin = origin,
-                                                edgemethod = input$edgemethod)
+                                                edgemethod = input$edgemethod,
+                                                exclude = exclusion())
                     }
                 }
                 
@@ -1778,6 +1799,12 @@ server <- function(input, output, session) {
             if (!is.null(trps) && (nrow(trps) > input$maxdetectors)) {
                 showNotification(paste0("more than ", input$maxdetectors, " detectors; try again"),
                                   type = "warning", id = "bigarray", duration = 5)
+                trps <- NULL
+            }
+            
+            if (!is.null(trps) && (nrow(trps) == 0)) {
+                showNotification(paste0("no detectors; try again"),
+                                  type = "warning", id = "zeroarray", duration = 5)
                 trps <- NULL
             }
             
@@ -1816,6 +1843,17 @@ server <- function(input, output, session) {
     region <- reactive( { 
         if (input$arrayinput == 'Region') {
             readpolygon(input$regionfilename) 
+        }
+        else {
+            NULL
+        }
+    }
+    )
+
+    ##############################################################################
+    exclusion <- reactive( { 
+        if (!is.null(input$exclusionfilename)) {
+            readpolygon(input$exclusionfilename) 
         }
         else {
             NULL
@@ -2479,7 +2517,10 @@ server <- function(input, output, session) {
         glength <- attr(gr, "arrayspan")
         if (!is.null(gr)) {
             if (input$arrayinput=='Region' & input$clustertype %in% c("Grid", "Line")) {
-                ncluster <- length(unique(clusterID(gr)))
+                if (nrow(gr)==0)
+                    ncluster <- 0
+                else
+                    ncluster <- length(unique(clusterID(gr)))
                 clustertext <- paste0( " in ", ncluster, " clusters")
                 cr <- "\n"
             }
@@ -2534,7 +2575,6 @@ server <- function(input, output, session) {
                 removeNotification("lownr")
             }
         }
-        
         paste0(
             
             "Expected number of individuals detected n = ", 
@@ -2653,11 +2693,13 @@ server <- function(input, output, session) {
     output$arrayPlot <- renderPlot( height = 340, width = 340, {
         tmpgrid <- array()
         if (is.null(tmpgrid)) return (NULL)
-        par(mar=c(1,1,1,1))
+        par(mar = c(1,1,1,1), xpd = TRUE)
         if (input$arrayinput=='Region') {
-            sp::plot(region())
+            plot (tmpgrid, gridlines = FALSE)
+            if (!is.null(exclusion()))
+                sp::plot(exclusion(), add = TRUE, col = 'lightblue', border = 'lightblue')
+            sp::plot(region(), add = TRUE)
             plot (tmpgrid, add = TRUE)
-            
         }
         else {
             plot (tmpgrid, border = border(1), gridlines = FALSE, bty='o', 
