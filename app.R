@@ -2176,8 +2176,8 @@ server <- function(input, output, session) {
         updateNumericInput(session, "sigma", value = 25)
 
         ## general
-        updateTextInput(session, "title", "Note", value = "", 
-                        placeholder = "scenario text for Summary")
+        updateTextInput(session, "title", "", value = "", 
+                        placeholder = "scenario label for Summary")
         updateNumericInput(session, "noccasions", value = 5)
         updateNumericInput(session, "nrepeats", value = 1)
         updateTabsetPanel(session, "tabs", selected = "Array")
