@@ -18,6 +18,7 @@ linewidth <- 2  # for various plots
 
 # Define UI 
 ui <- fluidPage(
+    # responsive = TRUE,
     includeCSS("secrdesignstyle.css"),
      withMathJax(),
     tags$head(tags$style(".mypanel{margin-top:5px; margin-bottom:10px; padding-bottom: 5px;}")),
@@ -28,7 +29,7 @@ ui <- fluidPage(
                  
                  tabPanel("Design",
                           fluidRow(
-                              column(3, offset = 0,
+                              column(3, offset = 0, 
                                      h2("Detector array"),
                                      wellPanel(class = "mypanel", 
                                          fluidRow(
@@ -182,7 +183,7 @@ ui <- fluidPage(
                                      )
                               ),
 
-                              column(3, offset = 0,
+                              column(3, offset = 0, # style='padding:0px;',
                                      
                                      h2("Parameters"),
                                      wellPanel(class = "mypanel", 
@@ -239,16 +240,14 @@ ui <- fluidPage(
                                                                  width = 220)
                                                     # uiOutput('clusterhelp')
                                                 )),
-                                         column(6,
+                                         column(6, #offset = 1, style='padding:0px;',
                                                 wellPanel(class = "mypanel", 
                                                     radioButtons("distributionbtn", label = "Distribution of n",
                                                                  choices = c("Poisson", "Binomial"))
                                                 ),
-                                                column(11, checkboxInput("autorefresh", "Auto refresh", TRUE))
+                                                checkboxInput("autorefresh", "  Auto refresh", TRUE)
                                          )
                                      ),
-                                     fluidRow(column(12,textInput("title", "Note", value = "", 
-                                                                  placeholder = "scenario text for Summary"))),
                                      
                                      h2("Actions"),
 
@@ -259,89 +258,96 @@ ui <- fluidPage(
                                      br(),
                                      fluidRow(
                                          column(5, actionButton("resetbtn", "Reset all", width = 130))
-                                     )
+                                     ),
+                                     br(),
+                                     fluidRow(
+                                         column(11, textInput("title", "", value = "", 
+                                                                  placeholder = "scenario label for Summary")))
                               ),
                               
-                              column (4,
+                              column (4, 
                                       h2("Results"),
+                                      
                                       fluidRow(
                                           column(11, verbatimTextOutput("nrmPrint")),
                                           column(1, conditionalPanel("output.nrmPrint!= ''",
                                                                      downloadLink("downloadnrmcode", "R")))
                                       ),
+                                      
                                       fluidRow(
-                                          br(),
-                                          tabsetPanel(
-                                              tabPanel("Array",
-                                                       plotOutput("arrayPlot", height = 340),
-                                                       fluidRow(
-                                                           column(11, verbatimTextOutput("ntrapPrint")),
-                                                           column(1, br(), conditionalPanel("output.ntrapPrint!= ''",
-                                                                                            downloadLink("downloadArray", "Save")))
-                                                       )
-                                              ),
-                                              tabPanel("Detectfn", plotOutput("detnPlot", height = 320)),
-                                              tabPanel("Popn", 
-                                                       plotOutput("popPlot", height = 320),
-                                                       
-                                                       fluidRow(
-                                                           column(4, checkboxInput("showmaskbox", "Display mask",
-                                                                                   value = FALSE,
-                                                                                   width = 180),
-                                                                  checkboxInput("onlymaskbox", "Restrict to mask",
-                                                                                value = TRUE,
-                                                                                width = 180)
-                                                           ),
-                                                           column(4, checkboxInput("showHRbox", "Display 95% HR",
-                                                                                   value = FALSE,
-                                                                                   width = 180),
-                                                                  uiOutput('uipopN')),
-                                                           column(4, actionButton("randompopbtn", "Randomize"),
-                                                                  helpText(HTML("Pick another realisation"))
-                                                           )
-                                                       )
-                                              ),
-                                              tabPanel("Pxy",
-                                                       plotOutput("pxyPlot", height = 320, click = "pxyclick"),
-                                                       helpText(HTML("p.(x) is the probability an animal at point x will be detected at least once"))
-                                              ),
-                                              tabPanel("Power",
-                                                       fluidRow(
-                                                           column(9, plotOutput("powerPlot", height = 320, click = "CIclick")),
-                                                           column(3, 
-                                                                  fluidRow (
-                                                                      column(2,""),
-                                                                      column(10, br(), conditionalPanel("input.powertype==true",
-                                                                                                        numericInput("xpos", "% change", min = -100, max = 250, step = 1, 
-                                                                                                                     value = 0, width = 70)))))
-                                                       ),
-                                                       br(),
-                                                       fluidRow(
-                                                           column(8,
-                                                                  sliderInput("RSEslider", "",
-                                                                              min = 1.0,
-                                                                              max = 40,
-                                                                              value = 1,
-                                                                              step = 0.1,
-                                                                              pre = "RSE ",
-                                                                              post = "%",
-                                                                              width = 340)),
-                                                           column(4,
-                                                                  checkboxInput("powertype", "95% CI",
-                                                                                value = TRUE,
-                                                                                width = 130),
-                                                                  ## uiOutput('CIpct'),
-                                                                  checkboxInput("adjustRSEbox", "Adjust final RSE",
-                                                                                value = TRUE,
-                                                                                width = 130),
-                                                                  helpText(HTML("Scales with population")))
-                                                           
-                                                           
-                                                       )
-                                              ),
-                                              type = "pills",
-                                              id = "tabs"
-                                          )
+                                          column(12,
+                                                 br(),
+                                                 tabsetPanel(type = "pills",
+                                                             id = "tabs",
+                                                             tabPanel("Array",
+                                                                      plotOutput("arrayPlot", height = 340),
+                                                                      fluidRow(
+                                                                          column(11, verbatimTextOutput("ntrapPrint")),
+                                                                          column(1, br(), conditionalPanel("output.ntrapPrint!= ''",
+                                                                                                           downloadLink("downloadArray", "Save")))
+                                                                      )
+                                                             ),
+                                                             tabPanel("Detectfn", plotOutput("detnPlot", height = 320)),
+                                                             tabPanel("Popn", 
+                                                                      plotOutput("popPlot", height = 320),
+                                                                      
+                                                                      fluidRow(
+                                                                          column(4, checkboxInput("showmaskbox", "Display mask",
+                                                                                                  value = FALSE,
+                                                                                                  width = 180),
+                                                                                 checkboxInput("onlymaskbox", "Restrict to mask",
+                                                                                               value = TRUE,
+                                                                                               width = 180)
+                                                                          ),
+                                                                          column(4, checkboxInput("showHRbox", "Display 95% HR",
+                                                                                                  value = FALSE,
+                                                                                                  width = 180),
+                                                                                 uiOutput('uipopN')),
+                                                                          column(4, actionButton("randompopbtn", "Randomize"),
+                                                                                 helpText(HTML("Pick another realisation"))
+                                                                          )
+                                                                      )
+                                                             ),
+                                                             tabPanel("Pxy",
+                                                                      plotOutput("pxyPlot", height = 320, click = "pxyclick"),
+                                                                      helpText(HTML("p.(x) is the probability an animal at point x will be detected at least once"))
+                                                             ),
+                                                             
+                                                             tabPanel("Power",
+                                                                      fluidRow(
+                                                                          column(11, plotOutput("powerPlot", height = 320, click = "CIclick"))
+                                                                      ),
+                                                                      br(),
+                                                                      fluidRow(
+                                                                          column(3, offset = 1,
+                                                                                 br(), checkboxInput("powertype", "95% CI",
+                                                                                               value = TRUE,
+                                                                                               width = 130)),
+                                                                          ## uiOutput('CIpct'),
+                                                                          column(4, 
+                                                                                 br(), checkboxInput("adjustRSEbox", "Adjust final RSE",
+                                                                                                  value = TRUE,
+                                                                                                  width = 130)),
+                                                                                 # helpText(HTML("Scales with population"))),
+                                                                          column(4,
+                                                                                 conditionalPanel("input.powertype==true",
+                                                                                                  numericInput("xpos", "% change", min = -100, max = 250, step = 1, 
+                                                                                                               value = 0, width = 70)))
+                                                                          
+                                                                      ),
+                                                                      fluidRow(
+                                                                          column(12,
+                                                                                 sliderInput("RSEslider", "",
+                                                                                             min = 1.0,
+                                                                                             max = 40,
+                                                                                             value = 1,
+                                                                                             step = 0.1,
+                                                                                             pre = "RSE ",
+                                                                                             post = "%",
+                                                                                             width = "90%"))
+                                                                      )
+                                              )
+                                          ))
                                       )
                                       )
                               )
@@ -2299,7 +2305,7 @@ server <- function(input, output, session) {
             methodfactor <- 1 + ((input$method != "none") * 4)
             functionfactor <- 1 + ((input$packagebtn != "openCR.fit") * 3)
             detectorfactor <- switch(input$detector, proximity = 1, multi = 0.6, count = 4)
-            time <- nrow(mask()) * nrow(detectorarray()) / 1e9 * nrepeats() * 
+            time <- nrow(mask()) * nrow(detectorarray()) / 1e9 * ## blocked 2019-01-14 nrepeats() * 
                 nrm()$En * input$noccasions * input$nrepl * 
                 length(seq(input$fromR, input$toR, input$simbyR)) *
                 methodfactor * functionfactor * detectorfactor
@@ -2326,7 +2332,7 @@ server <- function(input, output, session) {
             methodfactor <- 1 + ((input$method != "none") * 4)
             functionfactor <- 1 + ((input$packagebtn != "openCR.fit") * 3)
             detectorfactor <- switch(input$detector, proximity = 1, multi = 0.6, count = 4)
-            time <- nrow(mask()) * nrow(detectorarray()) / 4.5e9 * nrepeats() * 
+            time <- nrow(mask()) * nrow(detectorarray()) / 4.5e9 * ## blocked 2019-01-14 nrepeats() * 
                 nrm()$En * input$noccasions * input$nrepl * 
                 methodfactor * functionfactor * detectorfactor
             if (time > 0.2)
@@ -2949,7 +2955,7 @@ server <- function(input, output, session) {
             y1 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,1,1], xout = x)$y*100-100
             y2 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,2,1], xout = x)$y*100-100
             segments(x, y1, x, y2, lwd= linewidth, col = "blue")
-            text(rep(x,2)+5, c(y1, y2)+1, round(c(y1, y2)), adj = 0, cex = 0.9, col = "blue", xpd = TRUE)
+            text(rep(x,2)+5, c(y1+1, min(y2+1, par()$usr[4]*1.05)), round(c(y1, y2)), adj = 0, cex = 0.9, col = "blue", xpd = TRUE)
         }
         else {
             CIrv$x <- 0

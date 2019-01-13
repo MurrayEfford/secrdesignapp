@@ -34,15 +34,9 @@ label {
   font-style: normal; 
 }
 
-input[type=number] {
-  height: 30px;
-  max-width: 110px;
-}
-
 input[type=select] {
   height: 25px;
   width: 90px;
-  margin-bottom: 5px; 
 }
 
 hr {
