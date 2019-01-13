@@ -309,6 +309,7 @@ ui <- fluidPage(
                                                            numericInput("xpos", "% change", min = -100, max = 250, step = 1, 
                                                                               value = 0, width = 70)))
                                                    ),
+                                                   br(),
                                                    fluidRow(
                                                        column(8,
                                                               sliderInput("RSEslider", "",
@@ -2938,13 +2939,10 @@ server <- function(input, output, session) {
                                adjustRSE = input$adjustRSEbox, alpha = input$alpha)
             x <- CIrv$x
             if (is.null(x)) x <- 0
-            {
-                y1 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,1,1], xout = x)$y*100-100
-                y2 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,2,1], xout = x)$y*100-100
-                segments(x, y1, x, y2, lwd= linewidth, col = "blue")
-                text(rep(x,2)+5, c(y1, y2)+1, round(c(y1, y2)), adj = 0, cex = 0.9, col = "blue")
-                # text(x, par()$usr[4]*1.05, round(x), cex = 0.8, xpd = TRUE)
-            }
+            y1 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,1,1], xout = x)$y*100-100
+            y2 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,2,1], xout = x)$y*100-100
+            segments(x, y1, x, y2, lwd= linewidth, col = "blue")
+            text(rep(x,2)+5, c(y1, y2)+1, round(c(y1, y2)), adj = 0, cex = 0.9, col = "blue", xpd = TRUE)
         }
         else {
             CIrv$x <- 0
