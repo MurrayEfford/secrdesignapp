@@ -305,9 +305,12 @@ ui <- fluidPage(
                                           tabPanel("Power",
                                                    fluidRow(
                                                        column(9, plotOutput("powerPlot", height = 320, click = "CIclick")),
-                                                       column(3, br(), conditionalPanel("input.powertype==true",
+                                                       column(3, br(), 
+                                                              fluidRow (
+                                                                  column(1,""),
+                                                                  column(11, conditionalPanel("input.powertype==true",
                                                            numericInput("xpos", "% change", min = -100, max = 250, step = 1, 
-                                                                              value = 0, width = 70)))
+                                                                              value = 0, width = 70)))))
                                                    ),
                                                    br(),
                                                    fluidRow(
@@ -852,11 +855,13 @@ server <- function(input, output, session) {
     }
     ##############################################################################
     
-    lengthstr <- function (length) {
-        if (length<1000) 
-            dec <- 2
-        else 
-            dec <- 0
+    lengthstr <- function (length, dec = 0) {
+        if (missing(dec)) {
+            if (length<1000) 
+                dec <- 1
+            else 
+                dec <- 0
+        }
         if (input$areaunit == "ha") {
             paste0(round(length, dec), " m")
         }
@@ -2605,7 +2610,7 @@ server <- function(input, output, session) {
             else 
                 ratio <- round(glength/input$sigma,1)
             paste0(nrow(gr), " ", input$detector, " detectors", clustertext, 
-                   "; ", cr, "diameter ", lengthstr(glength), " (", ratio, " sigma)")
+                   "; ", cr, "diameter ", lengthstr(glength,0), " (", ratio, " sigma)")
         }
         else ""
     })
@@ -2932,7 +2937,7 @@ server <- function(input, output, session) {
         RSE <- input$RSEslider/100
         # if (input$powerplotbtn == "Confidence interval") {
         if (input$powertype) {    ## confidence interval
-            par(mar=c(3.5,4,2,3), mgp=c(2.4,0.7,0))
+            par(mar=c(3.5,4,2,1), mgp=c(2.4,0.7,0))
             headroom <- (input$maxEffect-input$minEffect)/4
             powLU <- plotpowerCI(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
                                  estimatedRange = c(input$minEffect, input$maxEffect+headroom),
@@ -2947,7 +2952,7 @@ server <- function(input, output, session) {
         else {
             CIrv$x <- 0
             updateNumericInput(session, "xpos", value = 0)
-            par(mar=c(4,4,3,2))
+            par(mar=c(4,4,3,1))
             powLU <- plotpower(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
                                adjustRSE = input$adjustRSEbox, alpha = input$alpha,
                                testtype = input$testtype,
