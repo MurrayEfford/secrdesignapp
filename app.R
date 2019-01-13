@@ -2945,7 +2945,7 @@ server <- function(input, output, session) {
         RSE <- input$RSEslider/100
         # if (input$powerplotbtn == "Confidence interval") {
         if (input$powertype) {    ## confidence interval
-            par(mar=c(4,4,2,1), mgp=c(2.4,0.7,0))
+            par(mar=c(4,4,2,2), mgp=c(2.4,0.7,0))
             headroom <- (input$maxEffect-input$minEffect)/4
             powLU <- plotpowerCI(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
                                  estimatedRange = c(input$minEffect, input$maxEffect+headroom),
@@ -2955,7 +2955,7 @@ server <- function(input, output, session) {
             y1 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,1,1], xout = x)$y*100-100
             y2 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,2,1], xout = x)$y*100-100
             segments(x, y1, x, y2, lwd= linewidth, col = "blue")
-            text(rep(x,2)+5, c(y1+1, min(y2+1, par()$usr[4]*1.05)), round(c(y1, y2)), adj = 0, cex = 0.9, col = "blue", xpd = TRUE)
+            text(rep(x,2)+5, c(y1+1, min(y2+1, par()$usr[4]*1.06)), round(c(y1, y2)), adj = 0, cex = 0.9, col = "blue", xpd = TRUE)
         }
         else {
             CIrv$x <- 0
