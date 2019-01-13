@@ -134,7 +134,12 @@ ui <- fluidPage(
                                                                                                  min = 0,
                                                                                                  max = 200000,
                                                                                                  step = 10)),
-                                                                           column(7, br(), checkboxInput("randomorigin", "Random origin", FALSE))
+                                                                           column(7, checkboxInput("randomorigin", "Random origin", FALSE),
+                                                                                  checkboxInput("chequerboard", "Chequer board", FALSE))
+                                                                           # radioButtons("chequerboard", "Chequer board squares", 
+                                                                           # choices = c("all", "black","white"),
+                                                                           # selected = "all"))
+                                                                                               
                                                                        ),
                                                                        uiOutput('clusteroverlap')),
                                                               
@@ -1397,6 +1402,12 @@ server <- function(input, output, session) {
                     origincode <- paste0("sp::bbox(region)[,1] + ", input$sppgrid/2)
                 }
                 
+                if (input$chequerboard) 
+                    chequercode <- paste0(",\n    chequerboard = 'white'")
+                else {
+                    chequercode <- ""  # default
+                }
+                
                 
                 if (input$clustertype == "Grid") {
                     clustercode <- paste0("cluster <- make.grid(nx = ", input$nx, ", ny = ", input$ny, 
@@ -1418,7 +1429,11 @@ server <- function(input, output, session) {
                 }
                 
                 if (input$clustertype %in% c("Grid", "Line")) {
-                    edgemethodcode <- paste0(",\n    edgemethod = '", input$edgemethod, "'")
+                    if (input$chequerboard)
+                        edgemethodcode <- paste0(", edgemethod = '", input$edgemethod, "'")
+                    else
+                        edgemethodcode <- paste0(",\n    edgemethod = '", input$edgemethod, "'")
+                        
                     if (input$rotation != 0)
                         rotatecode <- paste0("cluster <- rotate(cluster, ", input$rotation, ")\n")
                     else 
@@ -1445,7 +1460,7 @@ server <- function(input, output, session) {
                         seedcode,
                         "array <- make.systematic(spacing = ", input$sppgrid, ", ",
                         "region = region, \n", 
-                        "    cluster = cluster, origin = ", origincode, edgemethodcode, ")\n")
+                        "    cluster = cluster, origin = ", origincode, chequercode, edgemethodcode, ")\n")
                 }
                 else if (input$regiontype == "Random") {
                     if (input$clustertype %in% c("Grid", "Line"))
@@ -1801,6 +1816,7 @@ server <- function(input, output, session) {
                                                 cluster = cluster, 
                                                 region = region(),
                                                 origin = origin,
+                                                chequerboard = if (input$chequerboard) "white" else "all",
                                                 edgemethod = input$edgemethod,
                                                 exclude = exclusion())
                     }
