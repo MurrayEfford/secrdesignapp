@@ -1263,7 +1263,7 @@ server <- function(input, output, session) {
         df <- data.frame(
             date = format(Sys.time(), "%Y-%m-%d"),
             time = format(Sys.time(), "%H:%M:%S"),
-            note = if (simrv$current) paste(input$title, "sim") else input$title,
+            note = if (simrv$current && input$title=="") paste(input$title, "simulated") else input$title,
             detector = input$detector,
             source = input$arrayinput,
             nx = if (input$arrayinput=="Grid") input$nx else
@@ -1282,8 +1282,7 @@ server <- function(input, output, session) {
             lambda0 = input$lambda0,
             sigma = input$sigma,
             detperHR = nrmval$detperHR,
-            k = round(density()^0.5 * input$sigma / 100,3),
-            
+            k = if (input$detectfn=="HHN") round(density()^0.5 * input$sigma / 100,3) else NA,
             En = round(nrmval$En,1),
             Er = round(nrmval$Er,1),
             Em = round(nrmval$Em,1),
@@ -2620,6 +2619,10 @@ server <- function(input, output, session) {
         star <- if (nrepeats()>1) "*" else ""
         nrepeatstr <- if (nrepeats()>1) paste0("\n* ", nrepeats(), " arrays") else ""
         Pxyval <- Pxy()
+        kstr <- if (input$detectfn=="HHN") paste0(
+            "Overlap coefficient k = ",
+            round(density()^0.5 * input$sigma / 100,3), '\n')
+        else ""
         
         coststr <- if (is.null(nrmval$totalcost) | (nrmval$totalcost<=0))
             ""
@@ -2656,9 +2659,7 @@ server <- function(input, output, session) {
             round(nrmval$Em,1), star,'\n',
             "Median detectors per 95% home range = ", 
             nrmval$detperHR, '\n',
-            "Overlap coefficient k = ",
-            round(density()^0.5 * input$sigma / 100,3), '\n',
-            
+            kstr,
             "Effective sampling area = ",
             areastr(nrmval$esa), star, " (mask ", areastr(nrmval$maskarea),")\n",
             "Rule-of-thumb RSE = ",
@@ -2738,7 +2739,7 @@ server <- function(input, output, session) {
             if (input$method != "none") {
                 out <- paste0(out,
                               "Simulated RB = ",
-                              round(sims$RB, 2), "%", " (SE ",  round(sims$RBse, 2), "%)")
+                              preplus(round(sims$RB, 2)), "%", " (SE ",  round(sims$RBse, 2), "%)")
             }
             out
         }

@@ -1,7 +1,7 @@
 ---
 title: "secrdesign app 1.1"
 author: "Murray Efford"
-date: '2019-01-12'
+date: '2019-01-13'
 output:
   pdf_document:
     toc: yes
@@ -13,7 +13,7 @@ output:
 
 # An interactive app for designing spatially explicit capture--recapture studies
 
-## Murray Efford 2019-01-12
+## Murray Efford 2019-01-13
 
 # Contents
   [Introduction](#introduction)  
@@ -242,7 +242,7 @@ Simulation output is shown on the Simulation page and added to the Summary by de
 2\. A recapture is any detection after an animal's first. <br>
 3\. A movement is any recapture at a different detector to the previous one. <br>
 4\. "home range"" used here loosely; 95% radius from secr::circular.r; median is across mask, excluding non-overlapping points <br>
-5\. \(k\) tends to fall in the range 0.3--1.1 (see [Efford et al. 2016](#references) for some examples). Scenarios with $\sigma$ and $D$ that result in $k$ outside this range may be unrealistic. <br>
+5\. \(k\) tends to fall in the range 0.3--1.1 (see [Efford et al. 2016](#references) for some examples). Scenarios with $\sigma$ and $D$ that result in $k$ outside this range may be unrealistic. The coefficient is not computed when detectfn = "HEX" to prevent misleading comparisons.<br>
 6\. \(\small p_\cdot(\mathbf x)\) is the probability an animal centred at \(\vec x\) is detected at 
 least once ([Borchers and Efford 2008](#references)). \(a\) varies with the number of sampling occasions and \(\lambda_0\) as well as \(\sigma\). <br>
 7\. See explanation below. <br>
