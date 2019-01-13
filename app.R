@@ -1997,7 +1997,7 @@ server <- function(input, output, session) {
     pxyrv <- reactiveValues(current = FALSE, xy = NULL, value = NULL)
     setrv <- reactiveValues(resetting = FALSE)
     poprv <- reactiveValues(v = 0)  # used to invalidate and re-plot popn
-    CIrv  <- reactiveValues(x = NULL, y1 = NULL, y2 = NULL)
+    CIrv  <- reactiveValues(x = NULL)
     manualroute <- reactiveValues(seq = NULL)
     
     sumrv <- reactiveValues(
@@ -2234,7 +2234,7 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "updateCFbox", value = TRUE)
         
         updateRadioButtons(session, "powerplotbtn", selected = "Null hypothesis power")
-        updateCheckboxInput(session, "powertype", value = TRUE)
+        
         updateNumericInput(session, "alpha", value = 0.05)
         updateNumericInput(session, "target", value = 80)
         updateSelectInput(session, "testtype", selected = "two.sided")
@@ -2436,6 +2436,8 @@ server <- function(input, output, session) {
         if (input$powertype) {
             CIrv$x <- round(input$CIclick$x)
             updateNumericInput(session, "xpos", value = CIrv$x)
+        }
+        else {
         }
     })
     
@@ -2945,7 +2947,8 @@ server <- function(input, output, session) {
             }
         }
         else {
-            CIrv$x <- NULL
+            CIrv$x <- 0
+            updateNumericInput(session, "xpos", value = 0)
             par(mar=c(4,4,3,2))
             powLU <- plotpower(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
                                adjustRSE = input$adjustRSEbox, alpha = input$alpha,
