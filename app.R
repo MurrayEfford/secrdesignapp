@@ -32,10 +32,10 @@ ui <- fluidPage(
                                      h2("Detector array"),
                                      wellPanel(class = "mypanel", 
                                          fluidRow(
-                                             column(5, selectInput("detector", "Detector type",
+                                             column(6, selectInput("detector", "Detector type",
                                                                    choices = c("multi","proximity","count"),
                                                                    selected = "proximity", width = 120)),
-                                             column(7, uiOutput('detectorhelp'))
+                                             column(6, uiOutput('detectorhelp'))
                                          ),
                                          br(),
                                          tabsetPanel(
@@ -82,7 +82,7 @@ ui <- fluidPage(
                                              tabPanel("Line",
                                                       br(),
                                                       fluidRow(
-                                                          column(6,numericInput("nline",
+                                                          column(7,numericInput("nline",
                                                                                  "number of detectors",
                                                                                 value = 20,
                                                                                 min = 1,
