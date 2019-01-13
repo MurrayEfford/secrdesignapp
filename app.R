@@ -34,7 +34,7 @@ ui <- fluidPage(
                                          fluidRow(
                                              column(5, selectInput("detector", "Detector type",
                                                                    choices = c("multi","proximity","count"),
-                                                                   selected = "proximity", width = 110)),
+                                                                   selected = "proximity", width = 120)),
                                              column(7, uiOutput('detectorhelp'))
                                          ),
                                          br(),
@@ -155,10 +155,10 @@ ui <- fluidPage(
                                                               )
                                                           )),
                                                       wellPanel(class = "mypanel",
-                                                                fluidRow(column(6, radioButtons("clustertype", label = "Cluster type",
+                                                                fluidRow(column(7, radioButtons("clustertype", label = "Cluster type",
                                                                                    choices = c("Single detector", "Grid", "Line"), 
                                                                                    selected = "Single detector")),
-                                                                         column(6, 
+                                                                         column(5, 
                                                                                 numericInput(
                                                                                     "rotation",
                                                                                     "Rotation (deg)",
@@ -251,12 +251,12 @@ ui <- fluidPage(
                                      h2("Actions"),
 
                                      fluidRow(
-                                         column(5, actionButton("simulatebtn2", "Simulate",  width = 140)),
-                                         column(6, actionButton("appendbtn", "Add to summary",  width = 140))
+                                         column(5, actionButton("simulatebtn2", "Simulate",  width = 130)),
+                                         column(6, actionButton("appendbtn", "Add to summary",  width = 130))
                                      ),
                                      br(),
                                      fluidRow(
-                                         column(5, actionButton("resetbtn", "Reset all", width = 140))
+                                         column(5, actionButton("resetbtn", "Reset all", width = 130))
                                      )
                               ),
                               
@@ -2932,7 +2932,7 @@ server <- function(input, output, session) {
         RSE <- input$RSEslider/100
         # if (input$powerplotbtn == "Confidence interval") {
         if (input$powertype) {    ## confidence interval
-            par(mar=c(3.5,4,2,2), mgp=c(2.4,0.7,0))
+            par(mar=c(3.5,4,2,3), mgp=c(2.4,0.7,0))
             headroom <- (input$maxEffect-input$minEffect)/4
             powLU <- plotpowerCI(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
                                  estimatedRange = c(input$minEffect, input$maxEffect+headroom),
