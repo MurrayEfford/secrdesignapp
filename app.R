@@ -161,7 +161,7 @@ ui <- fluidPage(
                                                                          column(5, 
                                                                                 numericInput(
                                                                                     "rotation",
-                                                                                    "Rotation (deg)",
+                                                                                    "Rotation",
                                                                                     value = 0,
                                                                                     min = 0,
                                                                                     max = 360,
@@ -305,10 +305,10 @@ ui <- fluidPage(
                                           tabPanel("Power",
                                                    fluidRow(
                                                        column(9, plotOutput("powerPlot", height = 320, click = "CIclick")),
-                                                       column(3, br(), 
+                                                       column(3, 
                                                               fluidRow (
-                                                                  column(1,""),
-                                                                  column(11, conditionalPanel("input.powertype==true",
+                                                                  column(2,""),
+                                                                  column(10, br(), conditionalPanel("input.powertype==true",
                                                            numericInput("xpos", "% change", min = -100, max = 250, step = 1, 
                                                                               value = 0, width = 70)))))
                                                    ),
