@@ -101,8 +101,9 @@ ui <- fluidPage(
                                              ),
                                              tabPanel("File", values = "File",
                                                       br(),
-                                                      fileInput("trapfilename", "",   # Detector layout file
-                                                                accept = "text/plain"),
+                                                      div(style="height: 80px;",
+                                                          fileInput("trapfilename", "",   # Detector layout file
+                                                                    accept = "text/plain")),
                                                       helpText(HTML(paste0("Requires text file with detector ID ",
                                                                            "and x-y coordinates in three columns,",
                                                                            " as for secr::read.traps"))),
@@ -111,9 +112,10 @@ ui <- fluidPage(
                                              ),
                                              tabPanel("Region",
                                                       br(),
-                                                      fileInput("regionfilename", "Boundary file(s)",
+                                                      div(style="height: 80px;",
+                                                          fileInput("regionfilename", "Boundary file(s)",
                                                                 accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                           '.shx',".prj", ".txt", ".rdata"), multiple = TRUE),
+                                                                           '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
                                                       # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
                                                       uiOutput("shapefile"),
                                                       
@@ -599,10 +601,11 @@ ui <- fluidPage(
                                                radioButtons("edgemethod", label = "Method for clusters at edge of region",
                                                             choices = c("clip", "anyinside", "allinside"),
                                                             selected = "clip"),
-                                               fileInput("exclusionfilename", "Excluded region",
-                                                                accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                           '.shx',".prj", ".txt", ".rdata"), multiple = TRUE),
-                                                      uiOutput("exclusionfile"),
+                                               div(style="height: 80px;",
+                                                   fileInput("exclusionfilename", "Excluded region",
+                                                             accept = c('.shp','.dbf','.sbn','.sbx',
+                                                                        '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
+                                               uiOutput("exclusionfile"),
                                                numericInput("maxupload", "Maximum file upload Mb",
                                                             min = 5,
                                                             max = 100,
@@ -611,42 +614,39 @@ ui <- fluidPage(
                                      ),
                                      
                                      h2("Habitat mask"),
-                                     fluidRow(
-                                         column(6, wellPanel(class = "mypanel", 
-                                             numericInput("habxsigma", "Buffer width (multiple of sigma)",
-                                                          min = 0,
-                                                          max = 20,
-                                                          value = 4,
-                                                          step = 0.5,
-                                                          width = 250),
-                                             numericInput("habnx", "nx",
-                                                          min = 10,
-                                                          max = 1000,
-                                                          value = 64,
-                                                          step = 1,
-                                                          width = 180)
-                                             )
-                                         ),
-                                         
-                                         column(6, wellPanel(class = "mypanel", 
-                                             radioButtons("maskshapebtn", label = "Shape",
-                                                          choices = c("Rectangular", "Rounded"), 
-                                                          selected = "Rounded")
-                                         ),
-                                         checkboxInput("polygonbox", "Clip to polygon(s)",
-                                                   value = FALSE,
-                                                   width = 180)
-                                         )
-                                     ),
-                                     
-                                     
-                                     fileInput("habpolyfilename", "Polygon shapefile (all parts)",
-                                               accept = c('.shp','.dbf','.sbn','.sbx',
-                                                          '.shx',".prj", ".txt", ".rdata"), multiple = TRUE),
-                                     helpText(HTML("(.txt or at least xxx.shp, xxx.dbf, and xxx.shx)"))
-                                     
+                                     wellPanel(class = "mypanel", 
+                                               fluidRow(
+                                                   column(6, 
+                                                          numericInput("habxsigma", "Buffer width (multiple of sigma)",
+                                                                       min = 0,
+                                                                       max = 20,
+                                                                       value = 4,
+                                                                       step = 0.5,
+                                                                       width = 250),
+                                                          numericInput("habnx", "nx",
+                                                                       min = 10,
+                                                                       max = 1000,
+                                                                       value = 64,
+                                                                       step = 1,
+                                                                       width = 180)
+                                                   ),
+                                                   column(6, 
+                                                          radioButtons("maskshapebtn", label = "Shape",
+                                                                       choices = c("Rectangular", "Rounded"), 
+                                                                       selected = "Rounded"),
+                                                          br(),
+                                                          checkboxInput("polygonbox", "Clip to polygon(s)",
+                                                                        value = FALSE,
+                                                                        width = 180)
+                                                   )
+                                               ),
+                                               div(style="height: 80px;",
+                                                   fileInput("habpolyfilename", "Polygon shapefile (all parts)",
+                                                             accept = c('.shp','.dbf','.sbn','.sbx',
+                                                                        '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
+                                               helpText(HTML("(.txt or at least xxx.shp, xxx.dbf, and xxx.shx)"))
+                                     )
                               ),
-                          
 
                               column(3,
 
@@ -1638,7 +1638,7 @@ server <- function(input, output, session) {
     output$exclusionfile <- renderUI({
         helptext <- ""
         if (!is.null(input$exclusionfilename)) {
-            pos <- grep(".shp", tolower(input$regionfilename[,1]))
+            pos <- grep(".shp", tolower(input$exclusionfilename[,1]))
             if (length(pos)>0)
             helptext <- paste0(input$exclusionfilename[pos,1])
             pos <- grep(".rdata", tolower(input$exclusionfilename[,1]))
