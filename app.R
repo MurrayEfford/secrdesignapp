@@ -901,46 +901,6 @@ server <- function(input, output, session) {
     }
     ##############################################################################
     
-    pathlength <- function (trps, type = c("sequential", "sumspacing", "manual"),
-                            returntostart) {
-        type <- match.arg(type)
-        pathl <- NA
-        if (type %in% c("sequential", "tsp", "manual")) {
-            if (type=="manual")
-                seq <- manualroute$seq
-            else
-                seq <- attr(trps, "seq")
-            if (!is.null(seq)) {
-                #     stop("requires seq attribute or manual route")
-                if (length(seq)==1)
-                    pathl <- 0
-                else {
-                    trps <- trps[seq,]
-                    ntrps <- nrow(trps)
-                    if (returntostart)
-                        dxy <- trps - trps[c(2:ntrps, 1),]
-                    else
-                        dxy <- trps[-1,] - trps[-ntrps,]
-                    d <- sqrt(apply(dxy^2,1,sum))
-                    pathl <- sum(d)
-                }
-            }
-        }
-        else if (type == "sumspacing") {
-            d <- as.matrix(dist(trps))
-            diag(d) <- NA
-            d <- apply(d,1,min, na.rm = TRUE)
-            if (length(table(d)) == 1)
-                (nrow(trps)-1+returntostart) * d[1]
-            else
-                NA
-        }
-        else {
-            NA
-        }
-    }
-    ##############################################################################
-
     cost <- function (x, costs = NULL) {
         if (!inherits(x, "optimalSpacing"))
             stop("requires input of class optimalSpacing")
@@ -954,7 +914,7 @@ server <- function(input, output, session) {
         nrep <- attr(x, "nrepeats")
 
         ## initial path length in sigma units
-        pathl <- pathlength(trps, tolower(input$routetype), input$returnbox)
+        pathl <- arraypathlength()
         spc <- spacing(trps); if (is.null(spc)) spc <- NA
         df$pathlength <- df$R * pathl / spc * sig / 1000
 
@@ -1730,8 +1690,43 @@ server <- function(input, output, session) {
     output$validspacing <- reactive({rotrv$current})   ## for conditionalPanel                                  
 
     arraypathlength <- reactive({
-        trps <- detectorarray()
-        pathlength(trps, tolower(input$routetype), input$returnbox)
+        
+        pathl <- NA
+        if (input$routetype %in% c("Sequential", "TSP", "Manual")) {
+            if (input$routetype=="manual")
+                seq <- manualroute$seq
+            else
+                seq <- attr(detectorarray(), "seq")
+            if (!is.null(seq)) {
+                #     stop("requires seq attribute or manual route")
+                if (length(seq)==1)
+                    pathl <- 0
+                else {
+                    trps <- detectorarray()[seq,]
+                    ntrps <- nrow(trps)
+                    if (input$returnbox)
+                        dxy <- trps - trps[c(2:ntrps, 1),]
+                    else
+                        dxy <- trps[-1,] - trps[-ntrps,]
+                    d <- sqrt(apply(dxy^2,1,sum))
+                    pathl <- sum(d)
+                }
+            }
+        }
+        else if (input$routetype == "SumSpacing") {
+            d <- as.matrix(dist(detectorarray()))
+            diag(d) <- NA
+            d <- apply(d,1,min, na.rm = TRUE)
+            if (length(table(d)) == 1) {
+                pathl <- (nrow(detectorarray())-1+ input$returnbox) * d[1]
+            }
+            else {
+                pathl <- sum(d)   
+            }
+        }
+                
+        pathl
+
     })
     
     ##############################################################################
@@ -2061,7 +2056,7 @@ server <- function(input, output, session) {
             scensum
         }
         else {
-            showNotification("invalid mask", type = "warning", id = "invalidmask",
+            showNotification("invalid mask; check parameters", type = "warning", id = "invalidmask",
                                       duration = seconds)
             
             NULL
@@ -2772,22 +2767,29 @@ server <- function(input, output, session) {
     output$costPrint <- renderText({
         if (!is.null(detectorarray())) {
             costs <- nrm()
-            nocc1 <- input$noccasions + 1
-            paste0(
-                "  Travel     = $",
-                round(costs$travel,2), "  (", round(arraypathlength()/1000  * 
-                                                nocc1 * nrepeats(),3), ' km)\n',
-                "  Arrays     = $",
-                round(costs$arrays,2), "  (", nrepeats(), ") \n",
-                "  Detectors  = $",
-                round(costs$detectors,2), "  (", nrow(detectorarray()) * nrepeats(), ") \n",
-                "  Visits     = $",
-                round(costs$visits,2), "  (", nrow(detectorarray()) * nocc1 * nrepeats() , ") \n",
-                "  Detections = $",
-                round(costs$detections,2), "  (", round(costs$En+costs$Er,1), ')\n\n',
-                "  Total      = $",
-                round(costs$totalcost, 2)
-            )
+            if (is.null(costs)) {
+                showNotification("costing failed; check parameters",
+                                 type = "error", id = "nocost", duration = seconds)
+                return("")
+            }
+            else {
+                nocc1 <- input$noccasions + 1
+                paste0(
+                    "  Travel     = $",
+                    round(costs$travel,2), "  (", round(arraypathlength()/1000  * 
+                                                            nocc1 * nrepeats(),3), ' km)\n',
+                    "  Arrays     = $",
+                    round(costs$arrays,2), "  (", nrepeats(), ") \n",
+                    "  Detectors  = $",
+                    round(costs$detectors,2), "  (", nrow(detectorarray()) * nrepeats(), ") \n",
+                    "  Visits     = $",
+                    round(costs$visits,2), "  (", nrow(detectorarray()) * nocc1 * nrepeats() , ") \n",
+                    "  Detections = $",
+                    round(costs$detections,2), "  (", round(costs$En+costs$Er,1), ')\n\n',
+                    "  Total      = $",
+                    round(costs$totalcost, 2)
+                )
+            }
         }
         else ""
     })

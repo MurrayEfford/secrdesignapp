@@ -342,7 +342,7 @@ Travel cost depends on the length of the route taken to check detectors. If the 
 
 The 'Manual' option allows the user to construct a route 'on the fly' by clicking near detectors at the turning points.  Click on 'Define new route...' to start again.
 
-The 'SumSpacing' option determines route length by summing inter-detector distances.
+The 'SumSpacing' option determines route length by summing inter-detector distances. This is unreliable if detectors are clustered and spacing is not uniform.
 
 ----------------------------------------------------
 
