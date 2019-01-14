@@ -277,9 +277,13 @@ ui <- fluidPage(
                                       h2("Results"),
                                       
                                       fluidRow(
-                                          column(11, style='padding:0px;', verbatimTextOutput("nrmPrint")),
-                                          column(1, conditionalPanel("output.nrmPrint!= ''",
-                                                                     downloadLink("downloadnrmcode", "R")))
+                                          column(12,
+                                                 fluidRow(
+                                                     column(11, verbatimTextOutput("nrmPrint")), # style='padding:0px;'),
+                                                     column(1, style='padding:0px;', 
+                                                            conditionalPanel("output.nrmPrint!= ''",
+                                                                             downloadLink("downloadnrmcode", "R")))
+                                                 ))
                                       ),
                                       
                                       fluidRow(
