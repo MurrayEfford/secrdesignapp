@@ -6,17 +6,17 @@ secrdesignversion <- packageVersion('secrdesign')
 if (compareVersion(as.character(secrdesignversion), '2.5.5') < 0)
     stop("secrdesignapp 1.1 requires secrdesign version 2.5.5 or later",
          call. = FALSE)
-seconds <- 10   ## default duration for showNotification()
 
 # requires package rgdal to read shapefiles
 # requires package sp for bbox and plot method for SpatialPolygons
 # requires package parallel for max cores in simulate options (distributed with base R)
 # requires package tools for file path when reading shapefiles (distributed with base R)
 
-# interrupt
+# interrupt is hard -
 # see http://htmlpreview.github.io/?https://github.com/fellstat/ipc/blob/master/inst/doc/shinymp.html
 
 linewidth <- 2  # for various plots 
+seconds <- 6   ## default duration for showNotification()
 
 # Define UI 
 ui <- fluidPage(
@@ -31,7 +31,7 @@ ui <- fluidPage(
                  
                  tabPanel("Design",
                           fluidRow(
-                              column(3, offset = 0, 
+                              column(3, # offset = 0, style='padding:15px;',
                                      h2("Detector array"),
                                      wellPanel(class = "mypanel", 
                                          fluidRow(
@@ -130,14 +130,15 @@ ui <- fluidPage(
                                                                        
                                                                        br(),
                                                                        fluidRow(
-                                                                           column(5,numericInput("sppgrid",
+                                                                           column(6,numericInput("sppgrid",
                                                                                                  "spacing (m)",
                                                                                                  value = 200,
                                                                                                  min = 0,
                                                                                                  max = 200000,
                                                                                                  step = 10)),
-                                                                           column(7, checkboxInput("randomorigin", "Random origin", FALSE),
-                                                                                  checkboxInput("chequerboard", "Chequer board", FALSE))
+                                                                           column(6, 
+                                                                                  checkboxInput("randomorigin", "Random origin", FALSE),
+                                                                                  checkboxInput("chequerboard", "Chequerboard", FALSE))
                                                                            # radioButtons("chequerboard", "Chequer board squares", 
                                                                            # choices = c("all", "black","white"),
                                                                            # selected = "all"))
@@ -190,7 +191,7 @@ ui <- fluidPage(
                                      )
                               ),
 
-                              column(3, offset = 0, # style='padding:0px;',
+                              column(3, # offset = 0, style='padding:0px;',  
                                      
                                      h2("Parameters"),
                                      wellPanel(class = "mypanel", 
@@ -272,11 +273,11 @@ ui <- fluidPage(
                                                                   placeholder = "scenario label for Summary")))
                               ),
                               
-                              column (4, 
+                              column (4, # style='padding:0px;',
                                       h2("Results"),
                                       
                                       fluidRow(
-                                          column(11, verbatimTextOutput("nrmPrint")),
+                                          column(11, style='padding:0px;', verbatimTextOutput("nrmPrint")),
                                           column(1, conditionalPanel("output.nrmPrint!= ''",
                                                                      downloadLink("downloadnrmcode", "R")))
                                       ),
@@ -289,7 +290,7 @@ ui <- fluidPage(
                                                              tabPanel("Array",
                                                                       plotOutput("arrayPlot", height = 340),
                                                                       fluidRow(
-                                                                          column(11, verbatimTextOutput("ntrapPrint")),
+                                                                          column(11, style='padding:0px;', verbatimTextOutput("ntrapPrint")),
                                                                           column(1, br(), conditionalPanel("output.ntrapPrint!= ''",
                                                                                                            downloadLink("downloadArray", "Save")))
                                                                       )
@@ -612,7 +613,7 @@ ui <- fluidPage(
                                                ),
                                                
                                                radioButtons("edgemethod", label = "Method for clusters at edge of region",
-                                                            choices = c("clip", "anyinside", "allinside"),
+                                                            choices = c("clip", "allowoverlap", "allinside"),
                                                             selected = "clip"),
                                                div(style="height: 80px;",
                                                    fileInput("exclusionfilename", "Excluded region",
@@ -1116,7 +1117,7 @@ server <- function(input, output, session) {
                 array <- make.grid(nx = input$nline, ny = 1, detector = input$detector,
                                    spacing = input$spline*R)
             }
-            msk <- make.mask(array, buffer = input$habxsigma * input$sigma, nx = input$habnx)
+            msk <- suppressWarnings(make.mask(array, buffer = input$habxsigma * input$sigma, nx = input$habnx))
             nrm <- Enrm(density(), array, msk, detectpar, input$noccasions, input$detectfn)
             nrm[1] - nrm[2]
         }
@@ -2011,50 +2012,57 @@ server <- function(input, output, session) {
     ##############################################################################
 
     nrm <- reactive({
-        
         trps <- detectorarray()
         if (is.null(trps)) return (NULL)
         invalidateOutputs()
         msk <- mask()
-        pathl <- arraypathlength()
-        scen <- make.scenarios(trapsindex = 1, noccasions = input$noccasions, 
-                               nrepeats = nrepeats(), D = density(), sigma = input$sigma, 
-                               lambda0 = input$lambda0, detectfn = input$detectfn)
-        scensum <- scenarioSummary(scen,
-                                   trapset = trps,
-                                   mask = msk,
-                                   CF = input$CFslider,  
-                                   routelength = pathl / 1000,
-                                   costing = TRUE,
-                                   unitcost = list(perkm = input$perkm,
-                                                   perarray = input$perarray,
-                                                   perdetector = input$perdetector,
-                                                   pervisit = input$pervisit,
-                                                   perdetection = input$perdetection))
-        scensum$maskarea <- maskarea(msk)
-        if (input$distributionbtn == "Binomial") {
-            scensum$rotRSE <- scensum$rotRSEB     
+        if (nrow(msk)>0) {
+            pathl <- arraypathlength()
+            scen <- make.scenarios(trapsindex = 1, noccasions = input$noccasions, 
+                                   nrepeats = nrepeats(), D = density(), sigma = input$sigma, 
+                                   lambda0 = input$lambda0, detectfn = input$detectfn)
+            scensum <- scenarioSummary(scen,
+                                       trapset = trps,
+                                       mask = msk,
+                                       CF = input$CFslider,  
+                                       routelength = pathl / 1000,
+                                       costing = TRUE,
+                                       unitcost = list(perkm = input$perkm,
+                                                       perarray = input$perarray,
+                                                       perdetector = input$perdetector,
+                                                       pervisit = input$pervisit,
+                                                       perdetection = input$perdetection))
+            scensum$maskarea <- maskarea(msk)
+            if (input$distributionbtn == "Binomial") {
+                scensum$rotRSE <- scensum$rotRSEB     
+            }
+            
+            RSE <- 100*scensum$rotRSE
+            if (is.na(RSE))
+                maxRSE <- 100
+            else {
+                if (RSE<10) maxRSE <- 20
+                else if (RSE<20) maxRSE <- 30
+                else if (RSE<30) maxRSE <- 40
+                else if (RSE<40) maxRSE <- 50
+                else maxRSE <- 100
+            }
+            updateSliderInput(session, "RSEslider",
+                              min = 1.0,
+                              max = maxRSE,
+                              value = RSE,
+                              step = 0.1)
+            
+            # nr
+            scensum
         }
-        
-        RSE <- 100*scensum$rotRSE
-        if (is.na(RSE))
-            maxRSE <- 100
         else {
-            if (RSE<10) maxRSE <- 20
-            else if (RSE<20) maxRSE <- 30
-            else if (RSE<30) maxRSE <- 40
-            else if (RSE<40) maxRSE <- 50
-            else maxRSE <- 100
+            showNotification("invalid mask", type = "warning", id = "invalidmask",
+                                      duration = seconds)
+            
+            NULL
         }
-        updateSliderInput(session, "RSEslider",
-                          min = 1.0,
-                          max = maxRSE,
-                          value = RSE,
-                          step = 0.1)
-        
-        # nr
-        scensum
-    })
+        })
     ##############################################################################
 
     ## reactiveValues
