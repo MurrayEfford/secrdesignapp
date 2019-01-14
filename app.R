@@ -392,7 +392,7 @@ ui <- fluidPage(
                                                       step=0.1,
                                                       width = 200),
                                          numericInput("pervisit",
-                                                      "Cost per visit $",
+                                                      "Cost per detector visit $",
                                                       min = 0,
                                                       max = 1000,
                                                       value = 0,
@@ -404,7 +404,11 @@ ui <- fluidPage(
                                                       max = 1000,
                                                       value = 0,
                                                       step=0.1,
-                                                      width = 200))
+                                                      width = 200)),
+                                     br(),
+                                     fluidRow(
+                                         column(10, offset=1, checkboxInput("setupoccasion", "Include setup occasion", TRUE))
+                                     )
                               ),
                               column(3, offset = 0,
                                      h2("Route"),
@@ -1509,7 +1513,7 @@ server <- function(input, output, session) {
             "perdetector = ", input$perdetector, ",\n",
             "                    pervisit = ", input$pervisit, ", ",
             "perdetection = ", input$perdetection, ")",
-            ",\n    routelength = ", pathl,  ", costing = TRUE")
+            ",\n    routelength = ", pathl,  ", setupoccasion = ", input$setupoccasion, ", costing = TRUE")
         paste0(
             "# R code to generate main results\n",
             "library(secrdesign)\n\n",
@@ -2026,6 +2030,7 @@ server <- function(input, output, session) {
                                        CF = input$CFslider,  
                                        routelength = pathl / 1000,
                                        costing = TRUE,
+                                       setupoccasion = input$setupoccasion,
                                        unitcost = list(perkm = input$perkm,
                                                        perarray = input$perarray,
                                                        perdetector = input$perdetector,
@@ -2271,6 +2276,7 @@ server <- function(input, output, session) {
         updateNumericInput(session, "pervisit", value = 0)
         updateRadioButtons(session, "routetype", selected = "Sequential")
         updateCheckboxInput(session, "returnbox", value = FALSE)
+        updateCheckboxInput(session, "setupoccasion", value = TRUE)
 
         ## spacing
         updateTabsetPanel(session, "spacingtabs", selected = "RSE")
@@ -2773,7 +2779,7 @@ server <- function(input, output, session) {
                 return("")
             }
             else {
-                nocc1 <- input$noccasions + 1
+                nocc1 <- input$noccasions + as.numeric(input$setupoccasion)
                 paste0(
                     "  Travel     = $",
                     round(costs$travel,2), "  (", round(arraypathlength()/1000  * 

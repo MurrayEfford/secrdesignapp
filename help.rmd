@@ -314,7 +314,7 @@ As an alternative to conventional power analysis we can construct intervals for 
     <td> one-off cost of purchase and installation </td>
   </tr>
   <tr>
-    <td>Cost per visit $ </td>
+    <td>Cost per detector visit $ </td>
     <td> fixed cost per occasion, including set-up occasion </td>
   </tr>
   <tr>
@@ -322,6 +322,10 @@ As an alternative to conventional power analysis we can construct intervals for 
     <td> handling and lab costs </td>
   </tr>
 </table> 
+
+<br>
+
+Travel distance and per-visit costs are a function of the number of sampling occasions on the Design page. Usually there will also be travel and per-detector costs associated with a start-up visit; this may be excluded by un-ticking the "Include setup occasion" box.
                             
 ## Route
 
@@ -359,7 +363,9 @@ A very approximate algorithm is used to predict the execution time from the prod
 * number of clusters
 * number of replicates
 
-with adjustments for the maximisation method (default "none"), detector type (default "proximity") and fitting function (default `openCR.fit`). If the predicted time exceeds 0.2 minutes a dialogue box allows the user to cancel simulations.
+with adjustments for the maximisation method (default "none"), detector type (default "proximity") and fitting function (default `openCR.fit`). If the predicted time exceeds 0.2 minutes a dialogue box allows the user to cancel simulations before they start. 
+
+Unfortunately, there is no elegant way to interrupt simulations once they have started. Close your browser window and start again.
 
 ## Standalone R code
 
