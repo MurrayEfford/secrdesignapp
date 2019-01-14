@@ -1,10 +1,12 @@
 # renamed from secrdesignapp.R
 
 library(secrdesign)
-pver <- packageVersion('secrdesign')
-if (compareVersion(as.character(pver), '2.5.5') < 0)
+secrversion <- packageVersion('secr')
+secrdesignversion <- packageVersion('secrdesign')
+if (compareVersion(as.character(secrdesignversion), '2.5.5') < 0)
     stop("secrdesignapp 1.1 requires secrdesign version 2.5.5 or later",
          call. = FALSE)
+seconds <- 10   ## default duration for showNotification()
 
 # requires package rgdal to read shapefiles
 # requires package sp for bbox and plot method for SpatialPolygons
@@ -655,7 +657,8 @@ ui <- fluidPage(
                                                    fileInput("habpolyfilename", "Polygon shapefile (all parts)",
                                                              accept = c('.shp','.dbf','.sbn','.sbx',
                                                                         '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
-                                               helpText(HTML("(.txt or at least xxx.shp, xxx.dbf, and xxx.shx)"))
+                                               uiOutput("habitatfile")
+                                               #helpText(HTML("(.txt or at least xxx.shp, xxx.dbf, and xxx.shx)"))
                                      )
                               ),
 
@@ -829,7 +832,7 @@ server <- function(input, output, session) {
 
     desc <- packageDescription("secrdesign")
     showNotification(paste("secrdesign", desc$Version, desc$Date),
-                     closeButton = FALSE, type = "message", duration = 4)
+                     closeButton = FALSE, type = "message", duration = 5)
 
     ##############################################################################
     
@@ -1156,10 +1159,10 @@ server <- function(input, output, session) {
                       any(grepl(".dbf", fileupload[,1])) &&
                       any(grepl(".shx", fileupload[,1])))) {
                     showNotification("need shapefile components .shp, .dbf, .shx",
-                                     type = "error", id = "nofile", duration = NULL)
+                                     type = "error", id = "nofile", duration = seconds)
                 }
                 else  if (!requireNamespace("rgdal"))
-                    showNotification("need package rgdal to read shapefile", type = "error", id = "norgdal", duration = NULL)
+                    showNotification("need package rgdal to read shapefile", type = "error", id = "norgdal", duration = seconds)
                 else {
                     removeNotification(id = "nofile")
                     removeNotification(id = "norgdal")
@@ -1402,8 +1405,9 @@ server <- function(input, output, session) {
                     origincode <- paste0("sp::bbox(region)[,1] + ", input$sppgrid/2)
                 }
                 
-                if (input$chequerboard) 
+                if (input$chequerboard) { 
                     chequercode <- paste0(",\n    chequerboard = 'white'")
+                }
                 else {
                     chequercode <- ""  # default
                 }
@@ -1561,7 +1565,13 @@ server <- function(input, output, session) {
     }
     ##############################################################################
     
-
+    maskOK <- function () {
+        if (!is.null(poly())) {
+            sum(pointsInPolygon(detectorarray(), poly())) > 0
+        }
+        else TRUE
+    }
+    ##############################################################################
 
     ## renderUI
 
@@ -1671,6 +1681,22 @@ server <- function(input, output, session) {
         helpText(HTML(helptext))
     })
     ##############################################################################
+
+    output$habitatfile <- renderUI({
+        helptext <- ""
+        if (!is.null(input$habpolyfilename)) {
+            pos <- grep(".shp", tolower(input$habpolyfilename[,1]))
+            if (length(pos)>0)
+            helptext <- paste0(input$habpolyfilename[pos,1])
+            pos <- grep(".rdata", tolower(input$habpolyfilename[,1]))
+            if (length(pos)>0) {
+                objlist <- load(input$habpolyfilename[1,4])
+                helptext <- paste0(objlist[1])
+            }
+        }
+        helpText(HTML(helptext))
+    })
+    ##############################################################################
     
     output$uipopN <- renderUI({
         if (!is.null(poprv$v))
@@ -1770,7 +1796,8 @@ server <- function(input, output, session) {
                         expectedndetector <- input$numpgrid * npercluster
                     if (expectedndetector > input$maxdetectors*2) {
                         showNotification("expected N detectors exceeds limit",
-                                         type = "error", id = "toomany")
+                                         type = "error", id = "toomany",
+                                         duration = seconds)
                         
                         return(NULL)
                     }
@@ -1812,13 +1839,16 @@ server <- function(input, output, session) {
                                                  edgemethod = input$edgemethod)
                     }
                     else {
-                        trps <- make.systematic(spacing = input$sppgrid, 
-                                                cluster = cluster, 
-                                                region = region(),
-                                                origin = origin,
-                                                chequerboard = if (input$chequerboard) "white" else "all",
-                                                edgemethod = input$edgemethod,
-                                                exclude = exclusion())
+                        args <- list(spacing = input$sppgrid, 
+                                     cluster = cluster, 
+                                     region = region(),
+                                     origin = origin,
+                                     edgemethod = input$edgemethod,
+                                     exclude = exclusion())
+                        if (input$chequerboard)
+                            args$chequerboard <- "white"
+
+                        trps <- do.call(make.systematic, args)
                     }
                 }
                 
@@ -1837,7 +1867,7 @@ server <- function(input, output, session) {
                     if (!inherits(trps, "traps")) {
                         trps <- NULL
                         showNotification("invalid trap file or arguments; try again",
-                              type = "warning", id = "badarray", duration = NULL)
+                              type = "warning", id = "badarray", duration = seconds)
                     }
                 }
             }
@@ -1848,13 +1878,13 @@ server <- function(input, output, session) {
             }
             if (!is.null(trps) && (nrow(trps) > input$maxdetectors)) {
                 showNotification(paste0("more than ", input$maxdetectors, " detectors; try again"),
-                                  type = "warning", id = "bigarray", duration = 5)
+                                  type = "warning", id = "bigarray", duration = seconds)
                 trps <- NULL
             }
             
             if (!is.null(trps) && (nrow(trps) == 0)) {
                 showNotification(paste0("no detectors; try again"),
-                                  type = "warning", id = "zeroarray", duration = 5)
+                                  type = "warning", id = "zeroarray", duration = seconds)
                 trps <- NULL
             }
             
@@ -1915,33 +1945,48 @@ server <- function(input, output, session) {
     mask <- reactive( {
         rotrv$current <- FALSE
         pxyrv$value <- NULL
-        make.mask (detectorarray(),
-                   buffer = input$habxsigma * input$sigma,
-                   nx = input$habnx,
-                   type = if (input$maskshapebtn=='Rectangular') 'traprect' else 'trapbuffer',
-                   poly = poly(),
-                   keep.poly = FALSE)
+        if (!maskOK()) showNotification("no detectors in habitat polygon(s)",
+                                      type = "warning", id = "notrapsinpoly",
+                                      duration = seconds)
+        msk <- make.mask (detectorarray(),
+                          buffer = input$habxsigma * input$sigma,
+                          nx = input$habnx,
+                          type = if (input$maskshapebtn=='Rectangular') 'traprect' else 'trapbuffer',
+                          poly = poly(),
+                          keep.poly = FALSE)
+        msk
     }
     )
     ##############################################################################
-
+    
     pop <- reactive(
         {
             poprv$v
             core <- detectorarray()
-            if (is.null(core)) return (NULL)
+            if (is.null(core)) {
+                return (NULL)
+            }
             if (density() * maskarea(mask()) > 10000) {
                 showNotification("population exceeds 10000; try again",
-                                 type = "error", id = "bigpop", duration = 10)
+                                 type = "error", id = "bigpop", duration = seconds)
                 return(NULL)
             }
             else removeNotification("bigpop")
             Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
-            if (input$onlymaskbox)
-                pop <- sim.popn (D = density(), core=mask(), model2D="IHP", Ndist = Ndist)
-            else # rectangular area
+            if (input$onlymaskbox) {
+                if (nrow(mask())==0) {
+                    showNotification("incompatible mask",
+                                 type = "error", id = "badmask", duration = seconds)
+                    pop <- NULL
+                }
+                else {
+                    pop <- sim.popn (D = density(), core=mask(), model2D="IHP", Ndist = Ndist)
+                }
+            }
+            else { # rectangular area
                 pop <- sim.popn (D = density(), core=core, Ndist = Ndist,
                                  buffer = input$habxsigma * input$sigma)
+            }
             pop
         }
     )
@@ -2107,6 +2152,7 @@ server <- function(input, output, session) {
     # nrepeats
     # maxupload
     # areaunit
+    # chequerboard
     
     ##############################################################################
 
@@ -2120,7 +2166,7 @@ server <- function(input, output, session) {
         ## E[n] == E[r]
         if (!input$autorefresh) {
             showNotification("enable auto refresh",
-                             type = "error", id = "nosuggest")
+                             type = "error", id = "nosuggest", duration = seconds)
         }
         else {
             optimalspacing <- n.eq.r()
@@ -2137,7 +2183,7 @@ server <- function(input, output, session) {
         ## E[n] == E[r]
         if (!input$autorefresh) {
             showNotification("enable auto refresh",
-                             type = "error", id = "nosuggestline")
+                             type = "error", id = "nosuggestline", duration = seconds)
         }
         else {
         optimalspacing <- n.eq.r()
@@ -2311,6 +2357,14 @@ server <- function(input, output, session) {
     
     observeEvent(input$xpos, {
         CIrv$x <- input$xpos
+    })
+    
+    observeEvent(input$chequerboard, {
+        if (input$chequerboard && compareVersion(as.character(secrversion), '3.2.0') < 0) {
+            showNotification("chequerboard requires secr version >= 3.2.0",
+                             type = "error", id = "oldsecr", duration = seconds)
+            updateCheckboxInput(session, "chequerboard", value = FALSE)
+        }
     })
     
     observeEvent(input$spacingbtn, {
