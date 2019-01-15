@@ -111,7 +111,17 @@ ui <- fluidPage(
                                                                            "and x-y coordinates in three columns,",
                                                                            " as for secr::read.traps"))),
                                                       textInput("args", "Optional arguments for read.traps()",
-                                                                value = "", placeholder = "e.g., skip = 1, sep = ','")
+                                                                value = "", placeholder = "e.g., skip = 1, sep = ','"),
+                                                      br(),
+                                                      fluidRow(
+                                                          column (6, numericInput("scalefactor",
+                                                                   "Scaling factor",
+                                                                   value = 1.0,
+                                                                   min = 0, 
+                                                                   max = 100, 
+                                                                   step = 0.01)),
+                                                           column (6, br(), actionButton("suggestfilebtn", "Suggest factor")))
+                                                     
                                              ),
                                              tabPanel("Region",
                                                       br(),
@@ -166,9 +176,10 @@ ui <- fluidPage(
                                                               )
                                                           )),
                                                       wellPanel(class = "mypanel",
-                                                                fluidRow(column(7, radioButtons("clustertype", label = "Cluster type",
-                                                                                   choices = c("Single detector", "Grid", "Line"), 
-                                                                                   selected = "Single detector")),
+                                                                fluidRow(column(7, 
+                                                                                radioButtons("clustertype", label = "Cluster type",
+                                                                                             choices = c("Single detector", "Grid", "Line", "File"), 
+                                                                                             selected = "Single detector")),
                                                                          column(5, 
                                                                                 numericInput(
                                                                                     "rotation",
@@ -748,7 +759,6 @@ ui <- fluidPage(
                                                             choices = c("$", "\U00A3", "\U00A5", 
                                                                         "\U20AC", "Rs"),  # , "\U20A8" rupees fail
                                                             selected = "$", inline = TRUE)
-                                                   
                                                )
                               ),
 
@@ -1079,8 +1089,8 @@ server <- function(input, output, session) {
     n.eq.r <- function () {
         ## find minimum at n = r
         
-        if (!(input$arrayinput %in% c("Grid", "Line"))) {
-            stop ("optimal spacing works only for grid or line")
+        if (!(input$arrayinput %in% c("Grid", "Line", "File"))) {
+            stop ("optimal spacing works only for Grid, Line or File")
         }
         detectpar <- list(lambda0 = input$lambda0, sigma = input$sigma)
         nminr <- function(R) {
@@ -1093,16 +1103,40 @@ server <- function(input, output, session) {
                 array <- make.grid(nx = input$nline, ny = 1, detector = input$detector,
                                    spacing = input$spline*R)
             }
+            else if (input$arrayinput == "File") {
+                array <- array0
+                array[,] <- array[,] * R
+            }
             msk <- suppressWarnings(make.mask(array, buffer = input$habxsigma * input$sigma, nx = input$habnx))
             nrm <- Enrm(density(), array, msk, detectpar, input$noccasions, input$detectfn)
             nrm[1] - nrm[2]
         }
         if (nrow(detectorarray()) > 1) {
-            R <- uniroot(nminr, interval = c(input$fromR, input$toR))$root
-            if (input$arrayinput == "Grid") 
-                round(R * input$spx,1)
-            else
-                round(R * input$spline,1)
+            if (input$arrayinput == "File") {
+                array0 <- readtrapfile(1)
+            }
+            if (input$arrayinput %in% c("Grid", "Line")) {
+                lower <- input$fromR
+                upper <- input$toR
+            }
+            else {
+                lower <- 0.01
+                upper <- 100
+            }
+            R <- try(uniroot(nminr, interval = c(lower, upper)))
+            if (inherits(R, "try-error") || R$iter==0) {
+                showNotification("optimal value not found", type = "error", id = "nooptimum", duration = seconds)
+                return(NA)
+            }
+            else {
+                
+                if (input$arrayinput == "Grid") 
+                    round(R$root * input$spx,1)
+                else if (input$arrayinput == "Line") 
+                    round(R$root * input$spline,1)
+                else
+                    return(R$root)
+            }
         }
         else NA
     }
@@ -1343,6 +1377,7 @@ server <- function(input, output, session) {
                     "hollow = ", input$hollow, ")\n"
                 )
             }
+            
             else if (input$arrayinput == "Line") {
                 code <- paste0(
                     "array <- make.grid(",
@@ -1352,6 +1387,20 @@ server <- function(input, output, session) {
                     "detector = '", input$detector, "')\n"
                 )
             }
+            
+            else if (input$arrayinput == "File") {
+                
+                args <- input$args
+                if (args != "")
+                    args <- paste0(", ", args)
+                code <- paste0("array <- read.traps ('", 
+                               input$trapfilename[1,"name"],
+                               "', detector = '", input$detector, "'", args, ")\n")
+                if (input$scalefactor != 1.0) {
+                    code <- paste0(code, "array[,] <- array[,] * ", input$scalefactor, "\n")
+                }
+            }
+            
             else if (input$arrayinput == "Region") {
                 regionfilename <- input$regionfilename[1,1]
                 if (tolower(tools::file_ext(regionfilename)) == "txt") {
@@ -1401,6 +1450,11 @@ server <- function(input, output, session) {
                                           ", ny = 1, detector = '", input$detector, "', \n",
                                           "    spacing = ", input$spline, ")\n")
                 }
+                else if (input$clustertype == "File") {
+                    clustercode <- paste0("cluster <- read.traps ('",
+                                          input$trapfilename[1,"name"],
+                                          "', detector = '", input$detector, "')\n")
+                }
                 else {
                     if (input$regiontype == "Systematic")
                         clustercode <- paste0("cluster <- make.grid(nx = 1, ny = 1, detector = '", 
@@ -1409,7 +1463,7 @@ server <- function(input, output, session) {
                         clustercode <- ""
                 }
                 
-                if (input$clustertype %in% c("Grid", "Line")) {
+                if (input$clustertype %in% c("Grid", "Line", "File")) {
                     if (input$chequerboard)
                         edgemethodcode <- paste0(", edgemethod = '", input$edgemethod, "'")
                     else
@@ -1444,7 +1498,7 @@ server <- function(input, output, session) {
                         "    cluster = cluster, origin = ", origincode, chequercode, edgemethodcode, ")\n")
                 }
                 else if (input$regiontype == "Random") {
-                    if (input$clustertype %in% c("Grid", "Line"))
+                    if (input$clustertype %in% c("Grid", "Line", "File"))
                         clusterarg <- ",\n    cluster = cluster"
                     else 
                         clusterarg <- ""
@@ -1462,13 +1516,8 @@ server <- function(input, output, session) {
                 else stop ("unknown regiontype")
                 
             }
-            else { # input$arrayinput=="File"
-                code <- paste0(
-                    "array <- read.traps ('",
-                    input$trapfilename[1,"name"],
-                    "', detector = '", input$detector, "')\n"
-                )
-            }
+            else stop ("unknown arrayinput")
+            
             if (comment) {
                 tmp <- lapply(strsplit(code, "\n")[[1]], function(x) paste0("# ", x))
                 tmp$sep <- "\n"
@@ -1766,6 +1815,30 @@ server <- function(input, output, session) {
 
     ##############################################################################
 
+    readtrapfile <- function (scale) {
+        inFile <- input$trapfilename
+        trps <- NULL
+        if (!is.null(inFile)) {
+            filename <- input$trapfilename[1,"datapath"]
+            if (is.null(filename))
+                stop("provide valid filename")
+            args <- input$args
+            if (args != "")
+                args <- paste0(", ", args)
+            readtrapscall <- paste0("read.traps (filename, detector = input$detector", args, ")")
+            trps <- try(eval(parse(text = readtrapscall)))
+            if (scale != 1.0) {
+                trps[,] <- trps[,] * scale
+            }
+
+            if (!inherits(trps, "traps")) {
+                showNotification("invalid trap file or arguments; try again",
+                                 type = "warning", id = "badarray", duration = seconds)
+            }
+        }    
+        trps
+    }
+    
     detectorarray <- reactive(
         {
             simrv$current <- FALSE
@@ -1783,6 +1856,9 @@ server <- function(input, output, session) {
                 trps <- make.grid(nx = input$nline, ny = 1, detector = input$detector,
                                   spacing = input$spline)
             }
+            else if (input$arrayinput == 'File') {
+                trps <- readtrapfile(input$scalefactor)
+            }
             else if (input$arrayinput=='Region') {
                 
                 if (input$nrepeats>1) {
@@ -1792,29 +1868,6 @@ server <- function(input, output, session) {
                     trps <- NULL
                 }
                 else {
-                    #########################################################
-                    ## check expected number
-                    regionarea <- polyarea(region())
-                    if (input$clustertype == "Single detector")
-                        npercluster <- 1
-                    else if (input$clustertype == "Grid")
-                        npercluster <- input$nx * input$ny
-                    else if (input$clustertype == "Line")
-                        npercluster <- input$nline
-                    
-                    if (input$regiontype == "Systematic")
-                        expectedndetector <- regionarea/(input$sppgrid/100)^2 * npercluster
-                    else
-                        expectedndetector <- input$numpgrid * npercluster
-                    if (expectedndetector > input$maxdetectors*2) {
-                        showNotification("expected N detectors exceeds limit",
-                                         type = "error", id = "toomany",
-                                         duration = seconds)
-                        
-                        return(NULL)
-                    }
-                    #########################################################
-
                     if (input$randomorigin || input$regiontype == "Random") {
                         if (input$seedpgrid>0) {
                             set.seed(input$seedpgrid)
@@ -1835,9 +1888,31 @@ server <- function(input, output, session) {
                         cluster <- make.grid(nx = input$nline, ny = 1, detector = input$detector,
                                              spacing = input$spline)
                     }
+                    else if (input$clustertype == "File") {
+                        cluster <- readtrapfile(input$scalefactor)
+                    }
                     else {
                         cluster <- make.grid(1, 1, detector = input$detector)
                     }
+
+                    #########################################################
+                    ## check expected number
+                    regionarea <- polyarea(region())
+                    npercluster <- nrow(cluster)
+                    if (input$regiontype == "Systematic")
+                        expectedndetector <- regionarea/(input$sppgrid/100)^2 * npercluster
+                    else
+                        expectedndetector <- input$numpgrid * npercluster
+                    if (expectedndetector > input$maxdetectors*2) {
+                        showNotification("expected N detectors exceeds limit",
+                                         type = "error", id = "toomany",
+                                         duration = seconds)
+                        return(NULL)
+                    }
+                    #########################################################
+
+
+                    
                     if (input$clustertype != "Single detector")
                         cluster <- rotate (cluster, input$rotation)
                     
@@ -1864,24 +1939,6 @@ server <- function(input, output, session) {
                     }
                 }
                 
-            }
-            else if (input$arrayinput == 'File') {
-                inFile <- input$trapfilename
-                if (!is.null(inFile)) {
-                    filename <- input$trapfilename[1,"datapath"]
-                    if (is.null(filename))
-                        stop("provide valid filename")
-                    args <- input$args
-                    if (args != "")
-                        args <- paste0(", ", args)
-                    readtrapscall <- paste0("read.traps (filename, detector = input$detector", args, ")")
-                    trps <- try(eval(parse(text = readtrapscall)))
-                    if (!inherits(trps, "traps")) {
-                        trps <- NULL
-                        showNotification("invalid trap file or arguments; try again",
-                              type = "warning", id = "badarray", duration = seconds)
-                    }
-                }
             }
             else stop ("unrecognised array input")
             
@@ -2215,6 +2272,22 @@ server <- function(input, output, session) {
 
     ##############################################################################
     
+    observeEvent(input$suggestfilebtn, {
+        ## Grid
+        ## E[n] == E[r]
+        if (!input$autorefresh) {
+            showNotification("enable auto refresh",
+                             type = "error", id = "nosuggestfile", duration = seconds)
+        }
+        else {
+            optimalfactor <- n.eq.r()
+            if (!is.na(optimalfactor)) {
+                updateNumericInput(session, "scalefactor", value = round(optimalfactor,2))
+            }
+        }
+    })
+    ##############################################################################
+
     observeEvent(input$resetbtn, {
 
         setrv$resetting <- TRUE  ## suppresses auto adjust D in observeEvent(input$areaunit,...)
@@ -2250,6 +2323,7 @@ server <- function(input, output, session) {
         ## file
         updateTextInput(session, "args", "Optional arguments for read.traps()",
                         value = "", placeholder = "e.g., skip = 1, sep = ','")
+        updateNumericInput(session, "scalefactor", value = 1.0)
 
         ## parameters
         updateNumericInput(session, "D", "D (animals / ha)", value = 5)
@@ -2309,6 +2383,8 @@ server <- function(input, output, session) {
         updateRadioButtons(session, "edgemethod", "Cluster edge method", selected = "clip")
         updateNumericInput(session, "maxupload", value = 10)
         updateRadioButtons(session, "areaunit", "Area units", selected = "ha")
+
+        updateRadioButtons(session, "currency", selected = "$")
 
         ## habitat        
         updateNumericInput(session, "habxsigma", value = 4)
