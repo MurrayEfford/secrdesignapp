@@ -741,8 +741,15 @@ ui <- fluidPage(
                                                                   value = 0.4,
                                                                   step = 0.02,
                                                                   width = 180)))
-                                     )
-                                     
+                                     ),
+                                     h2("Costing"),
+                                     wellPanel(class = "mypanel",
+                                               radioButtons("currency", label = "Currency symbol",
+                                                            choices = c("$", "\U00A3", "\U00A5", 
+                                                                        "\U20AC", "Rs"),  # , "\U20A8" rupees fail
+                                                            selected = "$", inline = TRUE)
+                                                   
+                                               )
                               ),
 
                               column(3,
@@ -2539,6 +2546,14 @@ server <- function(input, output, session) {
         }
     })
     
+    observeEvent(input$currency, {
+        updateNumericInput(session, "perkm", label = paste("Travel per km", input$currency))
+        updateNumericInput(session, "perarray", label = paste("Cost per array", input$currency))
+        updateNumericInput(session, "perdetector", label = paste("Cost per detector", input$currency))
+        updateNumericInput(session, "pervisit", label = paste("Cost per detector visit", input$currency))
+        updateNumericInput(session, "perdetection", label = paste("Cost per detection", input$currency))
+    })
+    
     ##############################################################################
     
     observeEvent(input$appendbtn, {
@@ -2727,7 +2742,7 @@ server <- function(input, output, session) {
         coststr <- if (is.null(nrmval$totalcost) | (nrmval$totalcost<=0))
             ""
         else
-            paste0( "\nTotal cost = $", sprintf("%.2f", nrmval$totalcost), star)
+            paste0( "\nTotal cost = ", input$currency, sprintf("%.2f", nrmval$totalcost), star)
         
         if (nrmval$Em<5) {
             removeNotification("lownr")
@@ -2782,18 +2797,18 @@ server <- function(input, output, session) {
             else {
                 nocc1 <- input$noccasions + as.numeric(input$setupoccasion)
                 paste0(
-                    "  Travel     = $",
+                    "  Travel      ", input$currency, " ",
                     round(costs$travel,2), "  (", round(arraypathlength()/1000  * 
                                                             nocc1 * nrepeats(),3), ' km)\n',
-                    "  Arrays     = $",
+                    "  Arrays      ", input$currency, " ",
                     round(costs$arrays,2), "  (", nrepeats(), ") \n",
-                    "  Detectors  = $",
+                    "  Detectors   ", input$currency, " ",
                     round(costs$detectors,2), "  (", nrow(detectorarray()) * nrepeats(), ") \n",
-                    "  Visits     = $",
+                    "  Visits      ", input$currency, " ",
                     round(costs$visits,2), "  (", nrow(detectorarray()) * nocc1 * nrepeats() , ") \n",
-                    "  Detections = $",
+                    "  Detections  ", input$currency, " ",
                     round(costs$detections,2), "  (", round(costs$En+costs$Er,1), ')\n\n',
-                    "  Total      = $",
+                    "  Total       ", input$currency, " ",
                     round(costs$totalcost, 2)
                 )
             }
@@ -3093,7 +3108,7 @@ server <- function(input, output, session) {
             par(cex = 1.1)
             defaultargs <- list(x = 0, y = 0, type = "n", las = 1,
                                 xlab = expression(paste("Spacing -  ", sigma, "  units")),
-                                ylab = expression(paste("Cost $")),
+                                ylab = paste("Cost", input$currency),
                                 ylim = c(0, maxy),
                                 xlim = c(0, maxx))
 
