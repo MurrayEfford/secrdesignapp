@@ -265,7 +265,8 @@ ui <- fluidPage(
                                      ),
                                      br(),
                                      fluidRow(
-                                         column(5, actionButton("resetbtn", "Reset all", width = 130))
+                                         column(5, actionButton("resetbtn", "Reset all", width = 130)),
+                                         column(7, helpText(HTML("F11 to toggle fullscreen")))
                                      ),
                                      br(),
                                      fluidRow(
