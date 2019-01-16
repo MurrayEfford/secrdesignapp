@@ -197,6 +197,10 @@ The 'Auto refresh' box may be unchecked to delay updating until you have fully s
     <td>Reset all</td>
     <td>Reset all input options to defaults (except file inputs)</td>
   </tr>
+  <tr>
+    <td>Bookmark</td>
+    <td>Creates a URL that allows you to take up your session where you left off (experimental)</td>
+  </tr>
 </table> 
 
 <br>

@@ -19,848 +19,859 @@ linewidth <- 2  # for various plots
 seconds <- 6   ## default duration for showNotification()
 
 # Define UI 
-ui <- fluidPage(
-    # responsive = TRUE,
-    includeCSS("secrdesignstyle.css"),
-     withMathJax(),
-    tags$head(tags$style(".mypanel{margin-top:5px; margin-bottom:10px; padding-bottom: 5px;}")),
-    br(),
-    navlistPanel(id = "navlist", widths = c(2,10), well=TRUE,
-                 
-                 "secrdesign app 1.1",
-                 
-                 tabPanel("Design",
-                          fluidRow(
-                              column(3, # offset = 0, style='padding:15px;',
-                                     h2("Detector array"),
-                                     wellPanel(class = "mypanel", 
+ui <- function(request) {
+
+    fluidPage(
+        includeCSS("secrdesignstyle.css"),
+        withMathJax(),
+        tags$head(tags$style(".mypanel{margin-top:5px; margin-bottom:10px; padding-bottom: 5px;}")),
+        br(),
+        navlistPanel(id = "navlist", widths = c(2,10), well=TRUE,
+                     
+                     "secrdesign app 1.1",
+                     
+                     tabPanel("Design",
+                              fluidRow(
+                                  column(3, # offset = 0, style='padding:15px;',
+                                         h2("Detector array"),
+                                         wellPanel(class = "mypanel", 
+                                                   fluidRow(
+                                                       column(6, selectInput("detector", "Detector type",
+                                                                             choices = c("multi","proximity","count"),
+                                                                             selected = "proximity", width = 120)),
+                                                       column(6, uiOutput('detectorhelp'))
+                                                   ),
+                                                   br(),
+                                                   tabsetPanel(
+                                                       type = "pills", id = "arrayinput", selected = "Grid",
+                                                       
+                                                       tabPanel("Grid",
+                                                                br(),
+                                                                fluidRow(
+                                                                    column(5, numericInput("ny",
+                                                                                           "rows", # y dimension:",
+                                                                                           value = 8,
+                                                                                           min = 1,
+                                                                                           max = 40,
+                                                                                           step = 1,
+                                                                                           width = 80)),
+                                                                    column(6, numericInput("nx",
+                                                                                           "columns", # x dimension:",
+                                                                                           value = 8,
+                                                                                           min = 1,
+                                                                                           max = 40,
+                                                                                           step = 1,
+                                                                                           width = 80))
+                                                                ),
+                                                                fluidRow(
+                                                                    column(5,numericInput("spy",
+                                                                                          "row space (m)",
+                                                                                          value = 20,
+                                                                                          min = 1,
+                                                                                          max = 100000,
+                                                                                          step = 1)),
+                                                                    column(6,numericInput("spx",
+                                                                                          "col space (m)",
+                                                                                          value = 20,
+                                                                                          min = 1,
+                                                                                          max = 100000,
+                                                                                          step = 1))
+                                                                ),
+                                                                
+                                                                fluidRow(
+                                                                    column(5, checkboxInput("hollow", "Hollow", FALSE)),
+                                                                    column(6, actionButton("suggestbtn", "Suggest spacing"))
+                                                                )
+                                                       ),
+                                                       tabPanel("Line",
+                                                                br(),
+                                                                fluidRow(
+                                                                    column(7,numericInput("nline",
+                                                                                          "number of detectors",
+                                                                                          value = 20,
+                                                                                          min = 1,
+                                                                                          max = 100,
+                                                                                          step = 1)),
+                                                                    column(5,numericInput("spline",
+                                                                                          "spacing (m)",
+                                                                                          value = 20,
+                                                                                          min = 1,
+                                                                                          max = 100000,
+                                                                                          step = 1))
+                                                                ),
+                                                                actionButton("suggestlinebtn", "Suggest spacing"),
+                                                                br(),br(),
+                                                                helpText(HTML("Warning: results with linear arrays may be highly biased if home ranges are elongated and aligned"))
+                                                       ),
+                                                       tabPanel("File", values = "File",
+                                                                br(),
+                                                                div(style="height: 80px;",
+                                                                    fileInput("trapfilename", "",   # Detector layout file
+                                                                              accept = "text/plain")),
+                                                                helpText(HTML(paste0("Requires text file with detector ID ",
+                                                                                     "and x-y coordinates in three columns,",
+                                                                                     " as for secr::read.traps"))),
+                                                                textInput("args", "Optional arguments for read.traps()",
+                                                                          value = "", placeholder = "e.g., skip = 1, sep = ','"),
+                                                                br(),
+                                                                fluidRow(
+                                                                    column (6, numericInput("scalefactor",
+                                                                                            "Scaling factor",
+                                                                                            value = 1.0,
+                                                                                            min = 0, 
+                                                                                            max = 100, 
+                                                                                            step = 0.01)),
+                                                                    column (6, br(), actionButton("suggestfilebtn", "Suggest factor")))
+                                                                
+                                                       ),
+                                                       tabPanel("Region",
+                                                                br(),
+                                                                div(style="height: 80px;",
+                                                                    fileInput("regionfilename", "Boundary file(s)",
+                                                                              accept = c('.shp','.dbf','.sbn','.sbx',
+                                                                                         '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
+                                                                # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
+                                                                uiOutput("shapefile"),
+                                                                
+                                                                wellPanel(class = "mypanel", 
+                                                                          tabsetPanel(
+                                                                              type = "tabs", id = "regiontype", selected = "Systematic",
+                                                                              
+                                                                              tabPanel("Systematic",
+                                                                                       
+                                                                                       br(),
+                                                                                       fluidRow(
+                                                                                           column(6,numericInput("sppgrid",
+                                                                                                                 "spacing (m)",
+                                                                                                                 value = 200,
+                                                                                                                 min = 0,
+                                                                                                                 max = 200000,
+                                                                                                                 step = 10)),
+                                                                                           column(6, 
+                                                                                                  checkboxInput("randomorigin", "Random origin", FALSE),
+                                                                                                  checkboxInput("chequerboard", "Chequerboard", FALSE))
+                                                                                           # radioButtons("chequerboard", "Chequer board squares", 
+                                                                                           # choices = c("all", "black","white"),
+                                                                                           # selected = "all"))
+                                                                                           
+                                                                                       ),
+                                                                                       uiOutput('clusteroverlap')),
+                                                                              
+                                                                              tabPanel("Random",
+                                                                                       # br(),
+                                                                                       fluidRow(
+                                                                                           column(6, radioButtons("randomtype", label = "",
+                                                                                                                  choices = c("SRS", "GRTS"), selected = "SRS")),
+                                                                                           column(6, br(), numericInput("numpgrid",
+                                                                                                                        "number",
+                                                                                                                        value = 20,
+                                                                                                                        min = 0,
+                                                                                                                        max = 20000,
+                                                                                                                        step = 5))
+                                                                                       ),
+                                                                                       fluidRow(
+                                                                                           column(12, uiOutput('randomtext'))
+                                                                                           
+                                                                                       )
+                                                                                       
+                                                                              )
+                                                                          )),
+                                                                wellPanel(class = "mypanel",
+                                                                          fluidRow(column(7, 
+                                                                                          radioButtons("clustertype", label = "Cluster type",
+                                                                                                       choices = c("Single detector", "Grid", "Line", "File"), 
+                                                                                                       selected = "Single detector")),
+                                                                                   column(5, 
+                                                                                          numericInput(
+                                                                                              "rotation",
+                                                                                              "Rotation",
+                                                                                              value = 0,
+                                                                                              min = 0,
+                                                                                              max = 360,
+                                                                                              step = 5),
+                                                                                          numericInput(
+                                                                                              "seedpgrid", 
+                                                                                              "Seed",
+                                                                                              value = 0,
+                                                                                              min = 0, 
+                                                                                              max = 1000000000,
+                                                                                              step = 1)
+                                                                                   )))
+                                                                
+                                                       )
+                                                   )
+                                         )
+                                  ),
+                                  
+                                  column(3, # offset = 0, style='padding:0px;',  
+                                         
+                                         h2("Parameters"),
+                                         wellPanel(class = "mypanel", 
+                                                   
+                                                   fluidRow(
+                                                       column(6, numericInput("D",
+                                                                              "D (animals / ha)",
+                                                                              min = 0,
+                                                                              max = 1000,
+                                                                              value = 5,
+                                                                              step=0.1,
+                                                                              width = 180)
+                                                              # uiOutput('persqkm')
+                                                       ),
+                                                       column(6, selectInput("detectfn", "Detection function",
+                                                                             choices = c("HHN","HEX"),
+                                                                             selected = "HHN", width=110))
+                                                   ),
+                                                   fluidRow(
+                                                       column(6, numericInput("lambda0",
+                                                                              "lambda0",
+                                                                              value = 0.2,
+                                                                              min = 0,
+                                                                              max = 100,
+                                                                              step = 0.01,
+                                                                              width = 180)),
+                                                       column(6, numericInput("sigma",
+                                                                              "sigma (m)",
+                                                                              min = 0,
+                                                                              max = 100000,
+                                                                              value = 25,
+                                                                              step = 1,
+                                                                              width = 180)))
+                                         ),
+                                         
+                                         h2("General"),
+                                         
                                          fluidRow(
-                                             column(6, selectInput("detector", "Detector type",
-                                                                   choices = c("multi","proximity","count"),
-                                                                   selected = "proximity", width = 120)),
-                                             column(6, uiOutput('detectorhelp'))
+                                             column(6,
+                                                    wellPanel(class = "mypanel", 
+                                                              numericInput("noccasions",
+                                                                           "Occasions",
+                                                                           value = 5,
+                                                                           min = 1,
+                                                                           max = 100,
+                                                                           step = 1,
+                                                                           width = 220),
+                                                              numericInput("nrepeats",
+                                                                           "Arrays",
+                                                                           value = 1,
+                                                                           min = 1,
+                                                                           max = 100,
+                                                                           step = 1,
+                                                                           width = 220)
+                                                              # uiOutput('clusterhelp')
+                                                    )),
+                                             column(6, #offset = 1, style='padding:0px;',
+                                                    wellPanel(class = "mypanel", 
+                                                              radioButtons("distributionbtn", label = "Distribution of n",
+                                                                           choices = c("Poisson", "Binomial"))
+                                                    ),
+                                                    checkboxInput("autorefresh", "  Auto refresh", TRUE)
+                                             )
+                                         ),
+                                         
+                                         h2("Actions"),
+                                         
+                                         fluidRow(
+                                             column(5, actionButton("simulatebtn2", "Simulate",  width = 130)),
+                                             column(6, actionButton("appendbtn", "Add to summary",  width = 130))
+                                         ),
+                                         # br(),
+                                         # fluidRow(
+                                         #      column(5, actionButton("save_inputs", "Save",  width = 130)),
+                                         #      column(6, actionButton("load_inputs", "Load",  width = 130))
+                                         # ),
+                                         
+                                         br(),
+                                         fluidRow(
+                                             column(5, actionButton("resetbtn", "Reset all", width = 130)),
+                                             column(6, bookmarkButton(width = 130)) 
+                                         ),
+                                         br(),
+                                         fluidRow(
+                                             column(7, helpText(HTML("F11 to toggle fullscreen")))
+                                         ),
+                                         br(),
+                                         fluidRow(
+                                             column(11, textInput("title", "", value = "", 
+                                                                  placeholder = "scenario label for Summary")))
+                                  ),
+                                  
+                                  column (4, # style='padding:0px;',
+                                          h2("Results"),
+                                          
+                                          fluidRow(
+                                              column(12,
+                                                     fluidRow(
+                                                         column(11, verbatimTextOutput("nrmPrint")), # style='padding:0px;'),
+                                                         column(1, style='padding:0px;', 
+                                                                conditionalPanel("output.nrmPrint!= ''",
+                                                                                 downloadLink("downloadnrmcode", "R")))
+                                                     ))
+                                          ),
+                                          
+                                          fluidRow(
+                                              column(12,
+                                                     br(),
+                                                     tabsetPanel(type = "pills",
+                                                                 id = "tabs",
+                                                                 tabPanel("Array",
+                                                                          plotOutput("arrayPlot", height = 340),
+                                                                          fluidRow(
+                                                                              column(11, style='padding:0px;', verbatimTextOutput("ntrapPrint")),
+                                                                              column(1, br(), conditionalPanel("output.ntrapPrint!= ''",
+                                                                                                               downloadLink("downloadArray", "Save")))
+                                                                          )
+                                                                 ),
+                                                                 tabPanel("Detectfn", plotOutput("detnPlot", height = 320)),
+                                                                 tabPanel("Popn", 
+                                                                          plotOutput("popPlot", height = 320),
+                                                                          
+                                                                          fluidRow(
+                                                                              column(4, checkboxInput("showmaskbox", "Display mask",
+                                                                                                      value = FALSE,
+                                                                                                      width = 180),
+                                                                                     checkboxInput("onlymaskbox", "Restrict to mask",
+                                                                                                   value = TRUE,
+                                                                                                   width = 180)
+                                                                              ),
+                                                                              column(4, checkboxInput("showHRbox", "Display 95% HR",
+                                                                                                      value = FALSE,
+                                                                                                      width = 180),
+                                                                                     uiOutput('uipopN')),
+                                                                              column(4, actionButton("randompopbtn", "Randomize"),
+                                                                                     helpText(HTML("Pick another realisation"))
+                                                                              )
+                                                                          )
+                                                                 ),
+                                                                 tabPanel("Pxy",
+                                                                          plotOutput("pxyPlot", height = 320, click = "pxyclick"),
+                                                                          helpText(HTML("p.(x) is the probability an animal at point x will be detected at least once"))
+                                                                 ),
+                                                                 
+                                                                 tabPanel("Power",
+                                                                          fluidRow(
+                                                                              column(11, plotOutput("powerPlot", height = 320, click = "CIclick"))
+                                                                          ),
+                                                                          br(),
+                                                                          fluidRow(
+                                                                              column(3, offset = 1,
+                                                                                     br(), checkboxInput("powertype", "95% CI",
+                                                                                                         value = TRUE,
+                                                                                                         width = 130)),
+                                                                              ## uiOutput('CIpct'),
+                                                                              column(4, 
+                                                                                     br(), checkboxInput("adjustRSEbox", "Adjust final RSE",
+                                                                                                         value = TRUE,
+                                                                                                         width = 130)),
+                                                                              # helpText(HTML("Scales with population"))),
+                                                                              column(4,
+                                                                                     conditionalPanel("input.powertype==true",
+                                                                                                      numericInput("xpos", "% change", min = -100, max = 250, step = 1, 
+                                                                                                                   value = 0, width = 70)))
+                                                                              
+                                                                          ),
+                                                                          fluidRow(
+                                                                              column(12,
+                                                                                     sliderInput("RSEslider", "",
+                                                                                                 min = 1.0,
+                                                                                                 max = 40,
+                                                                                                 value = 1,
+                                                                                                 step = 0.1,
+                                                                                                 pre = "RSE ",
+                                                                                                 post = "%",
+                                                                                                 width = "90%"))
+                                                                          )
+                                                                 )
+                                                     ))
+                                          )
+                                  )
+                              )
+                     ),
+                     
+                     tabPanel("Costing",
+                              fluidRow(
+                                  column(3,
+                                         h2("Unit cost"),
+                                         wellPanel(class = "mypanel", 
+                                                   numericInput("perkm",
+                                                                "Travel per km $",
+                                                                value = 0,
+                                                                min = 0,
+                                                                max = 1000,
+                                                                step = 0.1,
+                                                                width = 200),
+                                                   numericInput("perarray",
+                                                                "Cost per array $",
+                                                                min = 0,
+                                                                max = 10000,
+                                                                value = 0,
+                                                                step=0.1,
+                                                                width = 200),
+                                                   numericInput("perdetector",
+                                                                "Cost per detector $",
+                                                                min = 0,
+                                                                max = 1000,
+                                                                value = 0,
+                                                                step=0.1,
+                                                                width = 200),
+                                                   numericInput("pervisit",
+                                                                "Cost per detector visit $",
+                                                                min = 0,
+                                                                max = 1000,
+                                                                value = 0,
+                                                                step=0.1,
+                                                                width = 200),
+                                                   numericInput("perdetection",
+                                                                "Cost per detection $",
+                                                                min = 0,
+                                                                max = 1000,
+                                                                value = 0,
+                                                                step=0.1,
+                                                                width = 200)),
+                                         br(),
+                                         fluidRow(
+                                             column(10, offset=1, checkboxInput("setupoccasion", "Include setup occasion", TRUE))
+                                         )
+                                  ),
+                                  column(3, offset = 0,
+                                         h2("Route"),
+                                         wellPanel(class = "mypanel", 
+                                                   radioButtons("routetype", label = "Type",
+                                                                choices = c("Sequential", "Manual", "SumSpacing")),
+                                                   #   choices = c("Sequential", "SumSpacing", "TSP", "Manual")),
+                                                   # selectInput("TSPmethod",
+                                                   #             "TSP method",
+                                                   #             c("two_opt", "farthest_insertion", "nearest_insertion", "nn"),
+                                                   #             "farthest_insertion",
+                                                   #             width = 200),
+                                                   # numericInput("TSPrepl",
+                                                   #              "TSP replicates",
+                                                   #              min = 1, max = 10000,
+                                                   #              value = 100,
+                                                   #              step=1,
+                                                   #              width=180),
+                                                   checkboxInput("returnbox", "Return to start",
+                                                                 value = FALSE,
+                                                                 width = 180)
+                                         ),
+                                         br(),
+                                         plotOutput("routePlot", click = "click", height=320),
+                                         conditionalPanel("input.routetype == 'Manual'",
+                                                          actionButton("routebtn", "Define new route by clicking at vertices",
+                                                                       width = 270))
+                                         
+                                  ),
+                                  column(4,
+                                         h2("Current costing"),
+                                         verbatimTextOutput("costPrint")
+                                  )
+                              )
+                     ),
+                     #################################################################################################
+                     
+                     tabPanel("Simulation",
+                              fluidRow(
+                                  column(5,
+                                         h2("Simulation control"),
+                                         fluidRow(
+                                             column(5, 
+                                                    wellPanel(class = "mypanel", 
+                                                              radioButtons("packagebtn", label = "Fit simulated data", 
+                                                                           choices = c("openCR.fit", "secr.fit")),
+                                                              selectInput("method", "Method",
+                                                                          choices = c("Newton-Raphson", "Nelder-Mead", "none"),
+                                                                          selected = "none", width=160),
+                                                              checkboxInput("simappendbox", "Add to Summary", TRUE)
+                                                    )
+                                             ),
+                                             column(7,
+                                                    wellPanel(class = "mypanel", 
+                                                              
+                                                              fluidRow(
+                                                                  column(6, numericInput("nrepl",
+                                                                                         "Number of replicates",
+                                                                                         min = 1,
+                                                                                         max = 1000,
+                                                                                         value = 5,
+                                                                                         step = 1,
+                                                                                         width = 180)),
+                                                                  column(6, numericInput("ncores",
+                                                                                         "Number of cores",
+                                                                                         min = 1,
+                                                                                         max = parallel::detectCores(),
+                                                                                         value = 1,
+                                                                                         step = 1,
+                                                                                         width = 180))),
+                                                              fluidRow(
+                                                                  column(6, numericInput("seed",
+                                                                                         "Random seed",
+                                                                                         min = 0,
+                                                                                         max = 1e10,
+                                                                                         value = 0,
+                                                                                         step = 1,
+                                                                                         width = 180)),
+                                                                  column(6, numericInput("simnx",
+                                                                                         "nx",
+                                                                                         min = 10,
+                                                                                         max = 1000,
+                                                                                         value = 32,
+                                                                                         step = 1,
+                                                                                         width = 180)))
+                                                    ),
+                                                    
+                                                    br(),
+                                                    actionButton("simulatebtn", "Click to execute", width = 200)
+                                                    
+                                             )
+                                         ),
+                                         
+                                         h2("Standalone R code"),
+                                         verbatimTextOutput("simcodePrint")
+                                         
+                                  ),
+                                  column(5,
+                                         h2("Results"),
+                                         fluidRow(
+                                             column(9, verbatimTextOutput("simPrint"))
+                                         )
+                                  )
+                              )
+                     ),
+                     
+                     #################################################################################################
+                     
+                     tabPanel("Spacing",
+                              fluidRow(
+                                  column(5,
+                                         fluidRow(
+                                             column(12, h2("Standalone R code"),
+                                                    verbatimTextOutput("spacingcodePrint"))
+                                         ),
+                                         
+                                         fluidRow(
+                                             column(6, 
+                                                    actionButton("spacingbtn", "Click to execute", width = 200)
+                                             ),
+                                             column(6, 
+                                                    checkboxInput("spacingsimbox", "with simulations", value = FALSE, width = 200),
+                                                    helpText(HTML('See Simulation for control options'))
+                                             )
+                                         )
+                                  ),
+                                  column(5,
+                                         h2("Results"),
+                                         fluidRow(
+                                             column(10, verbatimTextOutput("spacingPrint")),
+                                             column(2, conditionalPanel("output.validspacing==true",
+                                                                        downloadLink("downloadSpacing", "Save oS")))
+                                         ),
+                                         
+                                         fluidRow(
+                                             column(9, verbatimTextOutput("spacingPrint2"))
                                          ),
                                          br(),
                                          tabsetPanel(
-                                             type = "pills", id = "arrayinput", selected = "Grid",
-                                             
-                                             tabPanel("Grid",
-                                                      br(),
+                                             type = "pills", id = "spacingtabs",
+                                             tabPanel("RSE",
                                                       fluidRow(
-                                                          column(5, numericInput("ny",
-                                                                                 "rows", # y dimension:",
-                                                                                 value = 8,
-                                                                                 min = 1,
-                                                                                 max = 40,
-                                                                                 step = 1,
-                                                                                 width = 80)),
-                                                          column(6, numericInput("nx",
-                                                                                 "columns", # x dimension:",
-                                                                                 value = 8,
-                                                                                 min = 1,
-                                                                                 max = 40,
-                                                                                 step = 1,
-                                                                                 width = 80))
-                                                      ),
-                                                      fluidRow(
-                                                          column(5,numericInput("spy",
-                                                                                "row space (m)",
-                                                                                value = 20,
-                                                                                min = 1,
-                                                                                max = 100000,
-                                                                                step = 1)),
-                                                          column(6,numericInput("spx",
-                                                                                "col space (m)",
-                                                                                value = 20,
-                                                                                min = 1,
-                                                                                max = 100000,
-                                                                                step = 1))
-                                                      ),
-
-                                                      fluidRow(
-                                                          column(5, checkboxInput("hollow", "Hollow", FALSE)),
-                                                          column(6, actionButton("suggestbtn", "Suggest spacing"))
+                                                          column(6,
+                                                                 # Show a plot of the rule-of-thumb RSE
+                                                                 plotOutput("RSEPlot", width = "520px", height = "400px")
+                                                          )
                                                       )
                                              ),
-                                             tabPanel("Line",
-                                                      br(),
+                                             tabPanel("nrm",
                                                       fluidRow(
-                                                          column(7,numericInput("nline",
-                                                                                 "number of detectors",
-                                                                                value = 20,
-                                                                                min = 1,
-                                                                                max = 100,
-                                                                                step = 1)),
-                                                          column(5,numericInput("spline",
-                                                                                "spacing (m)",
-                                                                                value = 20,
-                                                                                min = 1,
-                                                                                max = 100000,
-                                                                                step = 1))
+                                                          br(),
+                                                          column(10,verbatimTextOutput("nrmlegend"))
                                                       ),
-                                                      actionButton("suggestlinebtn", "Suggest spacing"),
-                                                      br(),br(),
-                                                      helpText(HTML("Warning: results with linear arrays may be highly biased if home ranges are elongated and aligned"))
-                                             ),
-                                             tabPanel("File", values = "File",
-                                                      br(),
-                                                      div(style="height: 80px;",
-                                                          fileInput("trapfilename", "",   # Detector layout file
-                                                                    accept = "text/plain")),
-                                                      helpText(HTML(paste0("Requires text file with detector ID ",
-                                                                           "and x-y coordinates in three columns,",
-                                                                           " as for secr::read.traps"))),
-                                                      textInput("args", "Optional arguments for read.traps()",
-                                                                value = "", placeholder = "e.g., skip = 1, sep = ','"),
-                                                      br(),
                                                       fluidRow(
-                                                          column (6, numericInput("scalefactor",
-                                                                   "Scaling factor",
-                                                                   value = 1.0,
-                                                                   min = 0, 
-                                                                   max = 100, 
-                                                                   step = 0.01)),
-                                                           column (6, br(), actionButton("suggestfilebtn", "Suggest factor")))
-                                                     
+                                                          column(6,
+                                                                 # Show a plot of the expected number of detections vs spacing
+                                                                 plotOutput("nrmPlot", width = "520px", height = "400px")
+                                                          )
+                                                      )
                                              ),
-                                             tabPanel("Region",
-                                                      br(),
-                                                      div(style="height: 80px;",
-                                                          fileInput("regionfilename", "Boundary file(s)",
-                                                                accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                           '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
-                                                      # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
-                                                      uiOutput("shapefile"),
+                                             tabPanel("Cost",
+                                                      fluidRow(
+                                                          column(6,
+                                                                 # Show a plot of the cost vs spacing
+                                                                 plotOutput("costPlot", width = "520px", height = "400px")
+                                                          )
+                                                      )
                                                       
-                                                      wellPanel(class = "mypanel", 
-                                                          tabsetPanel(
-                                                              type = "tabs", id = "regiontype", selected = "Systematic",
-                                                              
-                                                              tabPanel("Systematic",
-                                                                       
-                                                                       br(),
-                                                                       fluidRow(
-                                                                           column(6,numericInput("sppgrid",
-                                                                                                 "spacing (m)",
-                                                                                                 value = 200,
-                                                                                                 min = 0,
-                                                                                                 max = 200000,
-                                                                                                 step = 10)),
-                                                                           column(6, 
-                                                                                  checkboxInput("randomorigin", "Random origin", FALSE),
-                                                                                  checkboxInput("chequerboard", "Chequerboard", FALSE))
-                                                                           # radioButtons("chequerboard", "Chequer board squares", 
-                                                                           # choices = c("all", "black","white"),
-                                                                           # selected = "all"))
-                                                                                               
-                                                                       ),
-                                                                       uiOutput('clusteroverlap')),
-                                                              
-                                                              tabPanel("Random",
-                                                                       # br(),
-                                                                       fluidRow(
-                                                                           column(6, radioButtons("randomtype", label = "",
-                                                                                                  choices = c("SRS", "GRTS"), selected = "SRS")),
-                                                                           column(6, br(), numericInput("numpgrid",
-                                                                                                        "number",
-                                                                                                        value = 20,
-                                                                                                        min = 0,
-                                                                                                        max = 20000,
-                                                                                                        step = 5))
-                                                                       ),
-                                                                       fluidRow(
-                                                                           column(12, uiOutput('randomtext'))
-                                                                           
-                                                                       )
-                                                                           
-                                                              )
-                                                          )),
-                                                      wellPanel(class = "mypanel",
-                                                                fluidRow(column(7, 
-                                                                                radioButtons("clustertype", label = "Cluster type",
-                                                                                             choices = c("Single detector", "Grid", "Line", "File"), 
-                                                                                             selected = "Single detector")),
-                                                                         column(5, 
-                                                                                numericInput(
-                                                                                    "rotation",
-                                                                                    "Rotation",
-                                                                                    value = 0,
-                                                                                    min = 0,
-                                                                                    max = 360,
-                                                                                    step = 5),
-                                                                                numericInput(
-                                                                                    "seedpgrid", 
-                                                                                    "Seed",
-                                                                                    value = 0,
-                                                                                    min = 0, 
-                                                                                    max = 1000000000,
-                                                                                    step = 1)
-                                                                         )))
                                                       
                                              )
                                          )
-                                     )
-                              ),
-
-                              column(3, # offset = 0, style='padding:0px;',  
-                                     
-                                     h2("Parameters"),
-                                     wellPanel(class = "mypanel", 
-                                         
-                                         fluidRow(
-                                             column(6, numericInput("D",
-                                                      "D (animals / ha)",
-                                                      min = 0,
-                                                      max = 1000,
-                                                      value = 5,
-                                                      step=0.1,
-                                                      width = 180)
-                                                    # uiOutput('persqkm')
-                                             ),
-                                         column(6, selectInput("detectfn", "Detection function",
-                                                     choices = c("HHN","HEX"),
-                                                     selected = "HHN", width=110))
-                                         ),
-                                         fluidRow(
-                                             column(6, numericInput("lambda0",
-                                                                    "lambda0",
-                                                                    value = 0.2,
-                                                                    min = 0,
-                                                                    max = 100,
-                                                                    step = 0.01,
-                                                                    width = 180)),
-                                             column(6, numericInput("sigma",
-                                                                    "sigma (m)",
-                                                                    min = 0,
-                                                                    max = 100000,
-                                                                    value = 25,
-                                                                    step = 1,
-                                                                    width = 180)))
-                                     ),
-                                     
-                                     h2("General"),
-                                     
-                                     fluidRow(
-                                         column(6,
-                                                wellPanel(class = "mypanel", 
-                                                    numericInput("noccasions",
-                                                                 "Occasions",
-                                                                 value = 5,
-                                                                 min = 1,
-                                                                 max = 100,
-                                                                 step = 1,
-                                                                 width = 220),
-                                                    numericInput("nrepeats",
-                                                                 "Arrays",
-                                                                 value = 1,
-                                                                 min = 1,
-                                                                 max = 100,
-                                                                 step = 1,
-                                                                 width = 220)
-                                                    # uiOutput('clusterhelp')
-                                                )),
-                                         column(6, #offset = 1, style='padding:0px;',
-                                                wellPanel(class = "mypanel", 
-                                                    radioButtons("distributionbtn", label = "Distribution of n",
-                                                                 choices = c("Poisson", "Binomial"))
-                                                ),
-                                                checkboxInput("autorefresh", "  Auto refresh", TRUE)
-                                         )
-                                     ),
-                                     
-                                     h2("Actions"),
-
-                                     fluidRow(
-                                         column(5, actionButton("simulatebtn2", "Simulate",  width = 130)),
-                                         column(6, actionButton("appendbtn", "Add to summary",  width = 130))
-                                     ),
-                                     br(),
-                                     fluidRow(
-                                         column(5, actionButton("resetbtn", "Reset all", width = 130)),
-                                         column(7, helpText(HTML("F11 to toggle fullscreen")))
-                                     ),
-                                     br(),
-                                     fluidRow(
-                                         column(11, textInput("title", "", value = "", 
-                                                                  placeholder = "scenario label for Summary")))
-                              ),
+                                  )
+                              )
                               
-                              column (4, # style='padding:0px;',
-                                      h2("Results"),
-                                      
-                                      fluidRow(
-                                          column(12,
-                                                 fluidRow(
-                                                     column(11, verbatimTextOutput("nrmPrint")), # style='padding:0px;'),
-                                                     column(1, style='padding:0px;', 
-                                                            conditionalPanel("output.nrmPrint!= ''",
-                                                                             downloadLink("downloadnrmcode", "R")))
-                                                 ))
-                                      ),
-                                      
-                                      fluidRow(
-                                          column(12,
-                                                 br(),
-                                                 tabsetPanel(type = "pills",
-                                                             id = "tabs",
-                                                             tabPanel("Array",
-                                                                      plotOutput("arrayPlot", height = 340),
-                                                                      fluidRow(
-                                                                          column(11, style='padding:0px;', verbatimTextOutput("ntrapPrint")),
-                                                                          column(1, br(), conditionalPanel("output.ntrapPrint!= ''",
-                                                                                                           downloadLink("downloadArray", "Save")))
-                                                                      )
-                                                             ),
-                                                             tabPanel("Detectfn", plotOutput("detnPlot", height = 320)),
-                                                             tabPanel("Popn", 
-                                                                      plotOutput("popPlot", height = 320),
-                                                                      
-                                                                      fluidRow(
-                                                                          column(4, checkboxInput("showmaskbox", "Display mask",
-                                                                                                  value = FALSE,
-                                                                                                  width = 180),
-                                                                                 checkboxInput("onlymaskbox", "Restrict to mask",
-                                                                                               value = TRUE,
-                                                                                               width = 180)
-                                                                          ),
-                                                                          column(4, checkboxInput("showHRbox", "Display 95% HR",
-                                                                                                  value = FALSE,
-                                                                                                  width = 180),
-                                                                                 uiOutput('uipopN')),
-                                                                          column(4, actionButton("randompopbtn", "Randomize"),
-                                                                                 helpText(HTML("Pick another realisation"))
-                                                                          )
-                                                                      )
-                                                             ),
-                                                             tabPanel("Pxy",
-                                                                      plotOutput("pxyPlot", height = 320, click = "pxyclick"),
-                                                                      helpText(HTML("p.(x) is the probability an animal at point x will be detected at least once"))
-                                                             ),
-                                                             
-                                                             tabPanel("Power",
-                                                                      fluidRow(
-                                                                          column(11, plotOutput("powerPlot", height = 320, click = "CIclick"))
-                                                                      ),
-                                                                      br(),
-                                                                      fluidRow(
-                                                                          column(3, offset = 1,
-                                                                                 br(), checkboxInput("powertype", "95% CI",
-                                                                                               value = TRUE,
-                                                                                               width = 130)),
-                                                                          ## uiOutput('CIpct'),
-                                                                          column(4, 
-                                                                                 br(), checkboxInput("adjustRSEbox", "Adjust final RSE",
-                                                                                                  value = TRUE,
-                                                                                                  width = 130)),
-                                                                                 # helpText(HTML("Scales with population"))),
-                                                                          column(4,
-                                                                                 conditionalPanel("input.powertype==true",
-                                                                                                  numericInput("xpos", "% change", min = -100, max = 250, step = 1, 
-                                                                                                               value = 0, width = 70)))
-                                                                          
-                                                                      ),
-                                                                      fluidRow(
-                                                                          column(12,
-                                                                                 sliderInput("RSEslider", "",
-                                                                                             min = 1.0,
-                                                                                             max = 40,
-                                                                                             value = 1,
-                                                                                             step = 0.1,
-                                                                                             pre = "RSE ",
-                                                                                             post = "%",
-                                                                                             width = "90%"))
-                                                                      )
-                                              )
-                                          ))
-                                      )
-                                      )
-                              )
-                 ),
-
-                 tabPanel("Costing",
-                          fluidRow(
-                              column(3,
-                                     h2("Unit cost"),
-                                     wellPanel(class = "mypanel", 
-                                         numericInput("perkm",
-                                                      "Travel per km $",
-                                                      value = 0,
-                                                      min = 0,
-                                                      max = 1000,
-                                                      step = 0.1,
-                                                      width = 200),
-                                         numericInput("perarray",
-                                                      "Cost per array $",
-                                                      min = 0,
-                                                      max = 10000,
-                                                      value = 0,
-                                                      step=0.1,
-                                                      width = 200),
-                                         numericInput("perdetector",
-                                                      "Cost per detector $",
-                                                      min = 0,
-                                                      max = 1000,
-                                                      value = 0,
-                                                      step=0.1,
-                                                      width = 200),
-                                         numericInput("pervisit",
-                                                      "Cost per detector visit $",
-                                                      min = 0,
-                                                      max = 1000,
-                                                      value = 0,
-                                                      step=0.1,
-                                                      width = 200),
-                                         numericInput("perdetection",
-                                                      "Cost per detection $",
-                                                      min = 0,
-                                                      max = 1000,
-                                                      value = 0,
-                                                      step=0.1,
-                                                      width = 200)),
-                                     br(),
-                                     fluidRow(
-                                         column(10, offset=1, checkboxInput("setupoccasion", "Include setup occasion", TRUE))
-                                     )
+                     ),
+                     #################################################################################################
+                     
+                     tabPanel("Summary",
+                              fluidRow(
+                                  column(12,
+                                         # h2("Results"),
+                                         div(tableOutput("summarytable"), style = "font-size:80%")
+                                  )
                               ),
-                              column(3, offset = 0,
-                                     h2("Route"),
-                                     wellPanel(class = "mypanel", 
-                                         radioButtons("routetype", label = "Type",
-                                                      choices = c("Sequential", "Manual", "SumSpacing")),
-                                         #   choices = c("Sequential", "SumSpacing", "TSP", "Manual")),
-                                         # selectInput("TSPmethod",
-                                         #             "TSP method",
-                                         #             c("two_opt", "farthest_insertion", "nearest_insertion", "nn"),
-                                         #             "farthest_insertion",
-                                         #             width = 200),
-                                         # numericInput("TSPrepl",
-                                         #              "TSP replicates",
-                                         #              min = 1, max = 10000,
-                                         #              value = 100,
-                                         #              step=1,
-                                         #              width=180),
-                                         checkboxInput("returnbox", "Return to start",
-                                                       value = FALSE,
-                                                       width = 180)
-                                     ),
-                                     br(),
-                                     plotOutput("routePlot", click = "click", height=320),
-                                     conditionalPanel("input.routetype == 'Manual'",
-                                            actionButton("routebtn", "Define new route by clicking at vertices",
-                                                         width = 270))
-
-                              ),
-                              column(4,
-                                     h2("Current costing"),
-                                     verbatimTextOutput("costPrint")
+                              fluidRow(
+                                  column(2, actionButton("clearallbtn", "Clear all")),
+                                  column(2, actionButton("clearlastbtn", "Delete last")),
+                                  column(2, downloadButton("downloadSummary", "Download"))
                               )
-                          )
-                 ),
-                 #################################################################################################
-                 
-                 tabPanel("Simulation",
-                          fluidRow(
-                              column(5,
-                                     h2("Simulation control"),
-                                     fluidRow(
-                                         column(5, 
-                                                wellPanel(class = "mypanel", 
-                                                          radioButtons("packagebtn", label = "Fit simulated data", 
-                                                                       choices = c("openCR.fit", "secr.fit")),
-                                                          selectInput("method", "Method",
-                                                                      choices = c("Newton-Raphson", "Nelder-Mead", "none"),
-                                                                      selected = "none", width=160),
-                                                          checkboxInput("simappendbox", "Add to Summary", TRUE)
-                                                )
-                                         ),
-                                         column(7,
-                                                wellPanel(class = "mypanel", 
-                                                          
-                                                          fluidRow(
-                                                              column(6, numericInput("nrepl",
-                                                                                     "Number of replicates",
-                                                                                     min = 1,
-                                                                                     max = 1000,
-                                                                                     value = 5,
-                                                                                     step = 1,
-                                                                                     width = 180)),
-                                                              column(6, numericInput("ncores",
-                                                                                     "Number of cores",
-                                                                                     min = 1,
-                                                                                     max = parallel::detectCores(),
-                                                                                     value = 1,
-                                                                                     step = 1,
-                                                                                     width = 180))),
-                                                          fluidRow(
-                                                              column(6, numericInput("seed",
-                                                                                     "Random seed",
-                                                                                     min = 0,
-                                                                                     max = 1e10,
-                                                                                     value = 0,
-                                                                                     step = 1,
-                                                                                     width = 180)),
-                                                              column(6, numericInput("simnx",
-                                                                                     "nx",
-                                                                                     min = 10,
-                                                                                     max = 1000,
-                                                                                     value = 32,
-                                                                                     step = 1,
-                                                                                     width = 180)))
-                                                ),
-                                                                                                          
-                                                br(),
-                                                actionButton("simulatebtn", "Click to execute", width = 200)
-
-                                     )
-                                     ),
-                                     
-                                     h2("Standalone R code"),
-                                     verbatimTextOutput("simcodePrint")
-                                     
-                          ),
-                          column(5,
-                                 h2("Results"),
-                                 fluidRow(
-                                     column(9, verbatimTextOutput("simPrint"))
-                                 )
-                          )
-                          )
-    ),
-    
-    #################################################################################################
-    
-    tabPanel("Spacing",
-             fluidRow(
-                 column(5,
-                        fluidRow(
-                            column(12, h2("Standalone R code"),
-                            verbatimTextOutput("spacingcodePrint"))
-                        ),
-                        
-                        fluidRow(
-                            column(6, 
-                                   actionButton("spacingbtn", "Click to execute", width = 200)
-                            ),
-                            column(6, 
-                                   checkboxInput("spacingsimbox", "with simulations", value = FALSE, width = 200),
-                                   helpText(HTML('See Simulation for control options'))
-                            )
-                        )
-                 ),
-                 column(5,
-                        h2("Results"),
-                        fluidRow(
-                            column(10, verbatimTextOutput("spacingPrint")),
-                            column(2, conditionalPanel("output.validspacing==true",
-                                                       downloadLink("downloadSpacing", "Save oS")))
-                        ),
-                        
-                        fluidRow(
-                            column(9, verbatimTextOutput("spacingPrint2"))
-                        ),
-                        br(),
-                        tabsetPanel(
-                            type = "pills", id = "spacingtabs",
-                            tabPanel("RSE",
-                                     fluidRow(
-                                         column(6,
-                                                # Show a plot of the rule-of-thumb RSE
-                                                plotOutput("RSEPlot", width = "520px", height = "400px")
-                                         )
-                                     )
-                            ),
-                            tabPanel("nrm",
-                                     fluidRow(
-                                         br(),
-                                         column(10,verbatimTextOutput("nrmlegend"))
-                                     ),
-                                     fluidRow(
-                                         column(6,
-                                                # Show a plot of the expected number of detections vs spacing
-                                                plotOutput("nrmPlot", width = "520px", height = "400px")
-                                         )
-                                     )
-                            ),
-                            tabPanel("Cost",
-                                     fluidRow(
-                                         column(6,
-                                                # Show a plot of the cost vs spacing
-                                                plotOutput("costPlot", width = "520px", height = "400px")
-                                         )
-                                     )
-                                     
-                                     
-                            )
-                        )
-                 )
-             )
-                 
-             ),
-             #################################################################################################
-             
-             tabPanel("Summary",
-                      fluidRow(
-                              column(12,
-                                     # h2("Results"),
-                                     div(tableOutput("summarytable"), style = "font-size:80%")
-                              )
-                          ),
-                          fluidRow(
-                              column(2, actionButton("clearallbtn", "Clear all")),
-                              column(2, actionButton("clearlastbtn", "Delete last")),
-                              column(2, downloadButton("downloadSummary", "Download"))
-                          )
-                 ),
-                 #################################################################################################
-                 
-                 tabPanel("Options",
-
-                          fluidRow(
-                              column(3,
-
-                                     h2("Detector array"),
-                                     wellPanel(class = "mypanel", 
-                                               checkboxInput("lockxy", "Couple row and column dimensions", TRUE),
-                                               fluidRow(
-                                                   column(5, radioButtons("areaunit", label = "Area units",
-                                                                          choices = c("ha", "km^2"),
-                                                                          selected = "ha")),
-                                                   column(7,numericInput("maxdetectors", "Maximum detectors",
-                                                                         min = 0,
-                                                                         max = 20000,
-                                                                         value = 1000,
-                                                                         step = 100))
-                                               ),
-                                               
-                                               radioButtons("edgemethod", label = "Method for clusters at edge of region",
-                                                            choices = c("clip", "allowoverlap", "allinside"),
-                                                            selected = "clip"),
-                                               div(style="height: 80px;",
-                                                   fileInput("exclusionfilename", "Excluded region",
-                                                             accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                        '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
-                                               uiOutput("exclusionfile"),
-                                               numericInput("maxupload", "Maximum file upload Mb",
-                                                            min = 5,
-                                                            max = 100,
-                                                            value = 10,
-                                                            step = 5)
-                                     ),
-                                     
-                                     h2("Habitat mask"),
-                                     wellPanel(class = "mypanel", 
-                                               fluidRow(
-                                                   column(6, 
-                                                          numericInput("habxsigma", "Buffer width (multiple of sigma)",
-                                                                       min = 0,
-                                                                       max = 20,
-                                                                       value = 4,
-                                                                       step = 0.5,
-                                                                       width = 250),
-                                                          numericInput("habnx", "nx",
-                                                                       min = 10,
-                                                                       max = 1000,
-                                                                       value = 64,
-                                                                       step = 1,
-                                                                       width = 180)
+                     ),
+                     #################################################################################################
+                     
+                     tabPanel("Options",
+                              
+                              fluidRow(
+                                  column(3,
+                                         
+                                         h2("Detector array"),
+                                         wellPanel(class = "mypanel", 
+                                                   checkboxInput("lockxy", "Couple row and column dimensions", TRUE),
+                                                   fluidRow(
+                                                       column(5, radioButtons("areaunit", label = "Area units",
+                                                                              choices = c("ha", "km^2"),
+                                                                              selected = "ha")),
+                                                       column(7,numericInput("maxdetectors", "Maximum detectors",
+                                                                             min = 0,
+                                                                             max = 20000,
+                                                                             value = 1000,
+                                                                             step = 100))
                                                    ),
-                                                   column(6, 
-                                                          radioButtons("maskshapebtn", label = "Shape",
-                                                                       choices = c("Rectangular", "Rounded"), 
-                                                                       selected = "Rounded"),
-                                                          br(),
-                                                          checkboxInput("polygonbox", "Clip to polygon(s)",
-                                                                        value = FALSE,
-                                                                        width = 180)
-                                                   )
-                                               ),
-                                               div(style="height: 80px;",
-                                                   fileInput("habpolyfilename", "Polygon shapefile (all parts)",
-                                                             accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                        '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
-                                               uiOutput("habitatfile")
-                                               #helpText(HTML("(.txt or at least xxx.shp, xxx.dbf, and xxx.shx)"))
-                                     )
-                              ),
-
-                              column(3,
-
-                                     h2("Array plot"),
-                                     wellPanel(class = "mypanel", 
-                                               checkboxInput("entireregionbox", "Show entire region",
-                                                             value = TRUE,
-                                                             width = 180)
-                                     ),
-
-                                     h2("Pxy contour plot"),
-                                     wellPanel(class = "mypanel", 
-                                               fluidRow(
-                                                   column(7, numericInput("pxyborder", "Border (spacing units)",
-                                                                          min = 0,
-                                                                          max = 10,
-                                                                          value = 3,
-                                                                          step = 0.5,
-                                                                          width = 180),
-                                                          numericInput("pxynx", "Mesh dimension nx",
-                                                                       min = 32,
-                                                                       max = 512,
-                                                                       value = 64,
-                                                                       step = 32,
-                                                                       width = 180)),
-                                                   column(5,
-                                                          br(),
-                                                          checkboxInput("pxyfillbox", "Fill contours",
-                                                                        value = TRUE,
-                                                                        width = 180),
-                                                          checkboxInput("pxyframebox", "Show frame",
-                                                                        value = FALSE,
-                                                                        width = 180),
-                                                          checkboxInput("pxylabelbox", "Label contours",
-                                                                        value = TRUE,
-                                                                        width = 180))
-                                               )
-                                     ),
-                                     h2("Spacing plot"),
-                                     wellPanel(class = "mypanel", 
-                                         "Spacing relative to sigma", br(), br(),
-                                         fluidRow(
-                                             column (6, numericInput("fromR",
-                                                                     "Minimum",
-                                                                     min = 0.01, max = 4,
-                                                                     value = 0.2,
-                                                                     step = 0.2,
-                                                                     width = 180)),
-                                             column(6,
-                                                    numericInput("toR",
-                                                                 "Maximum",
-                                                                 min = 1, max = 10,
-                                                                 value = 4,
-                                                                 step = 0.2,
-                                                                 width = 180))),
-                                         fluidRow(
-                                             column (6, 
-                                                     numericInput("byR",
-                                                                  "Increment",
-                                                                  min = 0.02, max = 2,
-                                                                  value = 0.2,
-                                                                  step = 0.02,
-                                                                  width = 180)),
-                                             column (6, 
-                                                     numericInput("simbyR",
-                                                                  "Simulation increment",
-                                                                  min = 0.02, max = 2,
-                                                                  value = 0.4,
-                                                                  step = 0.02,
-                                                                  width = 180)))
-                                     ),
-                                     h2("Costing"),
-                                     wellPanel(class = "mypanel",
-                                               radioButtons("currency", label = "Currency symbol",
-                                                            choices = c("$", "\U00A3", "\U00A5", 
-                                                                        "\U20AC", "Rs"),  # , "\U20A8" rupees fail
-                                                            selected = "$", inline = TRUE)
-                                               )
-                              ),
-
-                              column(3,
-                                     h2("Power plot"),
-                                     wellPanel(class = "mypanel", 
-                                         # fluidRow(
-                                         #     column(8, radioButtons("powerplotbtn", label = "Plot style",
-                                         #              choices = c("Null hypothesis power", "Confidence interval"))),
-                                         #     column(4, br(), br(), uiOutput('CIpct'))
-                                         # ),
-                                         fluidRow(
-                                             column(6, numericInput("alpha", "alpha",
-                                                                    min = 0.001,
-                                                                    max = 0.200,
-                                                                    value = 0.05,
-                                                                    step = 0.001,
-                                                                    width = 120))
-                                         ),
-                                         fluidRow(
-                                             column(6, numericInput("minEffect", "xmin",
-                                                                    min = -99,
-                                                                    max = 0,
-                                                                    value = -99,
-                                                                    step = 1,
-                                                                    width = 180)),
-                                             column (6, numericInput("maxEffect", "xmax",
-                                                                     min = 0,
-                                                                     max = 300,
-                                                                     value = 150,
-                                                                     step = 1,
-                                                                     width = 180))
+                                                   
+                                                   radioButtons("edgemethod", label = "Method for clusters at edge of region",
+                                                                choices = c("clip", "allowoverlap", "allinside"),
+                                                                selected = "clip"),
+                                                   div(style="height: 80px;",
+                                                       fileInput("exclusionfilename", "Excluded region",
+                                                                 accept = c('.shp','.dbf','.sbn','.sbx',
+                                                                            '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
+                                                   uiOutput("exclusionfile"),
+                                                   numericInput("maxupload", "Maximum file upload Mb",
+                                                                min = 5,
+                                                                max = 100,
+                                                                value = 10,
+                                                                step = 5)
                                          ),
                                          
-                                         br(),
-                                         h4("Hypothesis test"),
-                                         # br(),
-                                         fluidRow(
-                                             column(6,selectInput("testtype", "Type",
-                                                         choices = c("two.sided", "decrease", "increase"),
-                                                         selected = "two.sided",
-                                                         width = 140)),
-                                             column(6, numericInput("target", "Target power %",
-                                                          min = 50,
-                                                          max = 99,
-                                                          value = 80,
-                                                          step = 1,
-                                                          width = 180))
-                                             )
-                                     ),
-                                     h2("RSE correction factor"),
-                                     wellPanel(class = "mypanel", 
-                                         sliderInput("CFslider", "",
-                                                     min = 0.8,
-                                                     max = 2.0,
-                                                     value = 1,
-                                                     step = 0.001,
-                                                     pre = "CF ",
-                                                     post = "",
-                                                     width = 340),
-                                         fluidRow(
-                                             column(8, checkboxInput("updateCFbox", "Update from simulations",
-                                                       value = TRUE,
-                                                       width = 180)),
-                                             column(4, actionButton("resetCFbtn", "Reset"))
+                                         h2("Habitat mask"),
+                                         wellPanel(class = "mypanel", 
+                                                   fluidRow(
+                                                       column(6, 
+                                                              numericInput("habxsigma", "Buffer width (multiple of sigma)",
+                                                                           min = 0,
+                                                                           max = 20,
+                                                                           value = 4,
+                                                                           step = 0.5,
+                                                                           width = 250),
+                                                              numericInput("habnx", "nx",
+                                                                           min = 10,
+                                                                           max = 1000,
+                                                                           value = 64,
+                                                                           step = 1,
+                                                                           width = 180)
+                                                       ),
+                                                       column(6, 
+                                                              radioButtons("maskshapebtn", label = "Shape",
+                                                                           choices = c("Rectangular", "Rounded"), 
+                                                                           selected = "Rounded"),
+                                                              br(),
+                                                              checkboxInput("polygonbox", "Clip to polygon(s)",
+                                                                            value = FALSE,
+                                                                            width = 180)
+                                                       )
+                                                   ),
+                                                   div(style="height: 80px;",
+                                                       fileInput("habpolyfilename", "Polygon shapefile (all parts)",
+                                                                 accept = c('.shp','.dbf','.sbn','.sbx',
+                                                                            '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
+                                                   uiOutput("habitatfile")
+                                                   #helpText(HTML("(.txt or at least xxx.shp, xxx.dbf, and xxx.shx)"))
                                          )
-                                     )
+                                  ),
+                                  
+                                  column(3,
+                                         
+                                         h2("Array plot"),
+                                         wellPanel(class = "mypanel", 
+                                                   checkboxInput("entireregionbox", "Show entire region",
+                                                                 value = TRUE,
+                                                                 width = 180)
+                                         ),
+                                         
+                                         h2("Pxy contour plot"),
+                                         wellPanel(class = "mypanel", 
+                                                   fluidRow(
+                                                       column(7, numericInput("pxyborder", "Border (spacing units)",
+                                                                              min = 0,
+                                                                              max = 10,
+                                                                              value = 3,
+                                                                              step = 0.5,
+                                                                              width = 180),
+                                                              numericInput("pxynx", "Mesh dimension nx",
+                                                                           min = 32,
+                                                                           max = 512,
+                                                                           value = 64,
+                                                                           step = 32,
+                                                                           width = 180)),
+                                                       column(5,
+                                                              br(),
+                                                              checkboxInput("pxyfillbox", "Fill contours",
+                                                                            value = TRUE,
+                                                                            width = 180),
+                                                              checkboxInput("pxyframebox", "Show frame",
+                                                                            value = FALSE,
+                                                                            width = 180),
+                                                              checkboxInput("pxylabelbox", "Label contours",
+                                                                            value = TRUE,
+                                                                            width = 180))
+                                                   )
+                                         ),
+                                         h2("Spacing plot"),
+                                         wellPanel(class = "mypanel", 
+                                                   "Spacing relative to sigma", br(), br(),
+                                                   fluidRow(
+                                                       column (6, numericInput("fromR",
+                                                                               "Minimum",
+                                                                               min = 0.01, max = 4,
+                                                                               value = 0.2,
+                                                                               step = 0.2,
+                                                                               width = 180)),
+                                                       column(6,
+                                                              numericInput("toR",
+                                                                           "Maximum",
+                                                                           min = 1, max = 10,
+                                                                           value = 4,
+                                                                           step = 0.2,
+                                                                           width = 180))),
+                                                   fluidRow(
+                                                       column (6, 
+                                                               numericInput("byR",
+                                                                            "Increment",
+                                                                            min = 0.02, max = 2,
+                                                                            value = 0.2,
+                                                                            step = 0.02,
+                                                                            width = 180)),
+                                                       column (6, 
+                                                               numericInput("simbyR",
+                                                                            "Simulation increment",
+                                                                            min = 0.02, max = 2,
+                                                                            value = 0.4,
+                                                                            step = 0.02,
+                                                                            width = 180)))
+                                         ),
+                                         h2("Costing"),
+                                         wellPanel(class = "mypanel",
+                                                   radioButtons("currency", label = "Currency symbol",
+                                                                choices = c("$", "\U00A3", "\U00A5", 
+                                                                            "\U20AC", "Rs"),  # , "\U20A8" rupees fail
+                                                                selected = "$", inline = TRUE)
+                                         )
+                                  ),
+                                  
+                                  column(3,
+                                         h2("Power plot"),
+                                         wellPanel(class = "mypanel", 
+                                                   # fluidRow(
+                                                   #     column(8, radioButtons("powerplotbtn", label = "Plot style",
+                                                   #              choices = c("Null hypothesis power", "Confidence interval"))),
+                                                   #     column(4, br(), br(), uiOutput('CIpct'))
+                                                   # ),
+                                                   fluidRow(
+                                                       column(6, numericInput("alpha", "alpha",
+                                                                              min = 0.001,
+                                                                              max = 0.200,
+                                                                              value = 0.05,
+                                                                              step = 0.001,
+                                                                              width = 120))
+                                                   ),
+                                                   fluidRow(
+                                                       column(6, numericInput("minEffect", "xmin",
+                                                                              min = -99,
+                                                                              max = 0,
+                                                                              value = -99,
+                                                                              step = 1,
+                                                                              width = 180)),
+                                                       column (6, numericInput("maxEffect", "xmax",
+                                                                               min = 0,
+                                                                               max = 300,
+                                                                               value = 150,
+                                                                               step = 1,
+                                                                               width = 180))
+                                                   ),
+                                                   
+                                                   br(),
+                                                   h4("Hypothesis test"),
+                                                   # br(),
+                                                   fluidRow(
+                                                       column(6,selectInput("testtype", "Type",
+                                                                            choices = c("two.sided", "decrease", "increase"),
+                                                                            selected = "two.sided",
+                                                                            width = 140)),
+                                                       column(6, numericInput("target", "Target power %",
+                                                                              min = 50,
+                                                                              max = 99,
+                                                                              value = 80,
+                                                                              step = 1,
+                                                                              width = 180))
+                                                   )
+                                         ),
+                                         h2("RSE correction factor"),
+                                         wellPanel(class = "mypanel", 
+                                                   sliderInput("CFslider", "",
+                                                               min = 0.8,
+                                                               max = 2.0,
+                                                               value = 1,
+                                                               step = 0.001,
+                                                               pre = "CF ",
+                                                               post = "",
+                                                               width = 340),
+                                                   fluidRow(
+                                                       column(8, checkboxInput("updateCFbox", "Update from simulations",
+                                                                               value = TRUE,
+                                                                               width = 180)),
+                                                       column(4, actionButton("resetCFbtn", "Reset"))
+                                                   )
+                                         )
+                                  )
                               )
-                          )
-                 ),
-                 tabPanel("Help",
-                          withMathJax(includeMarkdown("help.rmd"))
-                 ),
-                 tabPanel("About",
-                          h2("secrdesign app 1.1"), br(),
-                          
-                          h5(paste("This Shiny application provides an interface to the R package 'secrdesign', version", 
-                                   packageDescription("secrdesign")$Version), "."),
-                          br(),
-                          h5("For further information see "), 
-                          a("www.otago.ac.nz/density", href="https://www.otago.ac.nz/density", target="_blank"), br(),
-                          a("CRAN.R-project.org/package=secrdesign", href="https://CRAN.R-project.org/package=secrdesign", target="_blank"),
-                          br(), br(),
-                          
-                          h5("Citation"),
-                          h5("[The preferred citation for this package is not finalised]"),
-                          h5("Efford, M. G. 2019. Interactive design of spatially explicit capture-recapture studies. In prep.")
-                 )
-               
+                     ),
+                     tabPanel("Help",
+                              withMathJax(includeMarkdown("help.rmd"))
+                     ),
+                     tabPanel("About",
+                              h2("secrdesign app 1.1"), br(),
+                              
+                              h5(paste("This Shiny application provides an interface to the R package 'secrdesign', version", 
+                                       packageDescription("secrdesign")$Version), "."),
+                              br(),
+                              h5("For further information see "), 
+                              a("www.otago.ac.nz/density", href="https://www.otago.ac.nz/density", target="_blank"), br(),
+                              a("CRAN.R-project.org/package=secrdesign", href="https://CRAN.R-project.org/package=secrdesign", target="_blank"),
+                              br(), br(),
+                              
+                              h5("Citation"),
+                              h5("[The preferred citation for this package is not finalised]"),
+                              h5("Efford, M. G. 2019. Interactive design of spatially explicit capture-recapture studies. In prep.")
+                     )
+                     
+        )
+        
     )
-    
-)
-
+}
 ############################################################################################
 # Define server logic
 
 server <- function(input, output, session) {
-
+    
     desc <- packageDescription("secrdesign")
     showNotification(paste("secrdesign", desc$Version, desc$Date),
                      closeButton = FALSE, type = "message", duration = 5)
-
+    setBookmarkExclude(c("bookmark"))
     ##############################################################################
     
     ## miscellaneous functions
@@ -934,12 +945,12 @@ server <- function(input, output, session) {
         sig <- attr(x, "detectpar")$sigma
         nocc <- attr(x, "noccasions")
         nrep <- attr(x, "nrepeats")
-
+        
         ## initial path length in sigma units
         pathl <- arraypathlength()
         spc <- spacing(trps); if (is.null(spc)) spc <- NA
         df$pathlength <- df$R * pathl / spc * sig / 1000
-
+        
         df$pathcost  <- costs$perkm * df$pathlength * (nocc+1) * nrep
         df$arraycost <- costs$perarray * nrep
         df$detrcost  <- costs$perdetector * nrow(trps) * nrep
@@ -949,11 +960,11 @@ server <- function(input, output, session) {
         df
     }
     ##############################################################################
-
+    
     plotpower <- function (RSE = 0.2, effectRange = c(-99,150), testtype = "two.sided",
                            effectIncr = 2, adjustRSE = FALSE, alpha = 0.05,
                            targetpower = 80, col = topo.colors(8)[2], add = FALSE, ...) {
-
+        
         power <- function (D2D1, RSE, adjustRSE, testtype) {
             if (adjustRSE) {
                 sdiff <- (log(1 + RSE^2) + log(1 + RSE^2 / D2D1))^0.5
@@ -967,7 +978,7 @@ server <- function(input, output, session) {
             if (testtype == "two.sided") {
                 z.alpha <- qnorm(1-alpha/2)
                 pnorm(effect - z.alpha, 0, 1, lower.tail = TRUE) +
-                pnorm(-effect - z.alpha, 0, 1, lower.tail = TRUE)
+                    pnorm(-effect - z.alpha, 0, 1, lower.tail = TRUE)
             }
             else if (testtype == "decrease") {
                 z.alpha <- qnorm(1-alpha)
@@ -978,7 +989,7 @@ server <- function(input, output, session) {
                 pnorm(effect - z.alpha, 0, 1, lower.tail = TRUE)
             }
         }
-
+        
         if (!add) {
             xlim <- effectRange
             if (xlim[1] < -98) xlim[1] <- -100
@@ -1004,9 +1015,9 @@ server <- function(input, output, session) {
             text (upper, 105, as.character(round(upper, 1)), cex=0.8, xpd = TRUE)
         }
         else upper <- NA
-
+        
         ## text(x = (par()$usr[3]- par()$usr[1])*0.9, y = 7, testtype, cex=0.9)
-
+        
         powerpct <- 100*power(xval/100+1, RSE = RSE, adjustRSE, testtype)
         lines (xval, powerpct, col = col, lwd = linewidth)
         abline(h = targetpower, lty = 2, xpd = FALSE)
@@ -1015,7 +1026,7 @@ server <- function(input, output, session) {
     }
     ##############################################################################
     preplus <- function(x) paste0(symnum(x, c(-Inf, 0, Inf), c("", "+")), x)
-
+    
     plotpowerCI <- function (RSE = seq(0.05,0.25,0.05), effectRange = c(-99,150), 
                              estimatedRange = effectRange, adjustRSE = FALSE, 
                              alpha = 0.05, effectincr = 2, col = topo.colors(8), plt = TRUE, 
@@ -1066,7 +1077,7 @@ server <- function(input, output, session) {
              alpha = alpha, limits = ci)
     }
     ##############################################################################
-
+    
     addsequence <- function (trps, routetype) {
         if (tolower(routetype) == "sequential")
             seq <- 1:nrow(trps)
@@ -1080,7 +1091,7 @@ server <- function(input, output, session) {
         trps
     }
     ##############################################################################
-
+    
     nrepeats <- function() {
         if (input$arrayinput=='Region') 1 else input$nrepeats
     }
@@ -1292,7 +1303,7 @@ server <- function(input, output, session) {
         
         nrmval <- nrm()
         invalidateOutputs()
-
+        
         df <- data.frame(
             date = format(Sys.time(), "%Y-%m-%d"),
             time = format(Sys.time(), "%H:%M:%S"),
@@ -1358,7 +1369,7 @@ server <- function(input, output, session) {
         rownames(sumrv$value) <- paste0("Scenario", 1:nrow(sumrv$value))
     }
     ##############################################################################
-
+    
     arraycode <- function (comment = FALSE) {
         # returns the R code needed to generate the specified array, 
         # as a character value
@@ -1468,7 +1479,7 @@ server <- function(input, output, session) {
                         edgemethodcode <- paste0(", edgemethod = '", input$edgemethod, "'")
                     else
                         edgemethodcode <- paste0(",\n    edgemethod = '", input$edgemethod, "'")
-                        
+                    
                     if (input$rotation != 0)
                         rotatecode <- paste0("cluster <- rotate(cluster, ", input$rotation, ")\n")
                     else 
@@ -1527,7 +1538,7 @@ server <- function(input, output, session) {
         code        
     }
     ##############################################################################
-
+    
     maskcode <- function (arrayname, polyname) {
         type <- if (input$maskshapebtn == 'Rectangular') 'traprect' else 'trapbuffer'
         buffer <- as.character(round(input$habxsigma * input$sigma,2))
@@ -1558,7 +1569,7 @@ server <- function(input, output, session) {
                ")\n")
     }
     ##############################################################################
-
+    
     nrmcode <- function() {
         pathl <- as.character(arraypathlength()/1000)
         detfn <- input$detectfn
@@ -1581,7 +1592,7 @@ server <- function(input, output, session) {
             "\n",
             "scen <- make.scenarios(trapsindex = 1, noccasions = ", input$noccasions, ", ", 
             "nrepeats = ", nrepeats(), ",\n    D = ", density(), ", sigma = ", input$sigma, ", ",
-                "lambda0 = ", input$lambda0, ", detectfn = ", detfn, ")\n\n",
+            "lambda0 = ", input$lambda0, ", detectfn = ", detfn, ")\n\n",
             
             "scensum <- scenarioSummary(scen, trapset = array, mask = mask, CF = ", 
             round(input$CFslider, 3), 
@@ -1598,9 +1609,9 @@ server <- function(input, output, session) {
         else TRUE
     }
     ##############################################################################
-
+    
     ## renderUI
-
+    
     ## persqkm
     ## CIpct
     ## detectorhelp
@@ -1611,7 +1622,7 @@ server <- function(input, output, session) {
     ## uipopN
     
     ##############################################################################
-
+    
     output$persqkm <- renderUI({
         ## display density in animals/km^2
         Dkm <- density() * 100
@@ -1620,7 +1631,7 @@ server <- function(input, output, session) {
     })
     
     ##############################################################################
-
+    
     # output$CIpct <- renderUI({
     #     ## display CI as percentage
     #     # if (input$powerplotbtn=="Confidence interval")
@@ -1681,7 +1692,7 @@ server <- function(input, output, session) {
         if (!is.null(region())) {
             pos <- grep(".shp", tolower(input$regionfilename[,1]))
             if (length(pos)>0)
-            helptext <- paste0(input$regionfilename[pos,1])
+                helptext <- paste0(input$regionfilename[pos,1])
             pos <- grep(".rdata", tolower(input$regionfilename[,1]))
             if (length(pos)>0) {
                 objlist <- load(input$regionfilename[1,4])
@@ -1697,7 +1708,7 @@ server <- function(input, output, session) {
         if (!is.null(input$exclusionfilename)) {
             pos <- grep(".shp", tolower(input$exclusionfilename[,1]))
             if (length(pos)>0)
-            helptext <- paste0(input$exclusionfilename[pos,1])
+                helptext <- paste0(input$exclusionfilename[pos,1])
             pos <- grep(".rdata", tolower(input$exclusionfilename[,1]))
             if (length(pos)>0) {
                 objlist <- load(input$exclusionfilename[1,4])
@@ -1707,13 +1718,13 @@ server <- function(input, output, session) {
         helpText(HTML(helptext))
     })
     ##############################################################################
-
+    
     output$habitatfile <- renderUI({
         helptext <- ""
         if (!is.null(input$habpolyfilename)) {
             pos <- grep(".shp", tolower(input$habpolyfilename[,1]))
             if (length(pos)>0)
-            helptext <- paste0(input$habpolyfilename[pos,1])
+                helptext <- paste0(input$habpolyfilename[pos,1])
             pos <- grep(".rdata", tolower(input$habpolyfilename[,1]))
             if (length(pos)>0) {
                 objlist <- load(input$habpolyfilename[1,4])
@@ -1747,9 +1758,9 @@ server <- function(input, output, session) {
     ## validspacing
     
     ##############################################################################
-
+    
     output$validspacing <- reactive({rotrv$current})   ## for conditionalPanel                                  
-
+    
     arraypathlength <- reactive({
         
         pathl <- NA
@@ -1785,9 +1796,9 @@ server <- function(input, output, session) {
                 pathl <- sum(d)   
             }
         }
-                
+        
         pathl
-
+        
     })
     
     ##############################################################################
@@ -1812,9 +1823,9 @@ server <- function(input, output, session) {
             simxsigma = input$habxsigma,
             method = input$method)}
     )
-
+    
     ##############################################################################
-
+    
     readtrapfile <- function (scale) {
         inFile <- input$trapfilename
         trps <- NULL
@@ -1830,7 +1841,7 @@ server <- function(input, output, session) {
             if (scale != 1.0) {
                 trps[,] <- trps[,] * scale
             }
-
+            
             if (!inherits(trps, "traps")) {
                 showNotification("invalid trap file or arguments; try again",
                                  type = "warning", id = "badarray", duration = seconds)
@@ -1894,7 +1905,7 @@ server <- function(input, output, session) {
                     else {
                         cluster <- make.grid(1, 1, detector = input$detector)
                     }
-
+                    
                     #########################################################
                     ## check expected number
                     regionarea <- polyarea(region())
@@ -1910,8 +1921,8 @@ server <- function(input, output, session) {
                         return(NULL)
                     }
                     #########################################################
-
-
+                    
+                    
                     
                     if (input$clustertype != "Single detector")
                         cluster <- rotate (cluster, input$rotation)
@@ -1934,7 +1945,7 @@ server <- function(input, output, session) {
                                      exclude = exclusion())
                         if (input$chequerboard)
                             args$chequerboard <- "white"
-
+                        
                         trps <- do.call(make.systematic, args)
                     }
                 }
@@ -1947,13 +1958,13 @@ server <- function(input, output, session) {
             }
             if (!is.null(trps) && (nrow(trps) > input$maxdetectors)) {
                 showNotification(paste0("more than ", input$maxdetectors, " detectors; try again"),
-                                  type = "warning", id = "bigarray", duration = seconds)
+                                 type = "warning", id = "bigarray", duration = seconds)
                 trps <- NULL
             }
             
             if (!is.null(trps) && (nrow(trps) == 0)) {
                 showNotification(paste0("no detectors; try again"),
-                                  type = "warning", id = "zeroarray", duration = seconds)
+                                 type = "warning", id = "zeroarray", duration = seconds)
                 trps <- NULL
             }
             
@@ -1963,7 +1974,7 @@ server <- function(input, output, session) {
             else {
                 showTab(inputId = "navlist", target = "Spacing")
             }
-                
+            
             if (is.null(trps)) {
                 hideTab(inputId = "navlist", target = "Costing")
                 hideTab(inputId = "navlist", target = "Simulation")
@@ -1998,7 +2009,7 @@ server <- function(input, output, session) {
         }
     }
     )
-
+    
     ##############################################################################
     exclusion <- reactive( { 
         if (!is.null(input$exclusionfilename)) {
@@ -2010,13 +2021,13 @@ server <- function(input, output, session) {
     }
     )
     ##############################################################################
-
+    
     mask <- reactive( {
         rotrv$current <- FALSE
         pxyrv$value <- NULL
         if (!maskOK()) showNotification("no detectors in habitat polygon(s)",
-                                      type = "warning", id = "notrapsinpoly",
-                                      duration = seconds)
+                                        type = "warning", id = "notrapsinpoly",
+                                        duration = seconds)
         msk <- make.mask (detectorarray(),
                           buffer = input$habxsigma * input$sigma,
                           nx = input$habnx,
@@ -2045,7 +2056,7 @@ server <- function(input, output, session) {
             if (input$onlymaskbox) {
                 if (nrow(mask())==0) {
                     showNotification("incompatible mask",
-                                 type = "error", id = "badmask", duration = seconds)
+                                     type = "error", id = "badmask", duration = seconds)
                     pop <- NULL
                 }
                 else {
@@ -2078,7 +2089,7 @@ server <- function(input, output, session) {
         list(CVPxy = sqrt(varPxy)/EPxy, sinuosity = sinuosity, esa = sumPxy * attr(msk, "area"))
     })
     ##############################################################################
-
+    
     nrm <- reactive({
         trps <- detectorarray()
         if (is.null(trps)) return (NULL)
@@ -2127,13 +2138,13 @@ server <- function(input, output, session) {
         }
         else {
             showNotification("invalid mask; check parameters", type = "warning", id = "invalidmask",
-                                      duration = seconds)
+                             duration = seconds)
             
             NULL
         }
-        })
+    })
     ##############################################################################
-
+    
     ## reactiveValues
     
     ## simrv, rotrv, RSErv, pxyrv, setrv : logical
@@ -2142,7 +2153,7 @@ server <- function(input, output, session) {
     ## manualroute
     
     ##############################################################################
-
+    
     simrv <- reactiveValues(current = FALSE, output = NULL)
     rotrv <- reactiveValues(current = FALSE, output = NULL)
     RSErv <- reactiveValues(current = FALSE, value = NULL, adjRSE = NULL)
@@ -2154,10 +2165,10 @@ server <- function(input, output, session) {
     
     sumrv <- reactiveValues(
         value = read.csv(text = paste
-        ("date, time, note, detector, source, nx, ny, spacex, spacey, ndetectors, noccasions, ",
-            "nrepeats, distribution, detectfn, D, lambda0, sigma, detperHR, k, En, Er, Em, ",
-            "rotRSE, CF, route, cost, simfn,  nrepl, simtime, simRSE, simRSEse,",
-            "simRB, simRBse"))
+                         ("date, time, note, detector, source, nx, ny, spacex, spacey, ndetectors, noccasions, ",
+                             "nrepeats, distribution, detectfn, D, lambda0, sigma, detperHR, k, En, Er, Em, ",
+                             "rotRSE, CF, route, cost, simfn,  nrepl, simtime, simRSE, simRSEse,",
+                             "simRB, simRBse"))
     )
     
     ##############################################################################
@@ -2173,7 +2184,7 @@ server <- function(input, output, session) {
         }
     })
     ##############################################################################
-
+    
     ## Modal dialogue to confirm simulation if it might take a long time
     
     OKModal <- function(time) {
@@ -2191,7 +2202,7 @@ server <- function(input, output, session) {
     ##############################################################################
     
     ## Modal dialogue to confirm spacing simulations if they might take a long time
-
+    
     spacingOKModal <- function(time) {
         modalDialog(
             paste("Simulations predicted to take ", round(time,1), " minutes"),
@@ -2232,7 +2243,7 @@ server <- function(input, output, session) {
     # chequerboard
     
     ##############################################################################
-
+    
     observeEvent(input$nrepeats, {
         if (input$arrayinput=='Region' & input$nrepeats>1)
             updateNumericInput(session, "nrepeats", value = 1)
@@ -2254,7 +2265,7 @@ server <- function(input, output, session) {
         }
     })
     ##############################################################################
-
+    
     observeEvent(input$suggestlinebtn, {
         ## Line
         ## E[n] == E[r]
@@ -2263,13 +2274,13 @@ server <- function(input, output, session) {
                              type = "error", id = "nosuggestline", duration = seconds)
         }
         else {
-        optimalspacing <- n.eq.r()
-        if (!is.na(optimalspacing)) {
-            updateNumericInput(session, "spline", value = optimalspacing)
-        }
+            optimalspacing <- n.eq.r()
+            if (!is.na(optimalspacing)) {
+                updateNumericInput(session, "spline", value = optimalspacing)
+            }
         }
     })
-
+    
     ##############################################################################
     
     observeEvent(input$suggestfilebtn, {
@@ -2287,16 +2298,16 @@ server <- function(input, output, session) {
         }
     })
     ##############################################################################
-
+    
     observeEvent(input$resetbtn, {
-
+        
         setrv$resetting <- TRUE  ## suppresses auto adjust D in observeEvent(input$areaunit,...)
         
         ## DOES NOT RESET FILE INPUTS
         ## SEE E.G. https://groups.google.com/forum/#!topic/shiny-discuss/HbTa4v612FA
         
         ## array
-
+        
         ## grid
         updateSelectInput(session, "detector", selected = "proximity")
         updateTabsetPanel(session, "arrayinput", selected = "Grid")
@@ -2324,13 +2335,13 @@ server <- function(input, output, session) {
         updateTextInput(session, "args", "Optional arguments for read.traps()",
                         value = "", placeholder = "e.g., skip = 1, sep = ','")
         updateNumericInput(session, "scalefactor", value = 1.0)
-
+        
         ## parameters
         updateNumericInput(session, "D", "D (animals / ha)", value = 5)
         updateSelectInput(session, "detectfn", selected = "HHN")
         updateNumericInput(session, "lambda0", value = 0.2)
         updateNumericInput(session, "sigma", value = 25)
-
+        
         ## general
         updateTextInput(session, "title", "", value = "", 
                         placeholder = "scenario label for Summary")
@@ -2339,7 +2350,7 @@ server <- function(input, output, session) {
         updateTabsetPanel(session, "tabs", selected = "Array")
         updateRadioButtons(session, "distributionbtn", "Distribution", selected = "Poisson")
         updateCheckboxInput(session, "autorefresh", "Auto refresh", TRUE)
-
+        
         ## pop plot
         updateCheckboxInput(session, "showHRbox", "Display 95% home range", value = FALSE)
         updateCheckboxInput(session, "showmaskbox", "Display mask", value = FALSE)
@@ -2349,7 +2360,7 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "adjustRSEbox", "Adjust final RSE", value = TRUE)
         updateCheckboxInput(session, "powertype", "95% CI", value = TRUE)
         updateNumericInput(session, "xpos", value = 0)
-
+        
         ## costing
         updateNumericInput(session, "perkm", value = 0)
         updateNumericInput(session, "perarray", value = 0)
@@ -2359,11 +2370,11 @@ server <- function(input, output, session) {
         updateRadioButtons(session, "routetype", selected = "Sequential")
         updateCheckboxInput(session, "returnbox", value = FALSE)
         updateCheckboxInput(session, "setupoccasion", value = TRUE)
-
+        
         ## spacing
         updateTabsetPanel(session, "spacingtabs", selected = "RSE")
         updateCheckboxInput(session, "spacingsimbox", value = FALSE)
-
+        
         ## simulate
         updateNumericInput(session, "nrepl", value = 5)
         updateNumericInput(session, "ncores", value = 1)
@@ -2383,9 +2394,9 @@ server <- function(input, output, session) {
         updateRadioButtons(session, "edgemethod", "Cluster edge method", selected = "clip")
         updateNumericInput(session, "maxupload", value = 10)
         updateRadioButtons(session, "areaunit", "Area units", selected = "ha")
-
+        
         updateRadioButtons(session, "currency", selected = "$")
-
+        
         ## habitat        
         updateNumericInput(session, "habxsigma", value = 4)
         updateNumericInput(session, "habnx", value = 64)
@@ -2395,7 +2406,7 @@ server <- function(input, output, session) {
         
         ## array plot
         updateCheckboxInput(session, "entireregionbox", "Show entire region", value = TRUE)
-
+        
         ## pxy plot
         updateNumericInput(session, "pxyborder", value = 3)
         updateNumericInput(session, "pxynx", value = 64)
@@ -2417,13 +2428,13 @@ server <- function(input, output, session) {
         updateNumericInput(session, "toR", value = 4)
         updateNumericInput(session, "byR", value = 0.2)
         updateNumericInput(session, "simbyR", value = 0.4)
-
+        
         invalidateOutputs()
-
+        
     })
-
+    
     ##############################################################################
-
+    
     observeEvent(input$CFslider, {
         rotrv$current <- FALSE
     })
@@ -2449,7 +2460,7 @@ server <- function(input, output, session) {
     
     observeEvent(input$alpha, {
         updateCheckboxInput(session, "powertype", label = paste0(
-        round(100 *(1-input$alpha), 1), "% CI"))
+            round(100 *(1-input$alpha), 1), "% CI"))
     })
     
     observeEvent(input$xpos, {
@@ -2491,7 +2502,7 @@ server <- function(input, output, session) {
     }
     )
     ##############################################################################
-
+    
     observeEvent(c(input$simulatebtn, input$simulatebtn2), {
         ## use test to block initial execution when simulatebtn2 goes from NULL to 0
         if ((input$simulatebtn + input$simulatebtn2>0) & !is.null(detectorarray())) {
@@ -2561,7 +2572,7 @@ server <- function(input, output, session) {
     })
     
     ##############################################################################
-
+    
     observeEvent(c(input$arrayinput, input$resetCFbtn), {
         if (input$arrayinput != "Region") {
             removeNotification(id = "nofile")
@@ -2636,7 +2647,7 @@ server <- function(input, output, session) {
         if (!is.null(detectorarray()))
             addtosummary()
     })
-
+    
     ##############################################################################
     
     observeEvent(input$summarybtn, {
@@ -2651,7 +2662,32 @@ server <- function(input, output, session) {
     }
     )
     ##############################################################################
-
+    
+    # experimental code 2019-01-16
+    # from https://stackoverflow.com/questions/32460475/export-all-user-inputs-in-a-shiny-app-to-file-and-load-them-later
+    
+    # observeEvent(input$load_inputs,{
+    # 
+    #     if(!file.exists('inputs.RDS')) {return(NULL)}
+    # 
+    #     savedInputs <- readRDS('inputs.RDS')
+    #     inputIDs      <- names(savedInputs)
+    #     inputvalues   <- unlist(savedInputs)
+    #     for (i in 1:length(savedInputs)) {
+    #         session$sendInputMessage(inputIDs[i],  list(value=inputvalues[[i]]) )
+    #         ## session$sendInputMessage(inputIDs[i],  list(value=savedInputs[[i]]) )
+    #     }
+    # })
+    # ##############################################################################
+    # 
+    #  observeEvent(input$save_inputs,{ 
+    #      values <- isolate(reactiveValuesToList(input))
+    #      # values <- values[!grepl("-selectized", names(values))]
+    #      # values <- values[names(values) != "save_inputs"]
+    #      saveRDS( values , file = 'inputs.RDS')
+    #  })
+    # # ##############################################################################
+    
     ## renderText
     
     # spacingcodePrint
@@ -2662,9 +2698,9 @@ server <- function(input, output, session) {
     # spacingPrint 
     # spacingPrint2
     # simPrint 
-
+    
     ##############################################################################
-
+    
     output$spacingcodePrint <- renderText ({
         if (is.null(detectorarray())) "" # abort if no valid array
         else {
@@ -2711,7 +2747,7 @@ server <- function(input, output, session) {
     })
     
     ##############################################################################
-
+    
     output$simcodePrint <- renderText ({
         if (is.null(detectorarray())) {
             ""
@@ -2804,7 +2840,7 @@ server <- function(input, output, session) {
         on.exit(progress$close())
         progress$set(message = 'Updating...',
                      detail = '')
-
+        
         nrmval <- nrm()
         if (is.null(nrmval)) return (NULL)
         star <- if (nrepeats()>1) "*" else ""
@@ -2980,7 +3016,7 @@ server <- function(input, output, session) {
         }
     })
     ##############################################################################
-
+    
     output$routePlot <- renderPlot( height = 320, width = 300, {
         tmpgrid <- detectorarray()
         if (is.null(tmpgrid)) return (NULL)
@@ -2992,11 +3028,11 @@ server <- function(input, output, session) {
         lines(tmpgrid[seq,], col = 'grey')
         plot(tmpgrid, add = TRUE)  ## overplot symbols
         if (!is.null(pathl))
-        mtext(side=1, line=1.5, paste0("Length of route = ", round(pathl/1000,3), " km"),
-              xpd = TRUE, adj = 0.5, cex = 1.1)
+            mtext(side=1, line=1.5, paste0("Length of route = ", round(pathl/1000,3), " km"),
+                  xpd = TRUE, adj = 0.5, cex = 1.1)
     })
     ##############################################################################
-
+    
     output$detnPlot <- renderPlot( height = 290, width = 400, {
         ## inp <- oS2()
         invalidateOutputs()
@@ -3016,12 +3052,12 @@ server <- function(input, output, session) {
             p <- seq(0,1,0.05)
         else 
             p <- seq(0,1,0.1)
-
+        
         axis(4, at = -log(1 - p), label = p, xpd = FALSE, las = 1)
         mtext(side = 4, line = 3.7, "Detection probability")
     })
     ##############################################################################
-
+    
     output$popPlot <- renderPlot( height = 300, width = 380, {
         core <- detectorarray()
         if (is.null(core)) return (NULL)
@@ -3036,7 +3072,7 @@ server <- function(input, output, session) {
         else {
             par(mar=c(0,3,0,3), xaxs='i', yaxs='i', xpd = FALSE)
         }
-
+        
         if (input$showmaskbox) {
             plot (core, border = border, gridlines = FALSE)
             plot (mask(), add = TRUE, col = grey(0.9))
@@ -3060,7 +3096,7 @@ server <- function(input, output, session) {
         
     })
     ##############################################################################
-
+    
     border <- function (multiple) {
         spc <- spacing(detectorarray()) 
         if (is.null(spc) || is.na(spc)) spc <- input$sigma
@@ -3084,13 +3120,13 @@ server <- function(input, output, session) {
             lev <- seq(0.1, 0.9, 0.1)
             par(mar=c(0,3,0,3)) # , xaxs='i', yaxs='i')
         }
-
+        
         border <- border(input$pxyborder)
         plot(core, border = border, gridlines = FALSE, hidetr = TRUE)
-
+        
         xr <- range(core[,1]) + c(-1,1) * border
         yr <- range(core[,2]) + c(-1,1) * border
-
+        
         if (input$pxyfillbox) {
             # clunky way to give green background
             rect(xr[1],yr[1],xr[2],yr[2], col = cols[1], border = NA)
@@ -3098,7 +3134,7 @@ server <- function(input, output, session) {
         }
         else
             drawlabels <- input$pxylabelbox
-
+        
         pdot.contour(core, border = border, nx = input$pxynx,
                      detectfn = input$detectfn,
                      detectpar = list(sigma = input$sigma, lambda0 = input$lambda0),
@@ -3122,7 +3158,7 @@ server <- function(input, output, session) {
         }
     })
     ##############################################################################
-
+    
     output$powerPlot <- renderPlot( height = 320, width = 360, {
         RSE <- input$RSEslider/100
         # if (input$powerplotbtn == "Confidence interval") {
@@ -3131,7 +3167,7 @@ server <- function(input, output, session) {
             headroom <- (input$maxEffect-input$minEffect)/4
             powLU <- plotpowerCI(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
                                  estimatedRange = c(input$minEffect, input$maxEffect+headroom),
-                               adjustRSE = input$adjustRSEbox, alpha = input$alpha)
+                                 adjustRSE = input$adjustRSEbox, alpha = input$alpha)
             x <- CIrv$x
             if (is.null(x)) x <- 0
             y1 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,1,1], xout = x)$y*100-100
@@ -3151,7 +3187,7 @@ server <- function(input, output, session) {
         ## text (110, 10, paste0("RSE = ", round(100*RSE,1), "%") )
     })
     ##############################################################################
-
+    
     output$RSEPlot <- renderPlot({
         ## rotrv$output is an object with class "optimalSpacing" with plot method in secrdesign
         if (rotrv$current){
@@ -3161,7 +3197,7 @@ server <- function(input, output, session) {
         else NULL
     })
     ##############################################################################
-
+    
     output$nrmPlot <- renderPlot({
         if (rotrv$current){
             par(mar=c(5,6,3,6))
@@ -3170,15 +3206,15 @@ server <- function(input, output, session) {
         else NULL
     })
     ##############################################################################
-
+    
     output$costPlot <- renderPlot({
         if (rotrv$current){
             par(mar=c(5,5,3,5))
             cc <- cost(rotrv$output, costs = list(perkm = input$perkm,
-                                          perarray = input$perarray,
-                                          perdetector = input$perdetector,
-                                          pervisit = input$pervisit,
-                                          perdetection = input$perdetection))
+                                                  perarray = input$perarray,
+                                                  perdetector = input$perdetector,
+                                                  pervisit = input$pervisit,
+                                                  perdetection = input$perdetection))
             maxx <- max(cc$R)
             maxy <- max(cc$totalcost) * 1.2
             par(cex = 1.1)
@@ -3187,7 +3223,7 @@ server <- function(input, output, session) {
                                 ylab = paste("Cost", input$currency),
                                 ylim = c(0, maxy),
                                 xlim = c(0, maxx))
-
+            
             do.call(plot, defaultargs)
             x <- c(cc$R, rev(cc$R))
             y <- c(cc$detrcost, rep(0, nrow(cc)))
@@ -3207,19 +3243,19 @@ server <- function(input, output, session) {
         else NULL
     })
     ##############################################################################
-
+    
     ## rendertable
     
     ##############################################################################
-
+    
     output$summarytable <- renderTable({
         tmp <- t(sumrv$value)
         if (ncol(tmp)>0) colnames(tmp) <- paste0('Scenario', 1:ncol(tmp))
         tmp <- cbind(Field=colnames(sumrv$value), tmp)
         # sumrv$value
         tmp }, spacing = "xs"
-        )
-
+    )
+    
     ##############################################################################
     
     ## downloadhandler
@@ -3232,7 +3268,7 @@ server <- function(input, output, session) {
             write.csv(sumrv$value, file, row.names = TRUE)
         }
     )
-
+    
     output$downloadArray <- downloadHandler(
         filename = "array.txt",
         content = function(file) {
@@ -3240,7 +3276,7 @@ server <- function(input, output, session) {
             write.traps(detectorarray(), header = head, file)
         }
     )
-
+    
     output$downloadSpacing <- downloadHandler(
         filename = "spacing.RData",
         content = function(file) {
@@ -3257,19 +3293,18 @@ server <- function(input, output, session) {
         , contentType = "text/R"
     )
     outputOptions(output, "validspacing", suspendWhenHidden = FALSE)  
- 
+    
     ##############################################################################
     # tidy end of session - app closes in R
     
     session$onSessionEnded(function() {
         stopApp()
     })
-
+    
     ##############################################################################
 }
 
-
 ##################################################################################
 # Run the application
-shinyApp(ui = ui, server = server)
+shinyApp(ui = ui, server = server, enableBookmarking = "server")
 ##################################################################################
