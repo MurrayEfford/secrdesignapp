@@ -302,11 +302,13 @@ ui <- function(request) {
                                           fluidRow(
                                               column(12,
                                                      fluidRow(
-                                                         column(11, verbatimTextOutput("nrmPrint")), # style='padding:0px;'),
-                                                         column(1, style='padding:0px;', 
+                                                         column(11, verbatimTextOutput("nrmPrint")) # style='padding:0px;')
+                                                         ,
+                                                         column(1, style='padding:0px;',
                                                                 conditionalPanel("output.nrmPrint!= ''",
                                                                                  downloadLink("downloadnrmcode", "R")))
-                                                     ))
+                                                     )
+                                              )
                                           ),
                                           
                                           fluidRow(
@@ -317,7 +319,8 @@ ui <- function(request) {
                                                                  tabPanel("Array",
                                                                           plotOutput("arrayPlot", height = 340),
                                                                           fluidRow(
-                                                                              column(11, style='padding:0px;', verbatimTextOutput("ntrapPrint")),
+                                                                              column(11, style='padding:0px;', verbatimTextOutput("ntrapPrint"))
+                                                                              ,
                                                                               column(1, br(), conditionalPanel("output.ntrapPrint!= ''",
                                                                                                                downloadLink("downloadArray", "Save")))
                                                                           )
@@ -364,10 +367,11 @@ ui <- function(request) {
                                                                                                          value = TRUE,
                                                                                                          width = 130)),
                                                                               # helpText(HTML("Scales with population"))),
-                                                                              column(4,
-                                                                                     conditionalPanel("input.powertype==true",
-                                                                                                      numericInput("xpos", "% change", min = -100, max = 250, step = 1, 
-                                                                                                                   value = 0, width = 70)))
+                                                                              column(4, conditionalPanel("input.powertype==true",
+                                                                                                         numericInput("xpos", "% change", min = -100, max = 250, 
+                                                                                                                      step = 1, value = 0, width = 70)
+                                                                                                         )
+                                                                                     )
                                                                               
                                                                           ),
                                                                           fluidRow(
@@ -561,7 +565,8 @@ ui <- function(request) {
                                   column(5,
                                          h2("Results"),
                                          fluidRow(
-                                             column(10, verbatimTextOutput("spacingPrint")),
+                                             column(10, verbatimTextOutput("spacingPrint"))
+                                             ,
                                              column(2, conditionalPanel("output.validspacing==true",
                                                                         downloadLink("downloadSpacing", "Save oS")))
                                          ),
@@ -776,11 +781,6 @@ ui <- function(request) {
                                   column(3,
                                          h2("Power plot"),
                                          wellPanel(class = "mypanel", 
-                                                   # fluidRow(
-                                                   #     column(8, radioButtons("powerplotbtn", label = "Plot style",
-                                                   #              choices = c("Null hypothesis power", "Confidence interval"))),
-                                                   #     column(4, br(), br(), uiOutput('CIpct'))
-                                                   # ),
                                                    fluidRow(
                                                        column(6, numericInput("alpha", "alpha",
                                                                               min = 0.001,
@@ -871,9 +871,131 @@ server <- function(input, output, session) {
     desc <- packageDescription("secrdesign")
     showNotification(paste("secrdesign", desc$Version, desc$Date),
                      closeButton = FALSE, type = "message", duration = 5)
-    setBookmarkExclude(c("bookmark"))
     ##############################################################################
     
+    ## renderUI
+    
+    ## persqkm
+    ## detectorhelp
+    ## clusterhelp
+    ## clusteroverlap
+    ## randomtext
+    ## shapefile
+    ## exclusionfile
+    ## habitatfile
+    ## uipopN
+    
+    ##############################################################################
+    
+    output$persqkm <- renderUI({
+        ## display density in animals/km^2
+        Dkm <- density() * 100
+        Dkmtext <- paste0(Dkm, '&nbsp; animals / km<sup>2</sup>')
+        helpText(HTML(Dkmtext))
+    })
+    
+    ##############################################################################
+    
+    output$detectorhelp <- renderUI({
+        helptext <- ""
+        if (input$detector == 'proximity')
+            helptext <- "binary proximity detector; max. one detection per animal per detector per occasion"
+        else if (input$detector == 'multi')
+            helptext <- "multi-catch trap; max. one detection per animal per occasion"
+        else if (input$detector == 'count')
+            helptext <- "count proximity detector; integer # detections per animal per occasion"
+        helpText(HTML(helptext))
+    })
+    ##############################################################################
+    
+    output$clusterhelp <- renderUI({
+        helptext <- "One array"
+        if (input$arrayinput!='Region' & input$nrepeats>1)
+            helptext <- "Repeated arrays"
+        else if (input$arrayinput=='Region')
+            helptext <- "Not applicable"
+        helpText(HTML(helptext))
+    })
+    ##############################################################################
+    
+    output$clusteroverlap <- renderUI({
+        helptext <- ""
+        if ((input$arrayinput=='Region') & input$clustertype == "Grid") {
+            if ((input$spx * input$nx >= input$sppgrid) |
+                (input$spy * input$ny >= input$sppgrid))
+                helptext <- "Warning: clusters overlap"
+        }
+        helpText(HTML(helptext))
+    })
+    ##############################################################################
+    
+    output$randomtext <- renderUI({
+        helptext <- ""
+        if (input$arrayinput=='Region' & input$regiontype=="Random") {
+            if (input$randomtype == "SRS")
+                helptext <- "Simple random sample"
+            else if (input$randomtype == "GRTS")
+                helptext <- "Generalised random tessellation stratified sample of Stevens & Olsen (2004)"
+        }
+        helpText(HTML(helptext))
+    })
+    ##############################################################################
+    
+    output$shapefile <- renderUI({
+        helptext <- ""
+        if (!is.null(region())) {
+            pos <- grep(".shp", tolower(input$regionfilename[,1]))
+            if (length(pos)>0)
+                helptext <- paste0(input$regionfilename[pos,1])
+            pos <- grep(".rdata", tolower(input$regionfilename[,1]))
+            if (length(pos)>0) {
+                objlist <- load(input$regionfilename[1,4])
+                helptext <- paste0(objlist[1])
+            }
+        }
+        helpText(HTML(helptext))
+    })
+    ##############################################################################
+    
+    output$exclusionfile <- renderUI({
+        helptext <- ""
+        if (!is.null(input$exclusionfilename)) {
+            pos <- grep(".shp", tolower(input$exclusionfilename[,1]))
+            if (length(pos)>0)
+                helptext <- paste0(input$exclusionfilename[pos,1])
+            pos <- grep(".rdata", tolower(input$exclusionfilename[,1]))
+            if (length(pos)>0) {
+                objlist <- load(input$exclusionfilename[1,4])
+                helptext <- paste0(objlist[1])
+            }
+        }
+        helpText(HTML(helptext))
+    })
+    ##############################################################################
+    
+    output$habitatfile <- renderUI({
+        helptext <- ""
+        if (!is.null(input$habpolyfilename)) {
+            pos <- grep(".shp", tolower(input$habpolyfilename[,1]))
+            if (length(pos)>0)
+                helptext <- paste0(input$habpolyfilename[pos,1])
+            pos <- grep(".rdata", tolower(input$habpolyfilename[,1]))
+            if (length(pos)>0) {
+                objlist <- load(input$habpolyfilename[1,4])
+                helptext <- paste0(objlist[1])
+            }
+        }
+        helpText(HTML(helptext))
+    })
+    ##############################################################################
+    
+    output$uipopN <- renderUI({
+        if (!is.null(poprv$v))
+            helpText(HTML(paste0("Number in mask = ", nrow(pop()))))
+        else ""
+    })
+    
+    ##############################################################################
     ## miscellaneous functions
     
     ## pathlength
@@ -938,7 +1060,8 @@ server <- function(input, output, session) {
         if (!inherits(x, "optimalSpacing"))
             stop("requires input of class optimalSpacing")
         if (is.null(costs))
-            stop("provide costs as list with components 'perkm', 'perarray', 'perdetector', 'pervisit', 'perdetection'")
+            stop("provide costs as list with components 'perkm', 'perarray', ", 
+                 "'perdetector', 'pervisit', 'perdetection'")
         df <- x$rotRSE$values
         df$C <- apply(df[, c("n","r")],1,sum)
         trps <- attr(x, "traps")
@@ -1093,28 +1216,25 @@ server <- function(input, output, session) {
     ##############################################################################
     
     nrepeats <- function() {
-        if (input$arrayinput=='Region') 1 else input$nrepeats
+        if (isolate(input$arrayinput)=='Region') 1 
+        else isolate(input$nrepeats)
     }
     ##############################################################################
     
     n.eq.r <- function () {
         ## find minimum at n = r
         
-        if (!(input$arrayinput %in% c("Grid", "Line", "File"))) {
-            stop ("optimal spacing works only for Grid, Line or File")
-        }
-        detectpar <- list(lambda0 = input$lambda0, sigma = input$sigma)
         nminr <- function(R) {
-            if (input$arrayinput == "Grid") {
+            if (arrinput == "Grid") {
                 array <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
                                    spacex = input$spx*R, spacey = input$spy*R,
                                    hollow = input$hollow)
             }
-            else if (input$arrayinput == "Line") {
+            else if (arrinput == "Line") {
                 array <- make.grid(nx = input$nline, ny = 1, detector = input$detector,
                                    spacing = input$spline*R)
             }
-            else if (input$arrayinput == "File") {
+            else if (arrinput == "File") {
                 array <- array0
                 array[,] <- array[,] * R
             }
@@ -1122,11 +1242,17 @@ server <- function(input, output, session) {
             nrm <- Enrm(density(), array, msk, detectpar, input$noccasions, input$detectfn)
             nrm[1] - nrm[2]
         }
+        
+        arrinput <- isolate(input$arrayinput)
+        if (!(arrinput %in% c("Grid", "Line", "File"))) {
+            stop ("optimal spacing works only for Grid, Line or File")
+        }
+        detectpar <- list(lambda0 = input$lambda0, sigma = input$sigma)
         if (nrow(detectorarray()) > 1) {
-            if (input$arrayinput == "File") {
+            if (arrinput == "File") {
                 array0 <- readtrapfile(1)
             }
-            if (input$arrayinput %in% c("Grid", "Line")) {
+            if (arrinput %in% c("Grid", "Line")) {
                 lower <- input$fromR
                 upper <- input$toR
             }
@@ -1141,10 +1267,10 @@ server <- function(input, output, session) {
             }
             else {
                 
-                if (input$arrayinput == "Grid") 
-                    round(R$root * input$spx,1)
-                else if (input$arrayinput == "Line") 
-                    round(R$root * input$spline,1)
+                if (arrinput == "Grid") 
+                    round(R$root * isolate(input$spx),1)
+                else if (arrinput == "Line") 
+                    round(R$root * isolate(input$spline),1)
                 else
                     return(R$root)
             }
@@ -1610,138 +1736,6 @@ server <- function(input, output, session) {
     }
     ##############################################################################
     
-    ## renderUI
-    
-    ## persqkm
-    ## CIpct
-    ## detectorhelp
-    ## clusterhelp
-    ## clusteroverlap
-    ## randomtext
-    ## shapefile
-    ## uipopN
-    
-    ##############################################################################
-    
-    output$persqkm <- renderUI({
-        ## display density in animals/km^2
-        Dkm <- density() * 100
-        Dkmtext <- paste0(Dkm, '&nbsp; animals / km<sup>2</sup>')
-        helpText(HTML(Dkmtext))
-    })
-    
-    ##############################################################################
-    
-    # output$CIpct <- renderUI({
-    #     ## display CI as percentage
-    #     # if (input$powerplotbtn=="Confidence interval")
-    #     if (input$powertype)
-    #         helpText(HTML(paste0(round(100 *(1-input$alpha), 1), "%")))
-    #     else 
-    #         helpText(HTML(""))
-    # })
-    ##############################################################################
-    
-    output$detectorhelp <- renderUI({
-        helptext <- ""
-        if (input$detector == 'proximity')
-            helptext <- "binary proximity detector; max. one detection per animal per detector per occasion"
-        else if (input$detector == 'multi')
-            helptext <- "multi-catch trap; max. one detection per animal per occasion"
-        else if (input$detector == 'count')
-            helptext <- "count proximity detector; integer # detections per animal per occasion"
-        helpText(HTML(helptext))
-    })
-    ##############################################################################
-    
-    output$clusterhelp <- renderUI({
-        helptext <- "One array"
-        if (input$arrayinput!='Region' & input$nrepeats>1)
-            helptext <- "Repeated arrays"
-        else if (input$arrayinput=='Region')
-            helptext <- "Not applicable"
-        helpText(HTML(helptext))
-    })
-    ##############################################################################
-    
-    output$clusteroverlap <- renderUI({
-        helptext <- ""
-        if ((input$arrayinput=='Region') & input$clustertype == "Grid") {
-            if ((input$spx * input$nx >= input$sppgrid) |
-                (input$spy * input$ny >= input$sppgrid))
-                helptext <- "Warning: clusters overlap"
-        }
-        helpText(HTML(helptext))
-    })
-    ##############################################################################
-    
-    output$randomtext <- renderUI({
-        helptext <- ""
-        if (input$arrayinput=='Region' & input$regiontype=="Random") {
-            if (input$randomtype == "SRS")
-                helptext <- "Simple random sample"
-            else if (input$randomtype == "GRTS")
-                helptext <- "Generalised random tessellation stratified sample of Stevens & Olsen (2004)"
-        }
-        helpText(HTML(helptext))
-    })
-    ##############################################################################
-    
-    output$shapefile <- renderUI({
-        helptext <- ""
-        if (!is.null(region())) {
-            pos <- grep(".shp", tolower(input$regionfilename[,1]))
-            if (length(pos)>0)
-                helptext <- paste0(input$regionfilename[pos,1])
-            pos <- grep(".rdata", tolower(input$regionfilename[,1]))
-            if (length(pos)>0) {
-                objlist <- load(input$regionfilename[1,4])
-                helptext <- paste0(objlist[1])
-            }
-        }
-        helpText(HTML(helptext))
-    })
-    ##############################################################################
-    
-    output$exclusionfile <- renderUI({
-        helptext <- ""
-        if (!is.null(input$exclusionfilename)) {
-            pos <- grep(".shp", tolower(input$exclusionfilename[,1]))
-            if (length(pos)>0)
-                helptext <- paste0(input$exclusionfilename[pos,1])
-            pos <- grep(".rdata", tolower(input$exclusionfilename[,1]))
-            if (length(pos)>0) {
-                objlist <- load(input$exclusionfilename[1,4])
-                helptext <- paste0(objlist[1])
-            }
-        }
-        helpText(HTML(helptext))
-    })
-    ##############################################################################
-    
-    output$habitatfile <- renderUI({
-        helptext <- ""
-        if (!is.null(input$habpolyfilename)) {
-            pos <- grep(".shp", tolower(input$habpolyfilename[,1]))
-            if (length(pos)>0)
-                helptext <- paste0(input$habpolyfilename[pos,1])
-            pos <- grep(".rdata", tolower(input$habpolyfilename[,1]))
-            if (length(pos)>0) {
-                objlist <- load(input$habpolyfilename[1,4])
-                helptext <- paste0(objlist[1])
-            }
-        }
-        helpText(HTML(helptext))
-    })
-    ##############################################################################
-    
-    output$uipopN <- renderUI({
-        if (!is.null(poprv$v))
-            helpText(HTML(paste0("Number in mask = ", nrow(pop()))))
-        else ""
-    })
-    
-    ##############################################################################
     
     ## reactive
     
@@ -1759,7 +1753,7 @@ server <- function(input, output, session) {
     
     ##############################################################################
     
-    output$validspacing <- reactive({rotrv$current})   ## for conditionalPanel                                  
+    output$validspacing <- reactive({rotrv$current})   ## for conditionalPanel
     
     arraypathlength <- reactive({
         
@@ -1813,6 +1807,7 @@ server <- function(input, output, session) {
     
     ##############################################################################
     
+    # note change to any of simulation settings
     simarg <- reactive({
         simrv$current <- FALSE
         list(
@@ -2960,12 +2955,11 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$simPrint <- renderText({
-        tmp <- simarg()
         if (simrv$current) {
             sims <- simrv$output
             out <- paste0(
                 "Number of replicates = ",
-                tmp$nrepl, "\n",
+                input$nrepl, "\n",
                 "Time for simulations = ",
                 round(sims$proctime,2), " secs",  "\n",
                 "Simulated RSE = ",
@@ -3292,14 +3286,16 @@ server <- function(input, output, session) {
         }
         , contentType = "text/R"
     )
-    outputOptions(output, "validspacing", suspendWhenHidden = FALSE)  
+   
+    outputOptions(output, "validspacing", suspendWhenHidden = FALSE)
     
     ##############################################################################
     # tidy end of session - app closes in R
+    # apparently incompatible with bookmarking 2019-01-17
     
-    session$onSessionEnded(function() {
-        stopApp()
-    })
+    # session$onSessionEnded(function() {
+    #     stopApp()
+    # })
     
     ##############################################################################
 }
