@@ -2132,7 +2132,7 @@ server <- function(input, output, session) {
             scensum
         }
         else {
-            showNotification("invalid mask; check parameters", type = "warning", id = "invalidmask",
+            showNotification("invalid mask; check sigma parameter", type = "warning", id = "invalidmask",
                              duration = seconds)
             
             NULL
@@ -2955,11 +2955,12 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$simPrint <- renderText({
+        tmp <- simarg()   ## ensures dependency
         if (simrv$current) {
             sims <- simrv$output
             out <- paste0(
                 "Number of replicates = ",
-                input$nrepl, "\n",
+                tmp$nrepl, "\n",
                 "Time for simulations = ",
                 round(sims$proctime,2), " secs",  "\n",
                 "Simulated RSE = ",
@@ -3291,7 +3292,7 @@ server <- function(input, output, session) {
     
     ##############################################################################
     # tidy end of session - app closes in R
-    # apparently incompatible with bookmarking 2019-01-17
+    # ?apparently incompatible with bookmarking 2019-01-17
     
     # session$onSessionEnded(function() {
     #     stopApp()
