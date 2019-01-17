@@ -1,6 +1,7 @@
 # renamed from secrdesignapp.R
 
 library(secrdesign)
+
 secrversion <- packageVersion('secr')
 secrdesignversion <- packageVersion('secrdesign')
 if (compareVersion(as.character(secrdesignversion), '2.5.5') < 0)
@@ -860,7 +861,6 @@ ui <- function(request) {
                      )
                      
         )
-        
     )
 }
 ############################################################################################
@@ -2506,9 +2506,9 @@ server <- function(input, output, session) {
     )
     ##############################################################################
     
-    observeEvent(c(input$simulatebtn, input$simulatebtn2), {
-        ## use test to block initial execution when simulatebtn2 goes from NULL to 0
-        if ((input$simulatebtn + input$simulatebtn2>0) & !is.null(detectorarray())) {
+    observeEvent(c(input$simulatebtn, input$simulatebtn2), ignoreInit = TRUE, {
+        ## ignoreInit blocks initial execution when simulatebtn2 goes from NULL to 0
+        if (!is.null(detectorarray())) {
             removeNotification("lownr")
             methodfactor <- 1 + ((input$method != "none") * 4)
             functionfactor <- 1 + ((input$packagebtn != "openCR.fit") * 3)
@@ -3306,6 +3306,17 @@ server <- function(input, output, session) {
     #     stopApp()
     # })
     
+    ##############################################################################
+
+    # Save extra values in state$values when we bookmark
+    onBookmark(function(state) {
+        state$values$simrvoutput <- simrv$output
+    })
+    
+    # Read values from state$values when we restore
+    onRestore(function(state) {
+        simrv$output <- state$values$simrvoutput
+    })
     ##############################################################################
 }
 
