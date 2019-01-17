@@ -1,7 +1,6 @@
 # renamed from secrdesignapp.R
 
 library(secrdesign)
-# library(shinyjs)
 
 secrversion <- packageVersion('secr')
 secrdesignversion <- packageVersion('secrdesign')
@@ -24,7 +23,6 @@ seconds <- 6   ## default duration for showNotification()
 ui <- function(request) {
 
     fluidPage(
-#        useShinyjs(),
         includeCSS("secrdesignstyle.css"),
         withMathJax(),
         tags$head(tags$style(".mypanel{margin-top:5px; margin-bottom:10px; padding-bottom: 5px;}")),
@@ -278,12 +276,7 @@ ui <- function(request) {
                                              column(5, actionButton("simulatebtn2", "Simulate",  width = 130)),
                                              column(6, actionButton("appendbtn", "Add to summary",  width = 130))
                                          ),
-                                         # br(),
-                                         # fluidRow(
-                                         #      column(5, actionButton("save_inputs", "Save",  width = 130)),
-                                         #      column(6, actionButton("load_inputs", "Load",  width = 130))
-                                         # ),
-                                         
+
                                          br(),
                                          fluidRow(
                                              column(5, actionButton("resetbtn", "Reset all", width = 130)),
@@ -1430,7 +1423,8 @@ server <- function(input, output, session) {
     addtosummary <- function() {
         
         nrmval <- nrm()
-        invalidateOutputs()
+        
+        ## tentatively suppress 2019-01-18 invalidateOutputs()
         
         df <- data.frame(
             date = format(Sys.time(), "%Y-%m-%d"),
@@ -1808,7 +1802,6 @@ server <- function(input, output, session) {
         simrv$current <- FALSE
         rotrv$current <- FALSE
         pxyrv$value <- NULL
-        CIrv$x <- NULL
         updateNumericInput(session, "D", step = 10^trunc(log10(density()/50)))
     })
     
@@ -2152,7 +2145,7 @@ server <- function(input, output, session) {
     
     ## reactiveValues
     
-    ## simrv, rotrv, RSErv, pxyrv, setrv : logical
+    ## simrv, rotrv, RSErv, pxyrv : logical
     ## sumrv : summary table
     ## poprv
     ## manualroute
@@ -2163,9 +2156,7 @@ server <- function(input, output, session) {
     rotrv <- reactiveValues(current = FALSE, output = NULL)
     RSErv <- reactiveValues(current = FALSE, value = NULL, adjRSE = NULL)
     pxyrv <- reactiveValues(current = FALSE, xy = NULL, value = NULL)
-    # setrv <- reactiveValues(resetting = FALSE)
     poprv <- reactiveValues(v = 0)  # used to invalidate and re-plot popn
-    CIrv  <- reactiveValues(x = NULL)
     manualroute <- reactiveValues(seq = NULL)
     
     sumrv <- reactiveValues(
@@ -2462,10 +2453,6 @@ server <- function(input, output, session) {
             round(100 *(1-input$alpha), 1), "% CI"))
     })
     
-    observeEvent(input$xpos, {
-        CIrv$x <- input$xpos
-    })
-    
     observeEvent(input$chequerboard, {
         if (input$chequerboard && compareVersion(as.character(secrversion), '3.2.0') < 0) {
             showNotification("chequerboard requires secr version >= 3.2.0",
@@ -2475,9 +2462,8 @@ server <- function(input, output, session) {
     })
     
     observeEvent(input$spacingbtn, {
-        ## inp <- oS2()
         if (input$spacingsimbox) {
-            
+        
             ## time check 2018-12-05
             methodfactor <- 1 + ((input$method != "none") * 4)
             functionfactor <- 1 + ((input$packagebtn != "openCR.fit") * 3)
@@ -2625,8 +2611,7 @@ server <- function(input, output, session) {
     observeEvent(input$CIclick, {
         invalidateOutputs()
         if (input$powertype) {
-            CIrv$x <- round(input$CIclick$x)
-            updateNumericInput(session, "xpos", value = CIrv$x)
+            updateNumericInput(session, "xpos", value = isolate(round(input$CIclick$x)))
         }
         else {
         }
@@ -2959,9 +2944,9 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$simPrint <- renderText({
-        tmp <- simarg()   ## ensures dependency
-        if (simrv$current) {
-            sims <- simrv$output
+        if (isolate(simrv$current)) {
+            tmp <- simarg()   ## ensures dependency on settings
+            sims <- isolate(simrv$output)
             out <- paste0(
                 "Number of replicates = ",
                 tmp$nrepl, "\n",
@@ -3160,23 +3145,19 @@ server <- function(input, output, session) {
     
     output$powerPlot <- renderPlot( height = 320, width = 360, {
         RSE <- input$RSEslider/100
-        # if (input$powerplotbtn == "Confidence interval") {
         if (input$powertype) {    ## confidence interval
             par(mar=c(4,4,2,2), mgp=c(2.4,0.7,0))
             headroom <- (input$maxEffect-input$minEffect)/4
             powLU <- plotpowerCI(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
                                  estimatedRange = c(input$minEffect, input$maxEffect+headroom),
                                  adjustRSE = input$adjustRSEbox, alpha = input$alpha)
-            x <- CIrv$x
-            if (is.null(x)) x <- 0
+            x <- input$xpos 
             y1 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,1,1], xout = x)$y*100-100
             y2 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,2,1], xout = x)$y*100-100
             segments(x, y1, x, y2, lwd= linewidth, col = "blue")
             text(rep(x,2)+5, c(y1+1, min(y2+1, par()$usr[4]*1.06)), round(c(y1, y2)), adj = 0, cex = 0.9, col = "blue", xpd = TRUE)
         }
         else {
-            CIrv$x <- 0
-            updateNumericInput(session, "xpos", value = 0)
             par(mar=c(4,4,3,1))
             powLU <- plotpower(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
                                adjustRSE = input$adjustRSEbox, alpha = input$alpha,
@@ -3304,16 +3285,21 @@ server <- function(input, output, session) {
     
     ##############################################################################
 
-    setBookmarkExclude(c("simulatebtn","simulatebtn2"))
+    setBookmarkExclude(c("simulatebtn", "simulatebtn2", "spacingbtn", "appendbtn",
+                         "clearallbtn", "clearlastbtn",
+                         "suggestbtn", "suggestlinebtn", "suggestfilebtn",
+                         "resetbtn", "routebtn", "randompopbtn"))
     
     # Save extra values in state$values when we bookmark
     onBookmark(function(state) {
         state$values$simrvoutput <- simrv$output
+        state$values$sumrv <- sumrv$value
     })
     
     # Read values from state$values when we restore
     onRestore(function(state) {
         simrv$output <- state$values$simrvoutput
+        sumrv$value <- state$values$sumrv
     })
     ##############################################################################
 }
