@@ -215,7 +215,7 @@ library(shiny)
 runGitHub("secrdesignapp", "MurrayEfford", port = 8000, destdir = "d:/myworkingfolder")
 ```
 
-The port number is arbitrary. 
+The port number is arbitrary. Bookmarks are stored in a subdirectory of destdir.
 
 ## Results  <a name="nrmspecs"></a>
 

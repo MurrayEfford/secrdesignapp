@@ -130,7 +130,8 @@ ui <- function(request) {
                                                                 div(style="height: 80px;",
                                                                     fileInput("regionfilename", "Boundary file(s)",
                                                                               accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                                         '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
+                                                                                         '.shx',".prj", ".txt", ".rdata", 
+                                                                                         ".rda", ".rds"), multiple = TRUE)),
                                                                 # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
                                                                 uiOutput("shapefile"),
                                                                 
@@ -650,7 +651,8 @@ ui <- function(request) {
                                                    div(style="height: 80px;",
                                                        fileInput("exclusionfilename", "Excluded region",
                                                                  accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                            '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
+                                                                            '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
+                                                                 multiple = TRUE)),
                                                    uiOutput("exclusionfile"),
                                                    numericInput("maxupload", "Maximum file upload Mb",
                                                                 min = 5,
@@ -689,7 +691,8 @@ ui <- function(request) {
                                                    div(style="height: 80px;",
                                                        fileInput("habpolyfilename", "Polygon shapefile (all parts)",
                                                                  accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                            '.shx',".prj", ".txt", ".rdata"), multiple = TRUE)),
+                                                                            '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
+                                                                 multiple = TRUE)),
                                                    uiOutput("habitatfile")
                                                    #helpText(HTML("(.txt or at least xxx.shp, xxx.dbf, and xxx.shx)"))
                                          )
@@ -942,10 +945,14 @@ server <- function(input, output, session) {
             pos <- grep(".shp", tolower(input$regionfilename[,1]))
             if (length(pos)>0)
                 helptext <- paste0(input$regionfilename[pos,1])
-            pos <- grep(".rdata", tolower(input$regionfilename[,1]))
+            pos <- grep(".rda", tolower(input$regionfilename[,1]))  # .rda, .rdata
             if (length(pos)>0) {
                 objlist <- load(input$regionfilename[1,4])
                 helptext <- paste0(objlist[1])
+            }
+            pos <- grep(".rds", tolower(input$regionfilename[,1])) 
+            if (length(pos)>0) {
+                helptext <- paste0(input$regionfilename[pos,1])
             }
         }
         helpText(HTML(helptext))
@@ -958,10 +965,14 @@ server <- function(input, output, session) {
             pos <- grep(".shp", tolower(input$exclusionfilename[,1]))
             if (length(pos)>0)
                 helptext <- paste0(input$exclusionfilename[pos,1])
-            pos <- grep(".rdata", tolower(input$exclusionfilename[,1]))
+            pos <- grep(".rda", tolower(input$exclusionfilename[,1]))  # .rda, .rdata
             if (length(pos)>0) {
                 objlist <- load(input$exclusionfilename[1,4])
                 helptext <- paste0(objlist[1])
+            }
+            pos <- grep(".rds", tolower(input$exclusionfilename[,1])) 
+            if (length(pos)>0) {
+                helptext <- paste0(input$exclusionfilename[pos,1])
             }
         }
         helpText(HTML(helptext))
@@ -974,10 +985,14 @@ server <- function(input, output, session) {
             pos <- grep(".shp", tolower(input$habpolyfilename[,1]))
             if (length(pos)>0)
                 helptext <- paste0(input$habpolyfilename[pos,1])
-            pos <- grep(".rdata", tolower(input$habpolyfilename[,1]))
+            pos <- grep(".rda", tolower(input$habpolyfilename[,1]))  # .rda, .rdata
             if (length(pos)>0) {
                 objlist <- load(input$habpolyfilename[1,4])
                 helptext <- paste0(objlist[1])
+            }
+            pos <- grep(".rds", tolower(input$habpolyfilename[,1])) 
+            if (length(pos)>0) {
+                helptext <- paste0(input$habpolyfilename[pos,1])
             }
         }
         helpText(HTML(helptext))
@@ -1026,18 +1041,21 @@ server <- function(input, output, session) {
     }
     ##############################################################################
     
-    lengthstr <- function (length, dec = 0) {
+    lengthstr <- function (length, dec) {
+        
+        lth <- if (input$areaunit == "ha") length else length/1000
+        
         if (missing(dec)) {
-            if (length<1000) 
-                dec <- 1
+            if (lth<1000) 
+                dec <- 2
             else 
                 dec <- 0
         }
         if (input$areaunit == "ha") {
-            paste0(round(length, dec), " m")
+            paste0(round(lth, dec), " m")
         }
         else {
-            paste0(round(length/1000, dec), " km")
+            paste0(round(lth, dec), " km")
         }
     }
     ##############################################################################
@@ -1278,13 +1296,19 @@ server <- function(input, output, session) {
         poly <- NULL
         if (!is.null(fileupload))
         {
-            if (tolower(tools::file_ext(fileupload[1,1])) == "txt") {
+            ext <- tolower(tools::file_ext(fileupload[1,1]))
+            if (ext == "txt") {
                 coord <- read.table(fileupload[1,4])
                 poly <- secr:::boundarytoSP(coord[,1:2])
             }
-            else if (tolower(tools::file_ext(fileupload[1,1])) == "rdata") {
-                objlist <- load(fileupload[1,4])
-                obj <- get(objlist[1])
+            else if (ext %in% c("rdata", "rda", "rds")) {
+                if (ext == "rds") {
+                    obj <- readRDS(fileupload[1,4])
+                }
+                else {
+                    objlist <- load(fileupload[1,4])
+                    obj <- get(objlist[1])
+                }
                 if (is.matrix(obj))
                     poly <- secr:::boundarytoSP(obj[,1:2])
                 else if (inherits(obj, "SpatialPolygons"))
@@ -1541,18 +1565,25 @@ server <- function(input, output, session) {
             
             else if (input$arrayinput == "Region") {
                 regionfilename <- input$regionfilename[1,1]
-                if (tolower(tools::file_ext(regionfilename)) == "txt") {
+                ext <- tolower(tools::file_ext(regionfilename))
+                if (ext == "txt") {
                     regioncode <- paste0( 
                         "# coordinates from text file\n",
                         "coord <- read.table('", regionfilename, "')   # read boundary coordinates\n",
                         "region <- secr:::boundarytoSP(coord)  # convert to SpatialPolygons\n")
                 }
-                else if (tolower(tools::file_ext(regionfilename)) == "rdata") {
+                else if (ext %in% c("rdata", "rda")) {
                     objlist <- load(input$regionfilename[1,4])
                     regioncode <- paste0( 
                         "# SpatialPolygons from RData file\n",
                         "objlist <- load('", input$regionfilename[1,1], "')\n",
                         "region <- get(objlist[1]) \n")
+                }
+                else if (ext == "rds") {
+                    objlist <- load(input$regionfilename[1,4])
+                    regioncode <- paste0( 
+                        "# SpatialPolygons from RDS file\n",
+                        "region <- readRDS('", input$regionfilename[1,1], ") \n")
                 }
                 else {
                     regioncode <- paste0(
@@ -2813,7 +2844,7 @@ server <- function(input, output, session) {
             else 
                 ratio <- round(glength/input$sigma,1)
             paste0(nrow(gr), " ", input$detector, " detectors", clustertext, 
-                   "; ", cr, "diameter ", lengthstr(glength,0), " (", ratio, " sigma)")
+                   "; ", cr, "diameter ", lengthstr(glength), " (", ratio, " sigma)")
         }
         else ""
     })
@@ -3292,8 +3323,8 @@ server <- function(input, output, session) {
     
     # Save extra values in state$values when we bookmark
     onBookmark(function(state) {
-        state$values$simrvoutput <- simrv$output
-        state$values$sumrv <- sumrv$value
+        state$values$simrvoutput <- simrv$output     # does not work 
+        state$values$sumrv <- sumrv$value            # works
     })
     
     # Read values from state$values when we restore
