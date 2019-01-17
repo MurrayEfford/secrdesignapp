@@ -1,6 +1,7 @@
 # renamed from secrdesignapp.R
 
 library(secrdesign)
+# library(shinyjs)
 
 secrversion <- packageVersion('secr')
 secrdesignversion <- packageVersion('secrdesign')
@@ -23,6 +24,7 @@ seconds <- 6   ## default duration for showNotification()
 ui <- function(request) {
 
     fluidPage(
+#        useShinyjs(),
         includeCSS("secrdesignstyle.css"),
         withMathJax(),
         tags$head(tags$style(".mypanel{margin-top:5px; margin-bottom:10px; padding-bottom: 5px;}")),
@@ -2161,7 +2163,7 @@ server <- function(input, output, session) {
     rotrv <- reactiveValues(current = FALSE, output = NULL)
     RSErv <- reactiveValues(current = FALSE, value = NULL, adjRSE = NULL)
     pxyrv <- reactiveValues(current = FALSE, xy = NULL, value = NULL)
-    setrv <- reactiveValues(resetting = FALSE)
+    # setrv <- reactiveValues(resetting = FALSE)
     poprv <- reactiveValues(v = 0)  # used to invalidate and re-plot popn
     CIrv  <- reactiveValues(x = NULL)
     manualroute <- reactiveValues(seq = NULL)
@@ -2304,13 +2306,11 @@ server <- function(input, output, session) {
     
     observeEvent(input$resetbtn, {
         
-        setrv$resetting <- TRUE  ## suppresses auto adjust D in observeEvent(input$areaunit,...)
-        
         ## DOES NOT RESET FILE INPUTS
         ## SEE E.G. https://groups.google.com/forum/#!topic/shiny-discuss/HbTa4v612FA
-        
+
         ## array
-        
+
         ## grid
         updateSelectInput(session, "detector", selected = "proximity")
         updateTabsetPanel(session, "arrayinput", selected = "Grid")
@@ -2319,11 +2319,11 @@ server <- function(input, output, session) {
         updateNumericInput(session, "spy", value = 20)
         updateNumericInput(session, "spx", value = 20)
         updateCheckboxInput(session, "hollow", value = FALSE )
-        
+
         ## line
         updateNumericInput(session, "nline", value = 20)
         updateNumericInput(session, "spline", value = 20)
-        
+
         ## region
         updateTabsetPanel(session, inputId = "regiontype", selected = "Systematic")
         updateCheckboxInput(session, "sppgrid", value = 200 )
@@ -2333,37 +2333,37 @@ server <- function(input, output, session) {
         updateRadioButtons(session, "randomtype", selected = "SRS")
         updateNumericInput(session, "numpgrid", value = 20)
         updateNumericInput(session, "seedpgrid", value = 0)
-        
+
         ## file
         updateTextInput(session, "args", "Optional arguments for read.traps()",
                         value = "", placeholder = "e.g., skip = 1, sep = ','")
         updateNumericInput(session, "scalefactor", value = 1.0)
-        
+
         ## parameters
         updateNumericInput(session, "D", "D (animals / ha)", value = 5)
         updateSelectInput(session, "detectfn", selected = "HHN")
         updateNumericInput(session, "lambda0", value = 0.2)
         updateNumericInput(session, "sigma", value = 25)
-        
+
         ## general
-        updateTextInput(session, "title", "", value = "", 
+        updateTextInput(session, "title", "", value = "",
                         placeholder = "scenario label for Summary")
         updateNumericInput(session, "noccasions", value = 5)
         updateNumericInput(session, "nrepeats", value = 1)
         updateTabsetPanel(session, "tabs", selected = "Array")
         updateRadioButtons(session, "distributionbtn", "Distribution", selected = "Poisson")
         updateCheckboxInput(session, "autorefresh", "Auto refresh", TRUE)
-        
+
         ## pop plot
         updateCheckboxInput(session, "showHRbox", "Display 95% home range", value = FALSE)
         updateCheckboxInput(session, "showmaskbox", "Display mask", value = FALSE)
         updateCheckboxInput(session, "onlymaskbox", "Restrict to mask", value = TRUE)
-        
+
         ## power plot
         updateCheckboxInput(session, "adjustRSEbox", "Adjust final RSE", value = TRUE)
         updateCheckboxInput(session, "powertype", "95% CI", value = TRUE)
         updateNumericInput(session, "xpos", value = 0)
-        
+
         ## costing
         updateNumericInput(session, "perkm", value = 0)
         updateNumericInput(session, "perarray", value = 0)
@@ -2373,11 +2373,11 @@ server <- function(input, output, session) {
         updateRadioButtons(session, "routetype", selected = "Sequential")
         updateCheckboxInput(session, "returnbox", value = FALSE)
         updateCheckboxInput(session, "setupoccasion", value = TRUE)
-        
+
         ## spacing
         updateTabsetPanel(session, "spacingtabs", selected = "RSE")
         updateCheckboxInput(session, "spacingsimbox", value = FALSE)
-        
+
         ## simulate
         updateNumericInput(session, "nrepl", value = 5)
         updateNumericInput(session, "ncores", value = 1)
@@ -2386,42 +2386,41 @@ server <- function(input, output, session) {
         updateSelectInput(session, "method", "method", selected = "none")
         updateRadioButtons(session, "packagebtn", "Fit simulated data", selected = "openCR.fit")
         updateCheckboxInput(session, "simappendbox", value = TRUE)
-        
+
         ## options
         # updateTextInput(session, "savefilename", value = "log.txt")
         # updateCheckboxInput(session, "appendbox", value = TRUE)
-        
+
         ## detector array
         updateCheckboxInput(session, "lockxy", value = TRUE)
         updateCheckboxInput(session, "randomorigin", value = FALSE)
         updateRadioButtons(session, "edgemethod", "Cluster edge method", selected = "clip")
         updateNumericInput(session, "maxupload", value = 10)
         updateRadioButtons(session, "areaunit", "Area units", selected = "ha")
-        
+
         updateRadioButtons(session, "currency", selected = "$")
-        
-        ## habitat        
+
+        ## habitat
         updateNumericInput(session, "habxsigma", value = 4)
         updateNumericInput(session, "habnx", value = 64)
         updateRadioButtons(session, "maskshapebtn", selected = "Rounded")
         updateCheckboxInput(session, "polygonbox", "Clip to region", value = FALSE)
-        
-        
+
         ## array plot
         updateCheckboxInput(session, "entireregionbox", "Show entire region", value = TRUE)
-        
+
         ## pxy plot
         updateNumericInput(session, "pxyborder", value = 3)
         updateNumericInput(session, "pxynx", value = 64)
         updateCheckboxInput(session, "pxyfillbox", value = TRUE)
         updateCheckboxInput(session, "pxyframebox", value = FALSE)
         updateCheckboxInput(session, "pxylabelbox", value = TRUE)
-        
+
         updateSliderInput(session, "CFslider", value = 1.0)
         updateCheckboxInput(session, "updateCFbox", value = TRUE)
-        
+
         updateRadioButtons(session, "powerplotbtn", selected = "Null hypothesis power")
-        
+
         updateNumericInput(session, "alpha", value = 0.05)
         updateNumericInput(session, "target", value = 80)
         updateSelectInput(session, "testtype", selected = "two.sided")
@@ -2449,16 +2448,13 @@ server <- function(input, output, session) {
     ##############################################################################
     
     observeEvent(input$areaunit, ignoreInit = TRUE, {
-        if (!setrv$resetting) {
-            if (input$areaunit=="ha") {
-                newD <- input$D/100
-            }
-            else {
-                newD <- input$D*100
-            }
-            updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"), value = newD)
+        if (isolate(input$areaunit)=="ha") {
+            newD <- isolate(input$D)/100
         }
-        setrv$resetting <- FALSE
+        else {
+            newD <- isolate(input$D)*100
+        }
+        updateNumericInput(session, "D", paste0("D (animals / ", isolate(input$areaunit), ")"), value = newD)
     })
     
     observeEvent(input$alpha, {
@@ -3308,6 +3304,8 @@ server <- function(input, output, session) {
     
     ##############################################################################
 
+    setBookmarkExclude(c("simulatebtn","simulatebtn2"))
+    
     # Save extra values in state$values when we bookmark
     onBookmark(function(state) {
         state$values$simrvoutput <- simrv$output
