@@ -1534,7 +1534,12 @@ server <- function(input, output, session) {
                                input$trapfilename[1,"name"],
                                "', detector = '", input$detector, "'", args, ")\n")
                 if (input$scalefactor != 1.0) {
-                    code <- paste0(code, "array[,] <- array[,] * ", input$scalefactor, "\n")
+                    code <- paste0(code, 
+                                   "# optional scaling about centroid\n",
+                                   "meanxy <- apply(array,2,mean)\n",
+                                   "array[,1] <- (array[,1]- meanxy[1]) * ", input$scalefactor, " + meanxy[1]\n",
+                                   "array[,2] <- (array[,2]- meanxy[2]) * ", input$scalefactor, " + meanxy[2]\n")
+                    #"array[,] <- array[,] * ", input$scalefactor, "\n")
                 }
             }
             
@@ -1834,7 +1839,10 @@ server <- function(input, output, session) {
             readtrapscall <- paste0("read.traps (filename, detector = input$detector", args, ")")
             trps <- try(eval(parse(text = readtrapscall)))
             if (scale != 1.0) {
-                trps[,] <- trps[,] * scale
+                # trps[,] <- trps[,] * scale
+                meanxy <- apply(trps,2,mean)
+                trps[,1] <- (trps[,1]- meanxy[1]) * scale + meanxy[1]
+                trps[,2] <- (trps[,2]- meanxy[2]) * scale + meanxy[2]
             }
             
             if (!inherits(trps, "traps")) {
