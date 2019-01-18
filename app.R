@@ -3339,6 +3339,9 @@ server <- function(input, output, session) {
     onBookmark(function(state) {
         state$values$simrvoutput <- simrv$output     # does not work 
         state$values$sumrv <- sumrv$value            # works
+        state$values$port <- session$clientData$url_port
+        ## can manually recover with e.g.
+        ## readRDS('d:/density secr 3.2/secrdesignapp/shiny_bookmarks/9c88715bacc260cf/values.rds')$port
     })    
     # Read values from state$values when we restore
     onRestore(function(state) {
