@@ -1243,8 +1243,8 @@ server <- function(input, output, session) {
     ##############################################################################
     
     nrepeats <- function() {
-        if (isolate(input$arrayinput)=='Region') 1 
-        else isolate(input$nrepeats)
+        if (input$arrayinput=='Region') 1 
+        else input$nrepeats
     }
     ##############################################################################
     
@@ -2487,13 +2487,13 @@ server <- function(input, output, session) {
     ##############################################################################
     
     observeEvent(input$areaunit, ignoreInit = TRUE, {
-        if (isolate(input$areaunit)=="ha") {
+        if (input$areaunit=="ha") {
             newD <- isolate(input$D)/100
         }
         else {
             newD <- isolate(input$D)*100
         }
-        updateNumericInput(session, "D", paste0("D (animals / ", isolate(input$areaunit), ")"), value = newD)
+        updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"), value = newD)
     })
     
     observeEvent(input$alpha, {
@@ -2664,7 +2664,7 @@ server <- function(input, output, session) {
     observeEvent(input$CIclick, {
         invalidateOutputs()
         if (input$powertype) {
-            updateNumericInput(session, "xpos", value = isolate(round(input$CIclick$x)))
+            updateNumericInput(session, "xpos", value = round(input$CIclick$x))
         }
         else {
         }
@@ -2689,41 +2689,17 @@ server <- function(input, output, session) {
     
     observeEvent(input$summarybtn, {
         ap <- isolate(input$appendbox)
-        ex <- file.exists(isolate(input$savefilename))
+        filename <- isolate(input$savefilename)
+        ex <- file.exists(filename)
         write.table(sumrv$value,
                     append = ap & ex,
-                    file = isolate(input$savefilename),
+                    file = filename,
                     col.names = !ap | !ex,
                     row.names = FALSE,
                     quote = FALSE)
     }
     )
     ##############################################################################
-    
-    # experimental code 2019-01-16
-    # from https://stackoverflow.com/questions/32460475/export-all-user-inputs-in-a-shiny-app-to-file-and-load-them-later
-    
-    # observeEvent(input$load_inputs,{
-    # 
-    #     if(!file.exists('inputs.RDS')) {return(NULL)}
-    # 
-    #     savedInputs <- readRDS('inputs.RDS')
-    #     inputIDs      <- names(savedInputs)
-    #     inputvalues   <- unlist(savedInputs)
-    #     for (i in 1:length(savedInputs)) {
-    #         session$sendInputMessage(inputIDs[i],  list(value=inputvalues[[i]]) )
-    #         ## session$sendInputMessage(inputIDs[i],  list(value=savedInputs[[i]]) )
-    #     }
-    # })
-    # ##############################################################################
-    # 
-    #  observeEvent(input$save_inputs,{ 
-    #      values <- isolate(reactiveValuesToList(input))
-    #      # values <- values[!grepl("-selectized", names(values))]
-    #      # values <- values[names(values) != "save_inputs"]
-    #      saveRDS( values , file = 'inputs.RDS')
-    #  })
-    # # ##############################################################################
     
     ## renderText
     
@@ -2997,9 +2973,9 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$simPrint <- renderText({
-        if (isolate(simrv$current)) {
+        if (simrv$current) {
             tmp <- simarg()   ## ensures dependency on settings
-            sims <- isolate(simrv$output)
+            sims <- simrv$output
             out <- paste0(
                 "Number of replicates = ",
                 tmp$nrepl, "\n",
