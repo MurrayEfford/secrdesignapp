@@ -2206,6 +2206,8 @@ server <- function(input, output, session) {
     pxyrv <- reactiveValues(current = FALSE, xy = NULL, value = NULL)
     poprv <- reactiveValues(v = 0)  # used to invalidate and re-plot popn
     arrrv <- reactiveValues(v = 0)  # used to invalidate and re-plot detectorarray
+    current <- reactiveValues(unit = "ha")
+
     manualroute <- reactiveValues(seq = NULL)
     
     sumrv <- reactiveValues(
@@ -2350,6 +2352,8 @@ server <- function(input, output, session) {
         ## DOES NOT RESET FILE INPUTS
         ## SEE E.G. https://groups.google.com/forum/#!topic/shiny-discuss/HbTa4v612FA
 
+        current$unit <- "ha"
+        
         ## array
 
         ## grid
@@ -2381,8 +2385,7 @@ server <- function(input, output, session) {
         updateNumericInput(session, "scalefactor", value = 1.0)
 
         ## parameters
-        updateRadioButtons(session, "areaunit", "Area units", selected = "ha")
-        updateNumericInput(session, "D", "D (animals / ha)", value = 500)   # scaled to 5 by areaunit event!
+        updateNumericInput(session, "D", "D (animals / ha)", value = 5)
         updateSelectInput(session, "detectfn", selected = "HHN")
         updateNumericInput(session, "lambda0", value = 0.2)
         updateNumericInput(session, "sigma", value = 25)
@@ -2438,7 +2441,7 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "randomorigin", value = FALSE)
         updateRadioButtons(session, "edgemethod", "Cluster edge method", selected = "clip")
         updateNumericInput(session, "maxupload", value = 5)
-        # update areaunit before D above
+        updateRadioButtons(session, "areaunit", "Area units", selected = "ha")
 
         updateRadioButtons(session, "currency", selected = "$")
 
@@ -2489,14 +2492,17 @@ server <- function(input, output, session) {
     ##############################################################################
     
     observeEvent(input$areaunit, ignoreInit = TRUE, {
-        a.unit <- isolate(input$areaunit)
-        if (a.unit=="ha") {
-            newD <- isolate(input$D)/100
+        new.unit <- isolate(input$areaunit)
+        if (new.unit != current$unit) {
+            if (new.unit=="ha") {
+                newD <- isolate(input$D)/100
+            }
+            else {
+                newD <- isolate(input$D)*100
+            }
+            updateNumericInput(session, "D", paste0("D (animals / ", new.unit, ")"), value = newD)
+            current$unit <- new.unit
         }
-        else {
-            newD <- isolate(input$D)*100
-        }
-        updateNumericInput(session, "D", paste0("D (animals / ", a.unit, ")"), value = newD)
     })
 
     observeEvent(input$alpha, {
@@ -3339,6 +3345,7 @@ server <- function(input, output, session) {
     onRestore(function(state) {
         simrv$output <- state$values$simrvoutput
         sumrv$value <- state$values$sumrv
+        updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"))
     })
     ##############################################################################
 }
