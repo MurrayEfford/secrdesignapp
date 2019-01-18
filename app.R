@@ -23,6 +23,7 @@ seconds <- 6   ## default duration for showNotification()
 ui <- function(request) {
 
     fluidPage(
+        title = "secrdesignapp 1.1",
         includeCSS("secrdesignstyle.css"),
         withMathJax(),
         tags$head(tags$style(".mypanel{margin-top:5px; margin-bottom:10px; padding-bottom: 5px;}")),
@@ -671,7 +672,7 @@ ui <- function(request) {
                                                    numericInput("maxupload", "Maximum file upload Mb",
                                                                 min = 5,
                                                                 max = 100,
-                                                                value = 10,
+                                                                value = 5,
                                                                 step = 5)
                                          ),
                                          
@@ -2434,7 +2435,7 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "lockxy", value = TRUE)
         updateCheckboxInput(session, "randomorigin", value = FALSE)
         updateRadioButtons(session, "edgemethod", "Cluster edge method", selected = "clip")
-        updateNumericInput(session, "maxupload", value = 10)
+        updateNumericInput(session, "maxupload", value = 5)
         updateRadioButtons(session, "areaunit", "Area units", selected = "ha")
 
         updateRadioButtons(session, "currency", selected = "$")
