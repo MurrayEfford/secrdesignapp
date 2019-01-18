@@ -1047,7 +1047,7 @@ server <- function(input, output, session) {
             dec <- 2
         else 
             dec <- 0
-        if (input$areaunit == "ha") {
+        if (isolate(input$areaunit) == "ha") {
             paste0(round(area, dec), " ha")
         }
         else {
@@ -1066,7 +1066,7 @@ server <- function(input, output, session) {
             else 
                 dec <- 0
         }
-        if (input$areaunit == "ha") {
+        if (isolate(input$areaunit) == "ha") {
             paste0(round(lth, dec), " m")
         }
         else {
@@ -1077,7 +1077,7 @@ server <- function(input, output, session) {
     
     density <- function() {
         ## return density in animals / hectare
-        if (input$areaunit == "ha")
+        if (isolate(input$areaunit) == "ha")
             input$D
         else
             input$D/100  ## per sq. km
@@ -2380,6 +2380,7 @@ server <- function(input, output, session) {
         updateNumericInput(session, "scalefactor", value = 1.0)
 
         ## parameters
+        updateRadioButtons(session, "areaunit", "Area units", selected = "ha")
         updateNumericInput(session, "D", "D (animals / ha)", value = 5)
         updateSelectInput(session, "detectfn", selected = "HHN")
         updateNumericInput(session, "lambda0", value = 0.2)
@@ -2436,7 +2437,7 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "randomorigin", value = FALSE)
         updateRadioButtons(session, "edgemethod", "Cluster edge method", selected = "clip")
         updateNumericInput(session, "maxupload", value = 5)
-        updateRadioButtons(session, "areaunit", "Area units", selected = "ha")
+        # update areaunit before D above
 
         updateRadioButtons(session, "currency", selected = "$")
 
