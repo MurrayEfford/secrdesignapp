@@ -634,7 +634,8 @@ ui <- function(request) {
                               fluidRow(
                                   column(2, actionButton("clearallbtn", "Clear all", title = "Delete all scenarios")),
                                   column(2, actionButton("clearlastbtn", "Delete last", title = "Delete last scenario")),
-                                  column(2, downloadButton("downloadSummary", "Download", title = "Save csv file"))
+                                  column(2, downloadButton("downloadSummaryrds", "Download .rds", title = "Save as RDS file; restore in R with e.g., readRDS(`summary.rds')")),
+                                  column(2, downloadButton("downloadSummary", "Download .csv", title = "Save as comma-delimited text (csv) file"))
                               )
                      ),
                      #################################################################################################
@@ -1013,9 +1014,9 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$uipopN <- renderUI({
-        if (!is.null(poprv$v))
+        # if (!is.null(poprv$v))
             helpText(HTML(paste0("Number in mask = ", nrow(pop()))))
-        else ""
+        # else ""
     })
     
     ##############################################################################
@@ -2270,6 +2271,7 @@ server <- function(input, output, session) {
     # simulatebtn, simulatebtn2
     # okbtn
     # randompopbtn
+    # randomarraybtn
     # routebtn
     # clearallbtn
     # clearlastbtn
@@ -2571,13 +2573,13 @@ server <- function(input, output, session) {
     ##############################################################################
     
     observeEvent(input$randompopbtn, ignoreInit = TRUE, {
-        ## use test to block initial execution when randompopbtn goes from NULL to 0
+        # invalidates pop when button pressed
         poprv$v <- poprv$v + 1
-        
     })
     
     ##############################################################################
     observeEvent(input$randomarraybtn, ignoreInit = TRUE, {
+        # invalidates detectorarray when button pressed
         arrrv$v <- arrrv$v + 1
     })
     
@@ -3297,6 +3299,13 @@ server <- function(input, output, session) {
         filename = "summary.csv",
         content = function(file) {
             write.csv(sumrv$value, file, row.names = TRUE)
+        }
+    )
+    
+    output$downloadSummaryrds <- downloadHandler(
+        filename = "summary.rds",
+        content = function(file) {
+            saveRDS(sumrv$value, file)
         }
     )
     
