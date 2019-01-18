@@ -689,7 +689,7 @@ ui <- function(request) {
                                                               numericInput("habnx", "nx",
                                                                            min = 10,
                                                                            max = 1000,
-                                                                           value = 64,
+                                                                           value = 32,
                                                                            step = 1,
                                                                            width = 180)
                                                        ),
@@ -2442,7 +2442,7 @@ server <- function(input, output, session) {
 
         ## habitat
         updateNumericInput(session, "habxsigma", value = 4)
-        updateNumericInput(session, "habnx", value = 64)
+        updateNumericInput(session, "habnx", value = 32)
         updateRadioButtons(session, "maskshapebtn", selected = "Rounded")
         updateCheckboxInput(session, "polygonbox", "Clip to region", value = FALSE)
 
