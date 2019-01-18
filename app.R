@@ -2206,10 +2206,9 @@ server <- function(input, output, session) {
     pxyrv <- reactiveValues(current = FALSE, xy = NULL, value = NULL)
     poprv <- reactiveValues(v = 0)  # used to invalidate and re-plot popn
     arrrv <- reactiveValues(v = 0)  # used to invalidate and re-plot detectorarray
+    manualroute <- reactiveValues(seq = NULL)
     current <- reactiveValues(unit = "ha")
 
-    manualroute <- reactiveValues(seq = NULL)
-    
     sumrv <- reactiveValues(
         value = read.csv(text = paste
                          ("date, time, note, detector, source, nx, ny, spacex, spacey, ndetectors, noccasions, ",
@@ -2493,7 +2492,7 @@ server <- function(input, output, session) {
     
     observeEvent(input$areaunit, ignoreInit = TRUE, {
         new.unit <- isolate(input$areaunit)
-        if (new.unit != current$unit) {
+         if (new.unit != current$unit) {
             if (new.unit=="ha") {
                 newD <- isolate(input$D)/100
             }
@@ -3339,12 +3338,12 @@ server <- function(input, output, session) {
     onBookmark(function(state) {
         state$values$simrvoutput <- simrv$output     # does not work 
         state$values$sumrv <- sumrv$value            # works
-    })
-    
+    })    
     # Read values from state$values when we restore
     onRestore(function(state) {
         simrv$output <- state$values$simrvoutput
         sumrv$value <- state$values$sumrv
+        current$unit <- input$areaunit
         updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"))
     })
     ##############################################################################
