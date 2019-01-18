@@ -81,7 +81,8 @@ ui <- function(request) {
                                                                 
                                                                 fluidRow(
                                                                     column(5, checkboxInput("hollow", "Hollow", FALSE)),
-                                                                    column(6, actionButton("suggestbtn", "Suggest spacing"))
+                                                                    column(6, actionButton("suggestbtn", "Suggest spacing",
+                                                                           title = "Find detector spacing at which E(n) = E(r)"))
                                                                 )
                                                        ),
                                                        tabPanel("Line",
@@ -100,7 +101,8 @@ ui <- function(request) {
                                                                                           max = 100000,
                                                                                           step = 1))
                                                                 ),
-                                                                actionButton("suggestlinebtn", "Suggest spacing"),
+                                                                actionButton("suggestlinebtn", "Suggest spacing",
+                                                                           title = "Find detector spacing at which E(n) = E(r)"),
                                                                 br(),br(),
                                                                 helpText(HTML("Warning: results with linear arrays may be highly biased if home ranges are elongated and aligned"))
                                                        ),
@@ -122,7 +124,8 @@ ui <- function(request) {
                                                                                             min = 0, 
                                                                                             max = 100, 
                                                                                             step = 0.01)),
-                                                                    column (6, br(), actionButton("suggestfilebtn", "Suggest factor")))
+                                                                    column (6, br(), actionButton("suggestfilebtn", "Suggest factor",
+                                                                           title = "Find spacing factor at which E(n) = E(r)")))
                                                                 
                                                        ),
                                                        tabPanel("Region",
@@ -160,21 +163,27 @@ ui <- function(request) {
                                                                                        uiOutput('clusteroverlap')),
                                                                               
                                                                               tabPanel("Random",
-                                                                                       # br(),
                                                                                        fluidRow(
-                                                                                           column(6, radioButtons("randomtype", label = "",
-                                                                                                                  choices = c("SRS", "GRTS"), selected = "SRS")),
-                                                                                           column(6, br(), numericInput("numpgrid",
+                                                                                           column(9, radioButtons("randomtype", label = "",
+                                                                                                        choices = c("SRS", "GRTS"), selected = "SRS", inline = TRUE))
+                                                                                       ),
+                                                                                       
+                                                                                       fluidRow(
+                                                                                           column(12, uiOutput('randomtext'))
+                                                                                       ),
+
+                                                                                       fluidRow(
+                                                                                           
+                                                                                           column(6, numericInput("numpgrid",
                                                                                                                         "number",
                                                                                                                         value = 20,
                                                                                                                         min = 0,
                                                                                                                         max = 20000,
-                                                                                                                        step = 5))
-                                                                                       ),
-                                                                                       fluidRow(
-                                                                                           column(12, uiOutput('randomtext'))
-                                                                                           
+                                                                                                                        step = 5)),
+                                                                                           column(6, br(), actionButton("randomarraybtn", "Randomize",
+                                                                                                               title = "Select another realisation"))
                                                                                        )
+                                                                                       
                                                                                        
                                                                               )
                                                                           )),
@@ -274,13 +283,16 @@ ui <- function(request) {
                                          h2("Actions"),
                                          
                                          fluidRow(
-                                             column(5, actionButton("simulatebtn2", "Simulate",  width = 130)),
-                                             column(6, actionButton("appendbtn", "Add to summary",  width = 130))
+                                             column(5, actionButton("simulatebtn2", "Simulate",  width = 130,
+                                                                           title = "Conduct simulations specified on Simulate page and update Results")),
+                                             column(6, actionButton("appendbtn", "Add to summary",  width = 130,
+                                                                           title = "Append new scenario to Summary table"))
                                          ),
 
                                          br(),
                                          fluidRow(
-                                             column(5, actionButton("resetbtn", "Reset all", width = 130)),
+                                             column(5, actionButton("resetbtn", "Reset all", width = 130, 
+                                                                    title = "Reset all inputs to initial values")),
                                              column(6, bookmarkButton(width = 130)) 
                                          ),
                                          br(),
@@ -338,8 +350,8 @@ ui <- function(request) {
                                                                                                       value = FALSE,
                                                                                                       width = 180),
                                                                                      uiOutput('uipopN')),
-                                                                              column(4, actionButton("randompopbtn", "Randomize"),
-                                                                                     helpText(HTML("Pick another realisation"))
+                                                                              column(4, actionButton("randompopbtn", "Randomize",
+                                                                                                     title = "Pick another realisation of the population")
                                                                               )
                                                                           )
                                                                  ),
@@ -551,7 +563,8 @@ ui <- function(request) {
                                          
                                          fluidRow(
                                              column(6, 
-                                                    actionButton("spacingbtn", "Click to execute", width = 200)
+                                                    actionButton("spacingbtn", "Click to execute", width = 200,
+                                                                 title = "Approximate RSE and optionally simulate at spacings selected in Options")
                                              ),
                                              column(6, 
                                                     checkboxInput("spacingsimbox", "with simulations", value = FALSE, width = 200),
@@ -619,9 +632,9 @@ ui <- function(request) {
                                   )
                               ),
                               fluidRow(
-                                  column(2, actionButton("clearallbtn", "Clear all")),
-                                  column(2, actionButton("clearlastbtn", "Delete last")),
-                                  column(2, downloadButton("downloadSummary", "Download"))
+                                  column(2, actionButton("clearallbtn", "Clear all", title = "Delete all scenarios")),
+                                  column(2, actionButton("clearlastbtn", "Delete last", title = "Delete last scenario")),
+                                  column(2, downloadButton("downloadSummary", "Download", title = "Save csv file"))
                               )
                      ),
                      #################################################################################################
@@ -833,7 +846,7 @@ ui <- function(request) {
                                                        column(8, checkboxInput("updateCFbox", "Update from simulations",
                                                                                value = TRUE,
                                                                                width = 180)),
-                                                       column(4, actionButton("resetCFbtn", "Reset"))
+                                                       column(4, actionButton("resetCFbtn", "Reset", title = "Reset slider to default for current array input"))
                                                    )
                                          )
                                   )
@@ -1884,6 +1897,7 @@ server <- function(input, output, session) {
             simrv$current <- FALSE
             rotrv$current <- FALSE
             pxyrv$value <- NULL
+            arrrv$v
             if (!input$autorefresh) return(NULL)
             trps <- NULL
             removeNotification("badarray")
@@ -2188,6 +2202,7 @@ server <- function(input, output, session) {
     RSErv <- reactiveValues(current = FALSE, value = NULL, adjRSE = NULL)
     pxyrv <- reactiveValues(current = FALSE, xy = NULL, value = NULL)
     poprv <- reactiveValues(v = 0)  # used to invalidate and re-plot popn
+    arrrv <- reactiveValues(v = 0)  # used to invalidate and re-plot detectorarray
     manualroute <- reactiveValues(seq = NULL)
     
     sumrv <- reactiveValues(
@@ -2555,10 +2570,15 @@ server <- function(input, output, session) {
     
     ##############################################################################
     
-    observeEvent(input$randompopbtn, {
+    observeEvent(input$randompopbtn, ignoreInit = TRUE, {
         ## use test to block initial execution when randompopbtn goes from NULL to 0
         poprv$v <- poprv$v + 1
         
+    })
+    
+    ##############################################################################
+    observeEvent(input$randomarraybtn, ignoreInit = TRUE, {
+        arrrv$v <- arrrv$v + 1
     })
     
     ##############################################################################
@@ -3319,7 +3339,7 @@ server <- function(input, output, session) {
     setBookmarkExclude(c("simulatebtn", "simulatebtn2", "spacingbtn", "appendbtn",
                          "clearallbtn", "clearlastbtn",
                          "suggestbtn", "suggestlinebtn", "suggestfilebtn",
-                         "resetbtn", "routebtn", "randompopbtn"))
+                         "resetbtn", "routebtn", "randompopbtn", "randomarraybtn"))
     
     # Save extra values in state$values when we bookmark
     onBookmark(function(state) {
