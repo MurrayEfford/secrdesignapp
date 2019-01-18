@@ -1077,10 +1077,10 @@ server <- function(input, output, session) {
     
     density <- function() {
         ## return density in animals / hectare
-        if (isolate(input$areaunit) == "ha")
-            isolate(input$D)
+        if (input$areaunit == "ha")
+            input$D
         else
-            isolate(input$D)/100  ## per sq. km
+            input$D/100  ## per sq. km
     }
     ##############################################################################
     
@@ -2140,6 +2140,7 @@ server <- function(input, output, session) {
         if (is.null(trps)) return (NULL)
         # appears not to be needed 2019-01-19
         # invalidateOutputs()
+        
         msk <- mask()
         if (nrow(msk)>0) {
             pathl <- arraypathlength()
