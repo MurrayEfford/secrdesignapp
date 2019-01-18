@@ -1057,8 +1057,8 @@ server <- function(input, output, session) {
     ##############################################################################
     
     lengthstr <- function (length, dec) {
-        
-        lth <- if (input$areaunit == "ha") length else length/1000
+        a.unit <- isolate(input$areaunit)
+        lth <- if (a.unit == "ha") length else length/1000
         
         if (missing(dec)) {
             if (lth<1000) 
@@ -1066,7 +1066,7 @@ server <- function(input, output, session) {
             else 
                 dec <- 0
         }
-        if (isolate(input$areaunit) == "ha") {
+        if (a.unit == "ha") {
             paste0(round(lth, dec), " m")
         }
         else {
@@ -1078,9 +1078,9 @@ server <- function(input, output, session) {
     density <- function() {
         ## return density in animals / hectare
         if (isolate(input$areaunit) == "ha")
-            input$D
+            isolate(input$D)
         else
-            input$D/100  ## per sq. km
+            isolate(input$D)/100  ## per sq. km
     }
     ##############################################################################
     
@@ -2138,7 +2138,8 @@ server <- function(input, output, session) {
     nrm <- reactive({
         trps <- detectorarray()
         if (is.null(trps)) return (NULL)
-        invalidateOutputs()
+        # appears not to be needed 2019-01-19
+        # invalidateOutputs()
         msk <- mask()
         if (nrow(msk)>0) {
             pathl <- arraypathlength()
@@ -2381,7 +2382,7 @@ server <- function(input, output, session) {
 
         ## parameters
         updateRadioButtons(session, "areaunit", "Area units", selected = "ha")
-        updateNumericInput(session, "D", "D (animals / ha)", value = 5)
+        updateNumericInput(session, "D", "D (animals / ha)", value = 500)   # scaled to 5 by areaunit event!
         updateSelectInput(session, "detectfn", selected = "HHN")
         updateNumericInput(session, "lambda0", value = 0.2)
         updateNumericInput(session, "sigma", value = 25)
@@ -2473,7 +2474,6 @@ server <- function(input, output, session) {
         updateNumericInput(session, "simbyR", value = 0.4)
         
         invalidateOutputs()
-        
     })
     
     ##############################################################################
@@ -2484,20 +2484,21 @@ server <- function(input, output, session) {
     ##############################################################################
     
     observeEvent(input$maxupload, {
-        options(shiny.maxRequestSize= input$maxupload*1024^2)
+        options(shiny.maxRequestSize = input$maxupload*1024^2)
     })
     ##############################################################################
     
     observeEvent(input$areaunit, ignoreInit = TRUE, {
-        if (input$areaunit=="ha") {
+        a.unit <- isolate(input$areaunit)
+        if (a.unit=="ha") {
             newD <- isolate(input$D)/100
         }
         else {
             newD <- isolate(input$D)*100
         }
-        updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"), value = newD)
+        updateNumericInput(session, "D", paste0("D (animals / ", a.unit, ")"), value = newD)
     })
-    
+
     observeEvent(input$alpha, {
         updateCheckboxInput(session, "powertype", label = paste0(
             round(100 *(1-input$alpha), 1), "% CI"))
