@@ -716,7 +716,12 @@ ui <- function(request) {
                                          wellPanel(class = "mypanel", 
                                                    checkboxInput("entireregionbox", "Show entire region",
                                                                  value = TRUE,
-                                                                 width = 180)
+                                                                 width = 180),
+                                                   radioButtons("gridlines", label = "Grid spacing (m)",
+                                                                choices = c("100", "1000", "10000", 
+                                                                            "100000", "Inf"),
+                                                                selected = "Inf", inline = TRUE)
+                                                   
                                          ),
                                          
                                          h2("Pxy contour plot"),
@@ -3023,15 +3028,15 @@ server <- function(input, output, session) {
             if (input$entireregionbox)
                 sp::plot(region())
             else 
-                plot (tmpgrid, gridlines = FALSE)
+                plot (tmpgrid, gridlines = (input$gridlines != "Inf"), gridspace = as.numeric(input$gridlines))
             if (!is.null(exclusion()))
                 sp::plot(exclusion(), add = TRUE, col = 'lightblue', border = 'lightblue')
             sp::plot(region(), add = TRUE)
-            plot (tmpgrid, add = TRUE)
+            plot (tmpgrid, add = TRUE,  gridlines = (input$gridlines != "Inf"), gridspace = as.numeric(input$gridlines))
         }
         else {
-            plot (tmpgrid, border = border(1), gridlines = FALSE, bty='o', 
-                  xaxs = 'i', yaxs = 'i')
+            plot (tmpgrid, border = border(1), bty='o', xaxs = 'i', yaxs = 'i',
+                   gridlines = (input$gridlines != "Inf"), gridspace = as.numeric(input$gridlines))
         }
     })
     ##############################################################################
