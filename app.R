@@ -141,27 +141,7 @@ ui <- function(request) {
                                                                 
                                                                 wellPanel(class = "mypanel", 
                                                                           tabsetPanel(
-                                                                              type = "tabs", id = "regiontype", selected = "Systematic",
-                                                                              
-                                                                              tabPanel("Systematic",
-                                                                                       
-                                                                                       br(),
-                                                                                       fluidRow(
-                                                                                           column(6,numericInput("sppgrid",
-                                                                                                                 "spacing (m)",
-                                                                                                                 value = 200,
-                                                                                                                 min = 0,
-                                                                                                                 max = 200000,
-                                                                                                                 step = 10)),
-                                                                                           column(6, 
-                                                                                                  checkboxInput("randomorigin", "Random origin", FALSE),
-                                                                                                  checkboxInput("chequerboard", "Chequerboard", FALSE))
-                                                                                           # radioButtons("chequerboard", "Chequer board squares", 
-                                                                                           # choices = c("all", "black","white"),
-                                                                                           # selected = "all"))
-                                                                                           
-                                                                                       ),
-                                                                                       uiOutput('clusteroverlap')),
+                                                                              type = "tabs", id = "regiontype", selected = "Random",
                                                                               
                                                                               tabPanel("Random",
                                                                                        fluidRow(
@@ -180,13 +160,30 @@ ui <- function(request) {
                                                                                                                         value = 20,
                                                                                                                         min = 0,
                                                                                                                         max = 20000,
-                                                                                                                        step = 5)),
+                                                                                                                  step = 5)),
                                                                                            column(6, br(), actionButton("randomarraybtn", "Randomize",
-                                                                                                               title = "Select another realisation"))
+                                                                                                                        title = "Select another realisation"))
                                                                                        )
                                                                                        
+                                                                              ),
+                                                                              tabPanel("Systematic",
                                                                                        
-                                                                              )
+                                                                                       br(),
+                                                                                       fluidRow(
+                                                                                           column(6,numericInput("sppgrid",
+                                                                                                                 "spacing (m)",
+                                                                                                                 value = 200,
+                                                                                                                 min = 0,
+                                                                                                                 max = 200000,
+                                                                                                                 step = 10)),
+                                                                                           column(6, 
+                                                                                                  checkboxInput("randomorigin", "Random origin", FALSE),
+                                                                                                  checkboxInput("chequerboard", "Chequerboard", FALSE))
+                                                                                           
+                                                                                       ),
+                                                                                       uiOutput('clusteroverlap'))
+                                                                              
+                                                                              
                                                                           )),
                                                                 wellPanel(class = "mypanel",
                                                                           fluidRow(column(7, 
@@ -2370,7 +2367,7 @@ server <- function(input, output, session) {
         updateNumericInput(session, "spline", value = 20)
 
         ## region
-        updateTabsetPanel(session, inputId = "regiontype", selected = "Systematic")
+        updateTabsetPanel(session, inputId = "regiontype", selected = "Random")
         updateCheckboxInput(session, "sppgrid", value = 200 )
         updateCheckboxInput(session, "clustertype", value = "Single detector" )
         updateNumericInput(session, "rotation", value = 0)
