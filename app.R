@@ -324,7 +324,13 @@ ui <- function(request) {
                                                      tabsetPanel(type = "pills",
                                                                  id = "tabs",
                                                                  tabPanel("Array",
-                                                                          plotOutput("arrayPlot", height = 340),
+                                                                          fluidRow(
+                                                                              column(9, style='padding:0px;', plotOutput("arrayPlot", height = 340,
+                                                                                                                         hover = "arrayClick")),
+                                                                              column(3, br(), conditionalPanel("input.gridlines != 'Inf'",
+                                                                                                               uiOutput("uigridlines")),
+                                                                                     br(), uiOutput('xycoord'))
+                                                                          ),
                                                                           fluidRow(
                                                                               column(11, style='padding:0px;', verbatimTextOutput("ntrapPrint"))
                                                                               ,
@@ -714,16 +720,14 @@ ui <- function(request) {
                                          
                                          h2("Array plot"),
                                          wellPanel(class = "mypanel", 
-                                                   checkboxInput("entireregionbox", "Show entire region",
-                                                                 value = TRUE,
-                                                                 width = 180),
                                                    radioButtons("gridlines", label = "Grid spacing (m)",
-                                                                choices = c("100", "1000", "10000", 
-                                                                            "100000", "Inf"),
-                                                                selected = "Inf", inline = TRUE)
-                                                   
+                                                                choices = c("100", "1000", "10000", "100000", "Inf"),
+                                                                selected = "Inf", inline = TRUE),
+                                                   fluidRow(
+                                                       column(6, checkboxInput("entireregionbox", "Show entire region", value = TRUE, width = 160)),
+                                                       column(5, checkboxInput("snaptodetector", "Snap to detector", value = FALSE, width = 160))
+                                                   )
                                          ),
-                                         
                                          h2("Pxy contour plot"),
                                          wellPanel(class = "mypanel", 
                                                    fluidRow(
@@ -899,6 +903,7 @@ server <- function(input, output, session) {
     ## exclusionfile
     ## habitatfile
     ## uipopN
+    ## uigridlines
     
     ##############################################################################
     
@@ -1020,6 +1025,28 @@ server <- function(input, output, session) {
         # if (!is.null(poprv$v))
             helpText(HTML(paste0("Number in mask = ", nrow(pop()))))
         # else ""
+    })
+    
+    output$uigridlines <- renderUI({
+        if (input$gridlines=="100")
+            helpText(HTML("100 m"))
+        else
+            helpText(HTML(paste0(round(as.numeric(input$gridlines)/1000,1), " km")))
+    })
+    
+    output$xycoord <- renderUI({
+        xy <- c(input$arrayClick$x, input$arrayClick$y)
+        if (is.null(xy)) 
+            helpText("")
+        else {
+            if (input$snaptodetector) {
+                nearest <- nearesttrap(xy, detectorarray())
+                xy <- detectorarray()[nearest,]
+                id <- paste0(rownames(detectorarray())[nearest], ":")
+            }
+            else id <- ""
+            helpText(HTML(paste(id, paste(round(xy), collapse = ", "))))
+        }
     })
     
     ##############################################################################
@@ -2284,6 +2311,7 @@ server <- function(input, output, session) {
     # hollow
     # arrayinput
     # click
+    # arrayclick
     # pxyclick
     # appendbtn
     # summarybtn
@@ -2455,6 +2483,8 @@ server <- function(input, output, session) {
 
         ## array plot
         updateCheckboxInput(session, "entireregionbox", "Show entire region", value = TRUE)
+        updateCheckboxInput(session, "snaptodetector", "Snap to detector", value = FALSE)
+        updateRadioButtons(session, "gridlines", selected = "Inf")
 
         ## pxy plot
         updateNumericInput(session, "pxyborder", value = 3)
