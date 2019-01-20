@@ -48,7 +48,7 @@ IMPORTANT NOTE: Maximising precision is only one component of study design. Samp
 <table style="width:40%">
   <tr>
     <td>Detector type</td>
-    <td>multi, proximity or count</td>
+    <td>multi, proximity, or count</td>
   </tr>
 </table> 
 <br>
@@ -56,6 +56,10 @@ Options for detector type follow **secr** ([Efford (2018b)](#references)): "mult
 <br>
 
 The detector layout ('Array') may be specified as a rectangular grid or line (via `make.grid`), read from a file, or as a systematic or random array within a region. Code for generating an array according to the current settings is shown on the Simulation page.
+
+<!-- <br> -->
+<!-- The "single" detector type may also be selected, but many results cannot be computed because expressions are not available for \(\small \mbox E (n)\) and \(\small \mbox E ( r )\). Simulation uses the likelihood for "multi" detectors. -->
+<br>
 
 ### Grid
 
