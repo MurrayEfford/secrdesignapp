@@ -527,14 +527,16 @@ ui <- function(request) {
                                                                                          max = 1e10,
                                                                                          value = 0,
                                                                                          step = 1,
-                                                                                         width = 180)),
-                                                                  column(6, numericInput("simnx",
-                                                                                         "nx",
-                                                                                         min = 10,
-                                                                                         max = 1000,
-                                                                                         value = 32,
-                                                                                         step = 1,
-                                                                                         width = 180)))
+                                                                                         width = 180))
+                                                                  # ,
+                                                                  # column(6, numericInput("simnx",
+                                                                  #                        "nx",
+                                                                  #                        min = 10,
+                                                                  #                        max = 1000,
+                                                                  #                        value = 32,
+                                                                  #                        step = 1,
+                                                                  #                        width = 180))
+                                                              )
                                                     ),
                                                     
                                                     br(),
@@ -693,7 +695,7 @@ ui <- function(request) {
                                                                            value = 4,
                                                                            step = 0.5,
                                                                            width = 250),
-                                                              numericInput("habnx", "nx",
+                                                              numericInput("habnx", "Mesh dimension nx",
                                                                            min = 10,
                                                                            max = 1000,
                                                                            value = 32,
@@ -1402,6 +1404,7 @@ server <- function(input, output, session) {
         seed <- input$seed
         if (seed == 0) seed <- NULL
         array <- detectorarray()
+        msk <- mask()
         Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
         fitargs = list(detectfn = input$detectfn, 
                        method = input$method, 
@@ -1420,8 +1423,9 @@ server <- function(input, output, session) {
             nrepl = input$nrepl,
             scenarios = scen,
             trapset = array,
-            xsigma = input$habxsigma,
-            nx = input$simnx,
+            maskset = msk,
+            # xsigma = input$habxsigma,
+            # nx = input$habnx,
             fit = TRUE,
             fit.function = input$packagebtn,
             pop.args = list(Ndist = Ndist),
@@ -1750,7 +1754,7 @@ server <- function(input, output, session) {
     }
     ##############################################################################
     
-    maskcode <- function (arrayname, polyname) {
+    maskcode <- function (arrayname) {
         type <- if (input$maskshapebtn == 'Rectangular') 'traprect' else 'trapbuffer'
         buffer <- as.character(round(input$habxsigma * input$sigma,2))
         if (!input$polygonbox) {
@@ -1898,7 +1902,7 @@ server <- function(input, output, session) {
             nrepl = input$nrepl,
             ncores = input$ncores,
             seed = input$seed,
-            simnx = input$simnx,
+            simnx = input$habnx,
             simxsigma = input$habxsigma,
             method = input$method)}
     )
@@ -2466,7 +2470,7 @@ server <- function(input, output, session) {
         updateNumericInput(session, "nrepl", value = 5)
         updateNumericInput(session, "ncores", value = 1)
         updateNumericInput(session, "seed", value = 0)
-        updateNumericInput(session, "simnx", value = 32)
+        #updateNumericInput(session, "simnx", value = 32)
         updateSelectInput(session, "method", "method", selected = "none")
         updateRadioButtons(session, "packagebtn", "Fit simulated data", selected = "openCR.fit")
         updateCheckboxInput(session, "simappendbox", value = TRUE)
@@ -2833,8 +2837,9 @@ server <- function(input, output, session) {
             paste0(
                 "library(secrdesign)\n\n",
                 
-                "# construct detector array\n",
-                arraycode(), "\n",
+                "# construct detector array and mask\n",
+                arraycode(), 
+                maskcode("array"), "\n",
                 
                 "# simulate\n",
                 "scen <- make.scenarios(",
@@ -2848,11 +2853,8 @@ server <- function(input, output, session) {
                 "sims <- run.scenarios (",
                 "nrepl = ", input$nrepl, ", ",
                 "scenarios = scen, \n",
-                "    trapset = array, ",
-                ## "xsigma = ", input$simxsigma, ", ",
-                "xsigma = ", input$habxsigma, ", ",
-                "nx = ", input$simnx, ",\n",
-                "    pop.args = list(Ndist = '", Ndist, "'),\n",
+                "    trapset = array, maskset = mask,",
+                " pop.args = list(Ndist = '", Ndist, "'),\n",
                 
                 "    fit = TRUE, ",
                 "fit.function = '", input$packagebtn, "',\n",
