@@ -327,7 +327,7 @@ ui <- function(request) {
                                                                  tabPanel("Array",
                                                                           fluidRow(
                                                                               column(9, style='padding:0px;', plotOutput("arrayPlot", height = 340,
-                                                                                                                         hover = "arrayClick")),
+                                                                                                                         click = clickOpts(id="arrayClick", clip = FALSE))),
                                                                               column(3, br(), conditionalPanel("input.gridlines != 'None'",
                                                                                                               uiOutput("uigridlines") ),
                                                                                      br(), uiOutput('xycoord'))
@@ -705,20 +705,25 @@ ui <- function(request) {
                                                        column(6, 
                                                               radioButtons("maskshapebtn", label = "Shape",
                                                                            choices = c("Rectangular", "Rounded"), 
-                                                                           selected = "Rounded"),
-                                                              br(),
-                                                              checkboxInput("polygonbox", "Clip to polygon(s)",
-                                                                            value = FALSE,
-                                                                            width = 180)
+                                                                           selected = "Rounded")
                                                        )
                                                    ),
+                                                   br(),
                                                    div(style="height: 80px;",
                                                        fileInput("habpolyfilename", "Polygon shapefile (all parts)",
                                                                  accept = c('.shp','.dbf','.sbn','.sbx',
                                                                             '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
                                                                  multiple = TRUE)),
-                                                   uiOutput("habitatfile")
-                                                   #helpText(HTML("(.txt or at least xxx.shp, xxx.dbf, and xxx.shx)"))
+                                                   uiOutput("habitatfile"),
+                                                   fluidRow(
+                                                       column(6, offset = 1, div(style="height: 20px;",
+                                                                                 checkboxInput("polygonbox", "Clip to region", value = FALSE, width = 180)))
+                                                   ),
+                                                   fluidRow(
+                                                       column(6, offset = 1, radioButtons("includeexcludebtn", label = "",
+                                                                                          choices = c("Include", "Exclude"), 
+                                                                                          selected = "Include", inline = TRUE))
+                                                   )
                                          )
                                   ),
                                   
@@ -1757,10 +1762,14 @@ server <- function(input, output, session) {
     maskcode <- function (arrayname) {
         type <- if (input$maskshapebtn == 'Rectangular') 'traprect' else 'trapbuffer'
         buffer <- as.character(round(input$habxsigma * input$sigma,2))
+
         if (!input$polygonbox) {
             polycode <- ""
+            polyhabitat <- ""
         }
-        else {
+        else { 
+            if (is.null(input$habpolyfilename)) return(NULL)
+            polyhabitat <- input$includeexcludebtn == "Include"
             polyfilename <- input$habpolyfilename[1,1]
             if (tolower(tools::file_ext(polyfilename)) == "txt") {
                 polycode <- paste0( 
@@ -1780,7 +1789,8 @@ server <- function(input, output, session) {
                ", buffer = ", buffer, 
                ", nx = ", input$habnx, 
                ", type = '", type, "'",  
-               if (polycode == "") "" else ", poly = poly",
+               if (polycode == "") "" else ",\n    poly = poly",
+               if (polycode == "") "" else ", poly.habitat = ", polyhabitat,
                ")\n")
     }
     ##############################################################################
@@ -2120,6 +2130,7 @@ server <- function(input, output, session) {
                           nx = input$habnx,
                           type = if (input$maskshapebtn=='Rectangular') 'traprect' else 'trapbuffer',
                           poly = poly(),
+                          poly.habitat = input$includeexcludebtn == "Include",
                           keep.poly = FALSE)
         msk
     }
@@ -2493,6 +2504,7 @@ server <- function(input, output, session) {
         updateNumericInput(session, "habnx", value = 32)
         updateRadioButtons(session, "maskshapebtn", selected = "Rounded")
         updateCheckboxInput(session, "polygonbox", "Clip to region", value = FALSE)
+        updateRadioButtons(session, "includeexcludebtn", value = "Include")
 
         ## array plot
         updateCheckboxInput(session, "entireregionbox", "Show entire region", value = TRUE)
@@ -3206,7 +3218,8 @@ server <- function(input, output, session) {
                      detectfn = input$detectfn,
                      detectpar = list(sigma = input$sigma, lambda0 = input$lambda0),
                      noccasions = input$noccasions, drawlabels = drawlabels,
-                     binomN = NULL, levels = lev, poly = poly(),
+                     binomN = NULL, levels = lev, poly = poly(), 
+                     poly.habitat = input$includeexcludebtn == "Include",
                      plt = TRUE, add = TRUE,
                      col = col, fill = cols)
         plot (core, add = TRUE)
