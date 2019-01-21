@@ -1,7 +1,7 @@
 ---
 title: "secrdesign app 1.1"
 author: "Murray Efford"
-date: '2019-01-18'
+date: '2019-01-21'
 output:
   pdf_document:
     toc: yes
@@ -13,7 +13,7 @@ output:
 
 # An interactive app for designing spatially explicit capture--recapture studies
 
-## Murray Efford 2019-01-18
+## Murray Efford 2019-01-21
 
 # Contents
   [Introduction](#introduction)  
@@ -23,6 +23,7 @@ output:
   [Spacing](#spacingspecs)  
   [Summary](#summary)  
   [Options](#optionspecs)  
+  [Troubleshooting](#troubles)  
   [References](#references)  
   [Appendices](#appendix1)  
 
@@ -517,6 +518,32 @@ The table may be downloaded as a comma-separated text file or in the RDS format 
 # Options  <a name="optionspecs"></a>
 
 *These should be self-explanatory. Experiment if in doubt.*
+
+----------------------------------------------------
+
+# Troubleshooting <a name="troubles"></a>
+
+Here are some known pitfalls
+
+## Slow simulations when ncores > 1
+
+This is a combined result of (i) when ncores = 1 all available cores are used for highly efficient multithreading by openCR.fit(), and (ii) parallel processing incurs substantial overheads of its own.
+
+## Components of a shapefile must be selected and uploaded together
+
+At least .shp, .dbf and .shx.
+
+## Invalid mask
+
+This often happens when the boundary file for a large region is uploaded before setting the sigma parameter. With the default settings (Shape = Rounded, sigma = 25 m, nx = 32) there may well be no points in the mask. Fix this by increasing sigma.
+
+## Detector array extends beyond mask with File input and factor > 1
+
+This will happen when a rigid boundary is provided in Options | Habitat mask.
+
+## Overlap coefficient k disappears when detectfn = 'HEX'
+
+This is intended. The coefficient cannot be compared between HHN and HEX models, and the simplest way to prevent misunderstanding was to block for HEX.
 
 ----------------------------------------------------
 # References <a name="references"></a>
