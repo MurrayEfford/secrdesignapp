@@ -492,29 +492,29 @@ ui <- function(request) {
                                   column(5,
                                          h2("Simulation control"),
                                          fluidRow(
-                                             column(5, 
+                                             column(6, 
                                                     wellPanel(class = "mypanel", 
-                                                              radioButtons("packagebtn", label = "Fit simulated data", 
-                                                                           choices = c("openCR.fit", "secr.fit")),
-                                                              selectInput("method", "Method",
+                                                              radioButtons("packagebtn", label = "Function to fit SECR model", 
+                                                                           choices = c("openCR.fit", "secr.fit", "do not fit model")),
+                                                              selectInput("method", "Maximization method",
                                                                           choices = c("Newton-Raphson", "Nelder-Mead", "none"),
                                                                           selected = "none", width=160),
                                                               checkboxInput("simappendbox", "Add to Summary", TRUE)
                                                     )
                                              ),
-                                             column(7,
+                                             column(6,
                                                     wellPanel(class = "mypanel", 
                                                               
                                                               fluidRow(
                                                                   column(6, numericInput("nrepl",
-                                                                                         "Number of replicates",
+                                                                                         "Replicates",
                                                                                          min = 1,
                                                                                          max = 1000,
                                                                                          value = 5,
                                                                                          step = 1,
                                                                                          width = 180)),
                                                                   column(6, numericInput("ncores",
-                                                                                         "Number of cores",
+                                                                                         "Cores",
                                                                                          min = 1,
                                                                                          max = parallel::detectCores(),
                                                                                          value = 1,
@@ -1411,6 +1411,7 @@ server <- function(input, output, session) {
         array <- detectorarray()
         msk <- mask()
         Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
+        fit <- input$packagebtn %in% c('openCR.fit', 'secr.fit')
         fitargs = list(detectfn = input$detectfn, 
                        method = input$method, 
                        details = list(distribution= tolower(input$distributionbtn)))
@@ -1429,39 +1430,53 @@ server <- function(input, output, session) {
             scenarios = scen,
             trapset = array,
             maskset = msk,
-            fit = TRUE,
-            fit.function = input$packagebtn,
+            fit = fit,
+            fit.function = if(fit) input$packagebtn else NULL,
             extractfn = summary,
             pop.args = list(Ndist = Ndist),
-            fit.args = fitargs,
+            fit.args = if (fit) fitargs else NULL,
             ncores = input$ncores,
             byscenario = FALSE,
-            seed = seed)
-        counts <- summary(count(sims))$OUTPUT[[1]]
-        predicted <- summary(predict(sims))$OUTPUT[[1]]
+            seed = seed,
+            terse = T)
+        
+        if (fit)
+            counts <- summary(count(sims))$OUTPUT[[1]]
+        else {  
+            sumc <- function(x) {
+                c(n = sum(!is.na(x)),
+                  mean = mean(x, na.rm = TRUE),
+                  se =  sd(x, na.rm = TRUE)/ sum(!is.na(x))^0.5)
+            }
+            counts <- t(apply(sims$output[[1]], 2, sumc))
+        }
         ## store simulation results in reactive value
         simrv$output <- list(
             nrepl = input$nrepl,
             method = input$method,
+            fit = fit,
             proctime = sims$proctime,
             n = counts['Animals', 'mean'],
             n.se = counts['Animals', 'se'],
             ndet = counts['Detections', 'mean'],
             ndet.se = counts['Detections', 'se'],
             nmov = counts['Moves', 'mean'],
-            nmov.se = counts['Moves', 'se'],
-            RB = predicted['RB','mean'] * 100,
-            RBse = predicted['RB','se'] * 100,
-            RSE = predicted['RSE','mean'] * 100,
-            RSEse = predicted['RSE','se'] * 100
-        )
-        
-        simrv$current <- TRUE
-        if (input$updateCFbox) {
-            ## CF = simulated / naive RSE value
-            CF <- predicted['RSE','mean'] / nrm()$rotRSE
-            updateSliderInput(session, "CFslider", value = CF)
+            nmov.se = counts['Moves', 'se'])
+        if (fit) {
+            predicted <- summary(predict(sims))$OUTPUT[[1]]
+            simrv$output$RB <- predicted['RB','mean'] * 100
+            simrv$output$RBse <- predicted['RB','se'] * 100
+            simrv$output$RSE <- predicted['RSE','mean'] * 100
+            simrv$output$RSEse <- predicted['RSE','se'] * 100
+            simrv$current <- TRUE
+            if (input$updateCFbox) {
+                ## CF = simulated / naive RSE value
+                CF <- predicted['RSE','mean'] / nrm()$rotRSE
+                updateSliderInput(session, "CFslider", value = CF)
+            }
         }
+        simrv$current <- TRUE
+
         if (input$simappendbox) addtosummary() 
         
     }
@@ -1556,17 +1571,15 @@ server <- function(input, output, session) {
             cost = round(nrm()$totalcost, 2)
         )
         
-        if (!simrv$current) {
-            simdf <- data.frame(
-                simfn = "",
-                nrepl = NA,
-                simtime = NA,
-                simRSE = NA, # simul()$RSE,
-                simRSEse = NA,
-                simRB = NA,
-                simRBse = NA)
-        }
-        else {
+        simdf <- data.frame(
+            simfn = "",
+            nrepl = NA,
+            simtime = NA,
+            simRSE = NA, 
+            simRSEse = NA,
+            simRB = NA,
+            simRBse = NA)
+        if (!simrv$current && simrv$output$fit) {
             simdf <- data.frame(
                 simfn = input$packagebtn,
                 nrepl = input$nrepl,
@@ -1583,6 +1596,43 @@ server <- function(input, output, session) {
         rownames(sumrv$value) <- paste0("Scenario", 1:nrow(sumrv$value))
     }
     ##############################################################################
+    
+    getSPcode <- function (inputfilename, varname) {
+        filename <- inputfilename[1,1]
+        if (is.null(filename)) {
+            return("")
+        }
+        else {
+            ext <- tolower(tools::file_ext(filename))
+            if (ext == "txt") {
+                code <- paste0( 
+                    "# coordinates from text file\n",
+                    "coord <- read.table('", filename, "')   # read boundary coordinates\n",
+                    varname, " <- secr:::boundarytoSP(coord)  # convert to SpatialPolygons\n")
+            }
+            else if (ext %in% c("rdata", "rda")) {
+                objlist <- load(inputfilename[1,4])
+                code <- paste0( 
+                    "# SpatialPolygons from RData file\n",
+                    "objlist <- load('", filename, "')\n",
+                    varname, " <- get(objlist[1]) \n")
+            }
+            else if (ext == "rds") {
+                code <- paste0( 
+                    "# SpatialPolygons from RDS file\n",
+                    varname, " <- readRDS('", filename, "') \n")
+            }
+            else {
+                code <- paste0(
+                    "# ESRI polygon shapefile\n",
+                    varname, " <- rgdal::readOGR(dsn = '", 
+                    tools::file_path_sans_ext(basename(filename)), 
+                    ".shp')\n"
+                )
+            }
+            code
+        }
+    }    
     
     arraycode <- function (comment = FALSE) {
         # returns the R code needed to generate the specified array, 
@@ -1632,36 +1682,11 @@ server <- function(input, output, session) {
             }
             
             else if (input$arrayinput == "Region") {
-                regionfilename <- input$regionfilename[1,1]
-                ext <- tolower(tools::file_ext(regionfilename))
-                if (ext == "txt") {
-                    regioncode <- paste0( 
-                        "# coordinates from text file\n",
-                        "coord <- read.table('", regionfilename, "')   # read boundary coordinates\n",
-                        "region <- secr:::boundarytoSP(coord)  # convert to SpatialPolygons\n")
-                }
-                else if (ext %in% c("rdata", "rda")) {
-                    objlist <- load(input$regionfilename[1,4])
-                    regioncode <- paste0( 
-                        "# SpatialPolygons from RData file\n",
-                        "objlist <- load('", input$regionfilename[1,1], "')\n",
-                        "region <- get(objlist[1]) \n")
-                }
-                else if (ext == "rds") {
-                    objlist <- load(input$regionfilename[1,4])
-                    regioncode <- paste0( 
-                        "# SpatialPolygons from RDS file\n",
-                        "region <- readRDS('", input$regionfilename[1,1], ") \n")
-                }
-                else {
-                    regioncode <- paste0(
-                        "# ESRI polygon shapefile\n",
-                        "region <- rgdal::readOGR(dsn = '", 
-                        tools::file_path_sans_ext(basename(regionfilename)), 
-                        ".shp')\n"
-                    )
-                }
                 
+                regioncode <- getSPcode(input$regionfilename, "region")
+                excludedcode <- getSPcode(input$exclusionfilename, "excluded")
+            
+
                 if (input$randomorigin) 
                     origincode <- "NULL"
                 else {
@@ -1716,6 +1741,11 @@ server <- function(input, output, session) {
                     rotatecode <- ""
                 }
                 
+                if (excludedcode != "") 
+                    exclusioncode <- ", exclude = excluded"
+                else
+                    exclusioncode <- ""
+                
                 if ((input$regiontype == "Random" || input$randomorigin) 
                     & input$seedpgrid>0) {
                     seedcode <- paste0("set.seed(", input$seedpgrid, ")\n")
@@ -1727,12 +1757,14 @@ server <- function(input, output, session) {
                 if (input$regiontype == "Systematic") {
                     code <- paste0( 
                         regioncode,
+                        excludedcode,
                         clustercode,
                         rotatecode,
                         seedcode,
                         "array <- make.systematic(spacing = ", input$sppgrid, ", ",
                         "region = region, \n", 
-                        "    cluster = cluster, origin = ", origincode, chequercode, edgemethodcode, ")\n")
+                        "    cluster = cluster, origin = ", origincode, chequercode, edgemethodcode, 
+                        exclusioncode, ")\n")
                 }
                 else if (input$regiontype == "Random") {
                     if (input$clustertype %in% c("Grid", "Line", "File"))
@@ -1742,13 +1774,14 @@ server <- function(input, output, session) {
                     
                     code <- paste0( 
                         regioncode,
+                        excludedcode,
                         clustercode,
                         rotatecode,
                         seedcode,
                         "array <- trap.builder(n = ", input$numpgrid, ", ",
                         "method = '", input$randomtype, "', ",
                         "region = region", clusterarg, 
-                        edgemethodcode, ")\n")
+                        edgemethodcode, exclusioncode, ")\n")
                 }
                 else stop ("unknown regiontype")
                 
@@ -1776,19 +1809,21 @@ server <- function(input, output, session) {
         else { 
             if (is.null(input$habpolyfilename)) return(NULL)
             polyhabitat <- input$includeexcludebtn == "Include"
-            polyfilename <- input$habpolyfilename[1,1]
-            if (tolower(tools::file_ext(polyfilename)) == "txt") {
-                polycode <- paste0( 
-                    "coord <- read.table('", polyfilename, "')   # read boundary coordinates\n",
-                    "poly <- secr:::boundarytoSP(coord)  # convert to SpatialPolygons\n")
-            }
-            else {
-                polycode <- paste0(
-                    "poly <- rgdal::readOGR(dsn = '", 
-                    tools::file_path_sans_ext(basename(polyfilename)), 
-                    ".shp')    # polygon(s) from shapefile\n"
-                )
-            }
+            
+            polycode <- getSPcode(input$habpolyfilename, "poly")
+            # polyfilename <- input$habpolyfilename[1,1]
+            # if (tolower(tools::file_ext(polyfilename)) == "txt") {
+            #     polycode <- paste0( 
+            #         "coord <- read.table('", polyfilename, "')   # read boundary coordinates\n",
+            #         "poly <- secr:::boundarytoSP(coord)  # convert to SpatialPolygons\n")
+            # }
+            # else {
+            #     polycode <- paste0(
+            #         "poly <- rgdal::readOGR(dsn = '", 
+            #         tools::file_path_sans_ext(basename(polyfilename)), 
+            #         ".shp')    # polygon(s) from shapefile\n"
+            #     )
+            # }
         }
         paste0(polycode,
                "mask <- make.mask (", arrayname, 
@@ -1920,7 +1955,8 @@ server <- function(input, output, session) {
             seed = input$seed,
             simnx = input$habnx,
             simxsigma = input$habxsigma,
-            method = input$method)}
+            method = input$method,
+            fit = input$packagebtn %in% c('openCR.fit', 'secr.fit'))}
     )
     
     ##############################################################################
@@ -2037,7 +2073,8 @@ server <- function(input, output, session) {
                                                  method = input$randomtype,
                                                  region = region(),
                                                  cluster = cluster,
-                                                 edgemethod = input$edgemethod)
+                                                 edgemethod = input$edgemethod,
+                                                 exclude = exclusion())
                     }
                     else {
                         args <- list(spacing = input$sppgrid, 
@@ -2613,7 +2650,7 @@ server <- function(input, output, session) {
         if (!is.null(detectorarray())) {
             removeNotification("lownr")
             methodfactor <- 1 + ((input$method != "none") * 4)
-            functionfactor <- 1 + ((input$packagebtn != "openCR.fit") * 3)
+            functionfactor <- switch(input$packagebtn, secr.fit = 4, openCR.fit = 1, 0.1)
             detectorfactor <- switch(input$detector, proximity = 1, single = 0.6, multi = 0.6, count = 4)
             En <- nrm()$En
             if (is.na(En)) En <- 100  ## surrogate for 'single' detectors
@@ -2852,6 +2889,23 @@ server <- function(input, output, session) {
                     "  RB = output['RB','mean'] * 100,\n",
                     "  RBse = output['RB','se'] * 100,\n"
                 )
+            fit <- input$packagebtn %in% c("openCR.fit", "secr.fit")
+            countcode <- if (fit) "summary(count(sims))$OUTPUT[[1]])\n" else
+                paste0(
+                    "sumc <- function(x) {\n",
+                    "    c(n = sum(!is.na(x)),\n",
+                    "     mean = mean(x, na.rm = TRUE),\n",
+                    "     se =  sd(x, na.rm = TRUE)/ sum(!is.na(x))^0.5)}\n",
+                    "t(apply(sims$output[[1]], 2, sumc))\n")
+            
+            fitcode <- if (fit)
+                paste0("output <- summary(predict(sims))$OUTPUT[[1]]\n",
+                       "c(sims$proctime,\n",
+                       RBcode,
+                       "  RSE = output['RSE','mean'] * 100,\n",
+                       "  RSEse = output['RSE','se'] * 100\n)")
+            else ""
+
             paste0(
                 "library(secrdesign)\n\n",
                 
@@ -2874,22 +2928,20 @@ server <- function(input, output, session) {
                 "    trapset = array, maskset = mask,",
                 " pop.args = list(Ndist = '", Ndist, "'),\n",
                 
-                "    fit = TRUE, ",
-                "fit.function = '", input$packagebtn, "', extractfn = summary, \n",
-                "    fit.args = list(detectfn = '", input$detectfn, "', ",
-                "method = '", input$method, "',\n",
-                "        ", distncode, "),\n", 
+                "    fit = ", fit, ", extractfn = summary, ",
+                if (fit) paste0("fit.function = '", input$packagebtn, "',\n",
+                                "    fit.args = list(detectfn = '", input$detectfn, "', ",
+                                "method = '", input$method, "',\n",
+                                "        ", distncode, "),\n")
+                else paste0("terse = TRUE,\n"),
+                
                 "    ncores = ", input$ncores, ", ",
                 "byscenario = FALSE, seed = ", if (input$seed==0) "NULL" else input$seed, 
                 ")\n\n",
                 
                 "# return selected results\n",
-                "summary(count(sims))$OUTPUT[[1]]\n",
-                "output <- summary(predict(sims))$OUTPUT[[1]]\n",
-                "c(sims$proctime,\n",
-                RBcode,
-                "  RSE = output['RSE','mean'] * 100,\n",
-                "  RSEse = output['RSE','se'] * 100\n)"
+                countcode,
+                fitcode
             )                
         }
     })
@@ -3063,16 +3115,21 @@ server <- function(input, output, session) {
                 "Number of detections (n+r) = ",
                 round(sims$ndet,2), " (SE ", round(sims$ndet.se, 2), ")\n",
 
-                "Number of moves (m) = ",
-                round(sims$nmov,2), " (SE ", round(sims$nmov.se, 2), ")\n",
+                "Number of recaptures (r) = ",
+                round(sims$ndet-sims$n,2), "\n",
 
-                "Simulated RSE = ",
-                round(sims$RSE, 2), "%", " (SE ",  round(sims$RSEse, 2), "%)", "\n")
-            
-            if (sims$method != "none") {
+                "Number of moves (m) = ",
+                round(sims$nmov,2), " (SE ", round(sims$nmov.se, 2), ")\n")
+            if (sims$fit) {
                 out <- paste0(out,
-                              "Simulated RB = ",
-                              preplus(round(sims$RB, 2)), "%", " (SE ",  round(sims$RBse, 2), "%)")
+                              "Simulated RSE = ",
+                              round(sims$RSE, 2), "%", " (SE ",  round(sims$RSEse, 2), "%)", "\n")
+                
+                if (sims$method != "none") {
+                    out <- paste0(out,
+                                  "Simulated RB = ",
+                                  preplus(round(sims$RB, 2)), "%", " (SE ",  round(sims$RBse, 2), "%)")
+                }
             }
             out
         }
