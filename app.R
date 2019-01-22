@@ -1429,31 +1429,37 @@ server <- function(input, output, session) {
             scenarios = scen,
             trapset = array,
             maskset = msk,
-            # xsigma = input$habxsigma,
-            # nx = input$habnx,
             fit = TRUE,
             fit.function = input$packagebtn,
+            extractfn = summary,
             pop.args = list(Ndist = Ndist),
             fit.args = fitargs,
             ncores = input$ncores,
             byscenario = FALSE,
             seed = seed)
-        output <- summary(sims)$OUTPUT[[1]]
+        counts <- summary(count(sims))$OUTPUT[[1]]
+        predicted <- summary(predict(sims))$OUTPUT[[1]]
         ## store simulation results in reactive value
         simrv$output <- list(
             nrepl = input$nrepl,
             method = input$method,
             proctime = sims$proctime,
-            RB = output['RB','mean'] * 100,
-            RBse = output['RB','se'] * 100,
-            RSE = output['RSE','mean'] * 100,
-            RSEse = output['RSE','se'] * 100
+            n = counts['Animals', 'mean'],
+            n.se = counts['Animals', 'se'],
+            ndet = counts['Detections', 'mean'],
+            ndet.se = counts['Detections', 'se'],
+            nmov = counts['Moves', 'mean'],
+            nmov.se = counts['Moves', 'se'],
+            RB = predicted['RB','mean'] * 100,
+            RBse = predicted['RB','se'] * 100,
+            RSE = predicted['RSE','mean'] * 100,
+            RSEse = predicted['RSE','se'] * 100
         )
         
         simrv$current <- TRUE
         if (input$updateCFbox) {
             ## CF = simulated / naive RSE value
-            CF <- output['RSE','mean'] / nrm()$rotRSE
+            CF <- predicted['RSE','mean'] / nrm()$rotRSE
             updateSliderInput(session, "CFslider", value = CF)
         }
         if (input$simappendbox) addtosummary() 
@@ -2504,7 +2510,7 @@ server <- function(input, output, session) {
         updateNumericInput(session, "habnx", value = 32)
         updateRadioButtons(session, "maskshapebtn", selected = "Rounded")
         updateCheckboxInput(session, "polygonbox", "Clip to region", value = FALSE)
-        updateRadioButtons(session, "includeexcludebtn", value = "Include")
+        updateRadioButtons(session, "includeexcludebtn", selected = "Include")
 
         ## array plot
         updateCheckboxInput(session, "entireregionbox", "Show entire region", value = TRUE)
@@ -2869,7 +2875,7 @@ server <- function(input, output, session) {
                 " pop.args = list(Ndist = '", Ndist, "'),\n",
                 
                 "    fit = TRUE, ",
-                "fit.function = '", input$packagebtn, "',\n",
+                "fit.function = '", input$packagebtn, "', extractfn = summary, \n",
                 "    fit.args = list(detectfn = '", input$detectfn, "', ",
                 "method = '", input$method, "',\n",
                 "        ", distncode, "),\n", 
@@ -2877,8 +2883,9 @@ server <- function(input, output, session) {
                 "byscenario = FALSE, seed = ", if (input$seed==0) "NULL" else input$seed, 
                 ")\n\n",
                 
-                "# return selected results as a vector\n",
-                "output <- summary(sims)$OUTPUT[[1]]\n",
+                "# return selected results\n",
+                "summary(count(sims))$OUTPUT[[1]]\n",
+                "output <- summary(predict(sims))$OUTPUT[[1]]\n",
                 "c(sims$proctime,\n",
                 RBcode,
                 "  RSE = output['RSE','mean'] * 100,\n",
@@ -3043,12 +3050,25 @@ server <- function(input, output, session) {
         if (simrv$current) {
             sims <- simrv$output
             out <- paste0(
+                
                 "Number of replicates = ",
                 sims$nrepl, "\n",
+                
                 "Time for simulations = ",
-                round(sims$proctime,2), " secs",  "\n",
+                round(sims$proctime,2), " seconds",  "\n",
+                
+                "Number of animals (n) = ",
+                round(sims$n,2), " (SE ", round(sims$n.se, 2), ")\n",
+
+                "Number of detections (n+r) = ",
+                round(sims$ndet,2), " (SE ", round(sims$ndet.se, 2), ")\n",
+
+                "Number of moves (m) = ",
+                round(sims$nmov,2), " (SE ", round(sims$nmov.se, 2), ")\n",
+
                 "Simulated RSE = ",
                 round(sims$RSE, 2), "%", " (SE ",  round(sims$RSEse, 2), "%)", "\n")
+            
             if (sims$method != "none") {
                 out <- paste0(out,
                               "Simulated RB = ",
