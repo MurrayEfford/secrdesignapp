@@ -396,38 +396,39 @@ Code is provided for users who want to go further. Multiple scenarios may be eva
 
 **secrdesign** >= 2.5.5 allows a choice between two functions for fitting closed-population SECR models: `secr.fit` in package **secr** and `openCR.fit` in package **openCR** ([Efford 2018c](#references)). The default is to use the faster multi-threaded code in `openCR.fit` (for this it is best to leave ncores = 1).
 
-`method = 'none'` by-passes maximisation and evaluates the Hessian (and hence the variance-covariance matrix) at the true values of the parameters. This is a fast way to predict \(\small \mbox{RSE}(\hat D)\); it is apparently reliable and requires few replicates. Bias is not estimated.
+`Maximization method = 'none'` by-passes likelihood maximization and evaluates the Hessian (and hence the variance-covariance matrix) at the true values of the parameters. This is a fast way to predict \(\small \mbox{RSE}(\hat D)\); it is apparently reliable and requires few replicates. Bias is not estimated.
 
 If the 'Add to summary' box is ticked then simulation results are added automatically to the [Summary](#summary) table.
 
 ### simulation controls
 <table style="width:40%">
   <tr>
-    <td>nrepl </td>
-    <td> number of replicate simulations<sup>1</sup> </td>
+    <td>Function to fit model </td>
+    <td> choose between openCR.fit (fast) and secr.fit(slow), or bypass fitting </td>
   </tr>
   <tr>
-    <td>ncores</td>
-    <td> number of cores for parallel processing<sup>2</sup> </td>
+    <td>Maximization method</td>
+    <td> method used for likelihood maximization by fitting function<sup>1</sup> </td>
   </tr>
   <tr>
-    <td>seed </td>
-    <td> random number seed<sup>3</sup> </td>
+    <td>Replicates </td>
+    <td> number of replicate simulations<sup>2</sup> </td>
   </tr>
   <tr>
-    <td>nx </td>
-    <td>  number of cells in mask in x direction  </td>
+    <td>Cores</td>
+    <td> number of cores for parallel processing<sup>3</sup> </td>
   </tr>
   <tr>
-    <td>method</td>
-    <td> method used for likelihood maximisation by `secr.fit`<sup>4</sup> </td>
+    <td>Seed </td>
+    <td> random number seed<sup>4</sup> </td>
   </tr>
 </table> 
 
 <br>
-1\. The default number is often enough for \(\small \mbox{RSE}(\hat D)\), but many more replicates are needed to estimate of \(\small \mbox{RB}(\hat D)\) reliably. <br>
-2\. Simulations are spread across multiple cores if ncores > 1. There may be little gain in speed. The maximum number of cores is determined automatically with `parallel::detectCores`.  <br>
-3\. Set a value greater than zero if you wish results to be repeatable. (Zero translates as NULL in the seed passed to `run.scenarios`) <br>
+1\. The default 'none' does not estimate relative bias. <br>
+2\. The default number is often enough for \(\small \mbox{RSE}(\hat D)\), but many more replicates are needed to estimate of \(\small \mbox{RB}(\hat D)\) reliably. <br>
+3\. Simulations are spread across multiple cores if ncores > 1. There may be little gain in speed. The maximum number of cores is determined automatically with `parallel::detectCores`.  <br>
+4\. Set a value greater than zero if you wish results to be repeatable. (Zero translates as NULL in the seed passed to `run.scenarios`) <br>
 <br>
 
 ## Results
@@ -442,16 +443,30 @@ If the 'Add to summary' box is ticked then simulation results are added automati
     <td>seconds</td>
   </tr>
   <tr>
+    <td>Number of animals (n)</td>
+    <td>mean and SE over replicates</td>
+  </tr>
+  <tr>
+    <td>Number of detections (n+r)</td>
+    <td>mean and SE over replicates</td>
+  </tr>
+  <tr>
+    <td>Number of moves (m)<sup>1</sup></td>
+    <td>mean and SE over replicates</td>
+  </tr>
+  <tr>
     <td> Simulated RSE </td>
     <td>mean and SE over replicates</td>
   </tr>
   <tr>
-    <td> Simulated RB<sup>1</sup> </td>
+    <td> Simulated RB<sup>2</sup> </td>
     <td>mean and SE over replicates</td>
   </tr>
 </table> 
 <br>
-1\. Relative bias \( \small \mbox{RB}(\hat D) = (\hat D - D) / D \).
+1\. The number of moves is reported consistently with E(m) only for trap (multi) detectors.
+
+2\. Relative bias \( \small \mbox{RB}(\hat D) = (\hat D - D) / D \).
 
 <br>
 
