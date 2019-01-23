@@ -310,8 +310,7 @@ ui <- function(request) {
                                           fluidRow(
                                               column(12,
                                                      fluidRow(
-                                                         column(11, verbatimTextOutput("nrmPrint")) # style='padding:0px;')
-                                                         ,
+                                                         column(11, verbatimTextOutput("nrmPrint")),
                                                          column(1, style='padding:0px;',
                                                                 conditionalPanel("output.nrmPrint!= ''",
                                                                                  downloadLink("downloadnrmcode", "R")))
@@ -638,9 +637,9 @@ ui <- function(request) {
                                          wellPanel(
                                              h2("Fields"),
                                              fluidRow(
-                                                 column(4, actionButton("selectfieldsbtn", "Select")),
-                                                 column(4, actionButton("selectnonebtn", "None")),
-                                                 column(4, actionButton("selectallbtn", "All"))
+                                                 column(4, actionButton("selectfieldsbtn", "Select", title = "Choose fields to display")), 
+                                                 column(4, actionButton("selectnonebtn", "None", title = "Unselect all fields")), 
+                                                 column(4, actionButton("selectallbtn", "All", title = "Select all fields"))
                                              ),
                                              br(),
                                              h2("Scenarios"),
@@ -686,7 +685,8 @@ ui <- function(request) {
                                   ),
                                   column(9, 
                                          # h2("Results"),
-                                         div(tableOutput("summarytable"), style = "width:800px; overflow-x: scroll; font-size:80%")
+#                                         div(tableOutput("summarytable"), style = "width:800px; overflow-x: scroll; font-size:80%")
+                                         div(tableOutput("summarytable"), style = "width:800px; overflow-x: scroll")
                                   )
                               )
                      ),
@@ -761,11 +761,11 @@ ui <- function(request) {
                                                                  multiple = TRUE)),
                                                    uiOutput("habitatfile"),
                                                    fluidRow(
-                                                       column(6, offset = 1, div(style="height: 20px;",
+                                                       column(10, offset = 1, div(style="height: 20px;",
                                                                                  checkboxInput("polygonbox", "Clip to region", value = FALSE, width = 180)))
                                                    ),
                                                    fluidRow(
-                                                       column(6, offset = 1, radioButtons("includeexcludebtn", label = "",
+                                                       column(10, offset = 1, radioButtons("includeexcludebtn", label = "",
                                                                                           choices = c("Include", "Exclude"), 
                                                                                           selected = "Include", inline = TRUE))
                                                    )
@@ -3481,8 +3481,7 @@ server <- function(input, output, session) {
         tmp <- t(sumrv$value[,fields])
         if (ncol(tmp)>0) colnames(tmp) <- paste0('Scenario', 1:ncol(tmp))
         tmp <- cbind(Field = fields, tmp)
-        # sumrv$value
-        tmp }, spacing = "xs"
+        tmp } , spacing = "xs"
     )
     
     ##############################################################################
