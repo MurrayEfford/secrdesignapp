@@ -114,6 +114,8 @@ A region is a study area within which detectors will be placed either systematic
 
 See Options | Detector array to control the clipping of clusters that cross the boundary of the region.
 
+A region based on an ESRI shapefile cannot at present be restored from a bookmark (see [Troubleshooting](#troubles)).
+
 #### Systematic
 
 A systematic array is specified by the cluster design, the spacing between cluster centres and the origin. By default the origin is fixed at (+sp/2, +sp/2) relative to the lower left corner of the bounding box of the region, where sp is the array spacing. Alternately the origin may be chosen at random within a square of side sp. 
@@ -539,6 +541,10 @@ The table may be downloaded as a comma-separated text file or in the RDS format 
 # Troubleshooting <a name="troubles"></a>
 
 Here are some known pitfalls
+
+## Bookmark fails with shapefile polygons
+
+This is a known bug that cannot be addressed immediately. It is avoided by saving SpatialPolygons as .rds or .rdata files.
 
 ## Slow simulations when ncores > 1
 

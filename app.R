@@ -298,7 +298,6 @@ ui <- function(request) {
                                          fluidRow(
                                              column(7, helpText(HTML("F11 to toggle fullscreen")))
                                          ),
-                                         br(),
                                          fluidRow(
                                              column(11, textInput("title", "", value = "", 
                                                                   placeholder = "scenario label for Summary")))
@@ -953,7 +952,7 @@ server <- function(input, output, session) {
     fieldgroup2 <- 18:33
     
     showNotification(paste("secrdesign", desc$Version, desc$Date),
-                     closeButton = FALSE, type = "message", duration = 5)
+                     closeButton = FALSE, type = "message", duration = seconds)
      output$selectingfields <- renderText('false')
      outputOptions(output, "selectingfields", suspendWhenHidden = FALSE)
     ##############################################################################
@@ -1031,7 +1030,8 @@ server <- function(input, output, session) {
     
     output$shapefile <- renderUI({
         helptext <- ""
-        if (!is.null(region())) {
+        # if (!is.null(region())) {
+        if (!is.null(input$regionfilename)) {
             pos <- grep(".shp", tolower(input$regionfilename[,1]))
             if (length(pos)>0)
                 helptext <- paste0(input$regionfilename[pos,1])
@@ -1106,15 +1106,18 @@ server <- function(input, output, session) {
     
     output$xycoord <- renderUI({
         xy <- c(input$arrayClick$x, input$arrayClick$y)
+        tmpgrid <- isolate(detectorarray())
         if (is.null(xy)) 
             helpText("")
         else {
             if (input$snaptodetector) {
-                nearest <- nearesttrap(xy, detectorarray())
-                xy <- detectorarray()[nearest,]
-                id <- paste0(rownames(detectorarray())[nearest], ":")
+                nearest <- nearesttrap(xy, tmpgrid)
+                xy <- tmpgrid[nearest,]
+                id <- paste0(rownames(tmpgrid)[nearest], ":")
             }
-            else id <- ""
+            else {
+                id <- ""
+            }
             helpText(HTML(paste(id, paste(round(xy), collapse = ", "))))
         }
     })
@@ -1430,9 +1433,11 @@ server <- function(input, output, session) {
                 else stop("unrecognised boundary object in ", objlist[1])
             }
             else {
+                ## not working on restore bookmark 2019-01-24
                 dsnname <- dirname(fileupload[1,4])
                 for ( i in 1:nrow(fileupload)) {
-                    file.rename(fileupload[i,4], paste0(dsnname,"/",fileupload[i,1]))}
+                    file.rename(fileupload[i,4], paste0(dsnname,"/",fileupload[i,1]))
+                }
                 filename <- list.files(dsnname, pattern="*.shp", full.names=FALSE)
                 layername <- tools::file_path_sans_ext(basename(filename))
                 if (is.null(filename) || 
@@ -2070,7 +2075,6 @@ server <- function(input, output, session) {
                 trps <- readtrapfile(input$scalefactor)
             }
             else if (input$arrayinput=='Region') {
-                
                 if (input$nrepeats>1) {
                     updateNumericInput(session, "nrepeats", value = 1)
                 }
@@ -2369,7 +2373,6 @@ server <- function(input, output, session) {
     sumrv <- reactiveValues(
         value = read.csv(text = paste(summaryfields, collapse = ", "))
     )
-    
     ##############################################################################
     
     ## observe
@@ -3324,7 +3327,6 @@ server <- function(input, output, session) {
             symbols(tmppop$x, tmppop$y, circles = rep(rad, nrow(tmppop)),
                     inches = FALSE, fg = grey(0.7), add = TRUE, xpd = FALSE)
         }
-        
     })
     ##############################################################################
     
@@ -3548,6 +3550,11 @@ server <- function(input, output, session) {
     
     # Save extra values in state$values when we bookmark
     onBookmark(function(state) {
+         if (!is.null(input$regionfilename)) {
+            pos <- grep(".shp", tolower(input$regionfilename[,1]))
+            if (length(pos)>0)
+                showNotification("ESRI shapefile will not be bookmarked", type = "warning", id = "noshapefile")
+         }
         state$values$simrvoutput <- simrv$output     # does not work 
         state$values$sumrv <- sumrv$value            # works
         state$values$port <- session$clientData$url_port
