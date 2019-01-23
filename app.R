@@ -632,17 +632,62 @@ ui <- function(request) {
                      #################################################################################################
                      
                      tabPanel("Summary",
+                              br(),
                               fluidRow(
-                                  column(12,
+                                  column(2, 
+                                         wellPanel(
+                                             h2("Fields"),
+                                             fluidRow(
+                                                 column(4, actionButton("selectfieldsbtn", "Select")),
+                                                 column(4, actionButton("selectnonebtn", "None")),
+                                                 column(4, actionButton("selectallbtn", "All"))
+                                             ),
+                                             br(),
+                                             h2("Scenarios"),
+                                             fluidRow(
+                                                 column(6, actionButton("clearallbtn", "Clear all", title = "Delete all scenarios")), 
+                                                 column(6, actionButton("clearlastbtn", "Delete last", title = "Delete last scenario"))
+                                             ), 
+                                             br(), 
+                                             h2("Download"),
+                                             fluidRow(
+                                                 column(6, downloadButton("downloadSummaryrds", ".rds", 
+                                                                                      title = "Save as RDS file; restore in R with e.g., readRDS(`summary.rds')")), 
+                                                 column(6, downloadButton("downloadSummary", ".csv", 
+                                                                                    title = "Save as comma-delimited text (csv) file"))
+                                             )
+                                         ),
+                                         
+                                         fluidRow(
+                                             column(5, offset=1,
+                                                    conditionalPanel("output.selectingfields == 'TRUE'",
+                                                                     checkboxGroupInput("fields1", "",
+                                                                                        choices = c("date", "time", "note", "detector", "source", "nx", "ny", "spacex", "spacey",
+                                                                                                    "ndetectors", "noccasions", "nrepeats", "distribution", "detectfn",
+                                                                                                    "D", "lambda0", "sigma"),
+                                                                                        selected = c("date", "time", "note", "detector", "source", "nx", "ny", "spacex", "spacey",
+                                                                                                     "ndetectors", "noccasions", "nrepeats", "distribution", "detectfn",
+                                                                                                     "D", "lambda0", "sigma")
+                                                                     ))),
+                                             column(6, 
+                                                    conditionalPanel("output.selectingfields == 'TRUE'",
+                                                                     checkboxGroupInput("fields2", "",
+                                                                                        choices = c("detperHR", "k", "En", "Er", "Em",
+                                                                                                    "rotRSE", "CF", "route", "cost", "simfn",  "nrepl", "simtime",
+                                                                                                    "simRSE", "simRSEse", "simRB", "simRBse"),
+                                                                                        selected = c("detperHR", "k", "En", "Er", "Em",
+                                                                                                     "rotRSE", "CF", "route", "cost", "simfn",  "nrepl", "simtime",
+                                                                                                     "simRSE", "simRSEse", "simRB", "simRBse")
+                                                                     )
+                                                    )                                                  
+                                             )
+                                         )
+                                         
+                                  ),
+                                  column(10, 
                                          # h2("Results"),
-                                         div(tableOutput("summarytable"), style = "font-size:80%")
+                                         div(tableOutput("summarytable"), style = "width:800px; overflow-x: scroll; font-size:80%")
                                   )
-                              ),
-                              fluidRow(
-                                  column(2, actionButton("clearallbtn", "Clear all", title = "Delete all scenarios")),
-                                  column(2, actionButton("clearlastbtn", "Delete last", title = "Delete last scenario")),
-                                  column(2, downloadButton("downloadSummaryrds", "Download .rds", title = "Save as RDS file; restore in R with e.g., readRDS(`summary.rds')")),
-                                  column(2, downloadButton("downloadSummary", "Download .csv", title = "Save as comma-delimited text (csv) file"))
                               )
                      ),
                      #################################################################################################
@@ -899,8 +944,18 @@ ui <- function(request) {
 server <- function(input, output, session) {
     
     desc <- packageDescription("secrdesign")
+    summaryfields <- c("date", "time", "note", "detector", "source", "nx", "ny", "spacex", "spacey",
+                       "ndetectors", "noccasions", "nrepeats", "distribution", "detectfn", 
+                       "D", "lambda0", "sigma", "detperHR", "k", "En", "Er", "Em",
+                       "rotRSE", "CF", "route", "cost", "simfn",  "nrepl", "simtime", 
+                       "simRSE", "simRSEse", "simRB", "simRBse")
+    fieldgroup1 <- 1:17
+    fieldgroup2 <- 18:33
+    
     showNotification(paste("secrdesign", desc$Version, desc$Date),
                      closeButton = FALSE, type = "message", duration = 5)
+     output$selectingfields <- renderText('false')
+     outputOptions(output, "selectingfields", suspendWhenHidden = FALSE)
     ##############################################################################
     
     ## renderUI
@@ -1529,10 +1584,10 @@ server <- function(input, output, session) {
     }
     
     addtosummary <- function() {
+        ## input$fields is character vector of selected fields
         
         ## tentatively suppress 2019-01-18 
         ## invalidateOutputs()
-        
         df <- data.frame(
             date = format(Sys.time(), "%Y-%m-%d"),
             time = format(Sys.time(), "%H:%M:%S"),
@@ -1570,6 +1625,8 @@ server <- function(input, output, session) {
             route = round(arraypathlength()/1000 * nrepeats(),3),
             cost = round(nrm()$totalcost, 2)
         )
+
+        newfields <- ""        
         
         simdf <- data.frame(
             simfn = "",
@@ -1579,20 +1636,23 @@ server <- function(input, output, session) {
             simRSEse = NA,
             simRB = NA,
             simRBse = NA)
-        if (!simrv$current && simrv$output$fit) {
+        if (simrv$current && !is.null(simrv$output$fit)) {
             simdf <- data.frame(
                 simfn = input$packagebtn,
                 nrepl = input$nrepl,
-                simtime = round(simrv$output$proctime,2),
-                simRSE = simrv$output$RSE,
-                simRSEse = simrv$output$RSEse,
-                simRB = simrv$output$RB,
-                simRBse = simrv$output$RBse
-            )
+                simtime = round(simrv$output$proctime,2))
+            if (simrv$output$fit) {
+                simdf$simRSE = simrv$output$RSE
+                simdf$simRSEse = simrv$output$RSEse
+                simdf$simRB = simrv$output$RB
+                simdf$simRBse = simrv$output$RBse
+            }
+            newfields <- unique(c(isolate(input$fields2), c("simfn", "nrepl", "simtime") ))
         }
         
         df <- cbind(df, simdf)
         sumrv$value <- rbind (sumrv$value, df)
+        # updateCheckboxGroupInput("fields2", selected = newfields)  ## FAILS 2019-01-23
         rownames(sumrv$value) <- paste0("Scenario", 1:nrow(sumrv$value))
     }
     ##############################################################################
@@ -2305,13 +2365,9 @@ server <- function(input, output, session) {
     arrrv <- reactiveValues(v = 0)  # used to invalidate and re-plot detectorarray
     manualroute <- reactiveValues(seq = NULL)
     current <- reactiveValues(unit = "ha")
-
+    selecting <- reactiveValues(v=FALSE)
     sumrv <- reactiveValues(
-        value = read.csv(text = paste
-                         ("date, time, note, detector, source, nx, ny, spacex, spacey, ndetectors, noccasions, ",
-                             "nrepeats, distribution, detectfn, D, lambda0, sigma, detperHR, k, En, Er, Em, ",
-                             "rotRSE, CF, route, cost, simfn,  nrepl, simtime, simRSE, simRSEse,",
-                             "simRB, simRBse"))
+        value = read.csv(text = paste(summaryfields, collapse = ", "))
     )
     
     ##############################################################################
@@ -2529,6 +2585,9 @@ server <- function(input, output, session) {
         updateRadioButtons(session, "packagebtn", "Fit simulated data", selected = "openCR.fit")
         updateCheckboxInput(session, "simappendbox", value = TRUE)
 
+        updateCheckboxGroupInput(session, "fields1", selected = summaryfields[fieldgroup1])
+        updateCheckboxGroupInput(session, "fields2", selected = summaryfields[fieldgroup2])
+
         ## options
         # updateTextInput(session, "savefilename", value = "log.txt")
         # updateCheckboxInput(session, "appendbox", value = TRUE)
@@ -2702,6 +2761,23 @@ server <- function(input, output, session) {
     
     ##############################################################################
     
+    observeEvent(input$selectfieldsbtn, {
+        selecting$v <- ! selecting$v
+        output$selectingfields <- renderText(selecting$v)
+            
+    }   )
+    
+    observeEvent(input$selectallbtn, {
+        updateCheckboxGroupInput(session, "fields1", selected = summaryfields[fieldgroup1])
+        updateCheckboxGroupInput(session, "fields2", selected = summaryfields[fieldgroup2])
+    }   )
+    
+    observeEvent(input$selectnonebtn, {
+        updateCheckboxGroupInput(session, "fields1", selected = "")
+        updateCheckboxGroupInput(session, "fields2", selected = "")
+    }   )
+    
+    ##############################################################################
     observeEvent(input$clearallbtn, {
         sumrv$value <- sumrv$value[0,]
     }   )
@@ -2797,12 +2873,13 @@ server <- function(input, output, session) {
     })
     
     ##############################################################################
-    
+
     observeEvent(input$summarybtn, {
         ap <- isolate(input$appendbox)
         filename <- isolate(input$savefilename)
         ex <- file.exists(filename)
-        write.table(sumrv$value,
+        browser()
+        write.table(sumrv$value[c(input$fields1, input$fields2),],
                     append = ap & ex,
                     file = filename,
                     col.names = !ap | !ex,
@@ -2811,7 +2888,7 @@ server <- function(input, output, session) {
     }
     )
     ##############################################################################
-    
+
     ## renderText
     
     # spacingcodePrint
@@ -3402,9 +3479,10 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$summarytable <- renderTable({
-        tmp <- t(sumrv$value)
+        fields <- c(input$fields1, input$fields2)
+        tmp <- t(sumrv$value[,fields])
         if (ncol(tmp)>0) colnames(tmp) <- paste0('Scenario', 1:ncol(tmp))
-        tmp <- cbind(Field=colnames(sumrv$value), tmp)
+        tmp <- cbind(Field = fields, tmp)
         # sumrv$value
         tmp }, spacing = "xs"
     )
@@ -3468,7 +3546,8 @@ server <- function(input, output, session) {
     setBookmarkExclude(c("simulatebtn", "simulatebtn2", "spacingbtn", "appendbtn",
                          "clearallbtn", "clearlastbtn",
                          "suggestbtn", "suggestlinebtn", "suggestfilebtn",
-                         "resetbtn", "routebtn", "randompopbtn", "randomarraybtn"))
+                         "resetbtn", "routebtn", "randompopbtn", "randomarraybtn", 
+                         "selectfieldsbtn", "selecting"))
     
     # Save extra values in state$values when we bookmark
     onBookmark(function(state) {
