@@ -634,7 +634,7 @@ ui <- function(request) {
                      tabPanel("Summary",
                               br(),
                               fluidRow(
-                                  column(2, 
+                                  column(3, 
                                          wellPanel(
                                              h2("Fields"),
                                              fluidRow(
@@ -684,7 +684,7 @@ ui <- function(request) {
                                          )
                                          
                                   ),
-                                  column(10, 
+                                  column(9, 
                                          # h2("Results"),
                                          div(tableOutput("summarytable"), style = "width:800px; overflow-x: scroll; font-size:80%")
                                   )
