@@ -495,7 +495,7 @@ ui <- function(request) {
                                              column(6, 
                                                     wellPanel(class = "mypanel", 
                                                               radioButtons("packagebtn", label = "Function to fit SECR model", 
-                                                                           choices = c("openCR.fit", "secr.fit", "do not fit model")),
+                                                                           choices = c("openCR.fit", "secr.fit", "no fit")),
                                                               selectInput("method", "Maximization method",
                                                                           choices = c("Newton-Raphson", "Nelder-Mead", "none"),
                                                                           selected = "none", width=160),
@@ -1636,16 +1636,16 @@ server <- function(input, output, session) {
             simRSEse = NA,
             simRB = NA,
             simRBse = NA)
+        
         if (simrv$current && !is.null(simrv$output$fit)) {
-            simdf <- data.frame(
-                simfn = input$packagebtn,
-                nrepl = input$nrepl,
-                simtime = round(simrv$output$proctime,2))
+            simdf$simfn <- input$packagebtn
+            simdf$nrepl <- input$nrepl
+            simdf$simtime <- round(simrv$output$proctime,2)
             if (simrv$output$fit) {
-                simdf$simRSE = simrv$output$RSE
-                simdf$simRSEse = simrv$output$RSEse
-                simdf$simRB = simrv$output$RB
-                simdf$simRBse = simrv$output$RBse
+                simdf$simRSE <- simrv$output$RSE
+                simdf$simRSEse <- simrv$output$RSEse
+                simdf$simRB <- simrv$output$RB
+                simdf$simRBse <- simrv$output$RBse
             }
             newfields <- unique(c(isolate(input$fields2), c("simfn", "nrepl", "simtime") ))
         }
@@ -2437,7 +2437,6 @@ server <- function(input, output, session) {
     # arrayclick
     # pxyclick
     # appendbtn
-    # summarybtn
     # nrepeats
     # maxupload
     # areaunit
@@ -2874,21 +2873,20 @@ server <- function(input, output, session) {
     
     ##############################################################################
 
-    observeEvent(input$summarybtn, {
-        ap <- isolate(input$appendbox)
-        filename <- isolate(input$savefilename)
-        ex <- file.exists(filename)
-        browser()
-        write.table(sumrv$value[c(input$fields1, input$fields2),],
-                    append = ap & ex,
-                    file = filename,
-                    col.names = !ap | !ex,
-                    row.names = FALSE,
-                    quote = FALSE)
-    }
-    )
-    ##############################################################################
-
+    # observeEvent(input$summarybtn, {
+    #     ap <- isolate(input$appendbox)
+    #     filename <- isolate(input$savefilename)
+    #     ex <- file.exists(filename)
+    #     write.table(sumrv$value[c(input$fields1, input$fields2),],
+    #                 append = ap & ex,
+    #                 file = filename,
+    #                 col.names = !ap | !ex,
+    #                 row.names = FALSE,
+    #                 quote = FALSE)
+    # }
+    # )
+    # ##############################################################################
+    # 
     ## renderText
     
     # spacingcodePrint
