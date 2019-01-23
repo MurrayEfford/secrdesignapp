@@ -560,6 +560,24 @@ This will happen when a rigid boundary is provided in Options | Habitat mask.
 
 This is intended. The coefficient cannot be compared between HHN and HEX models, and the simplest way to prevent misunderstanding was to block for HEX.
 
+## No exclusion option for habitat mask
+
+A systematic or random array defined with a Region polygon may exclude sites that lie within other polygons (Options | Detector array | Excluded region). How is an exclusion applied to the habitat mask? Unfortunately the **secr** function `make.mask` accepts only one polygon input, although this may represent either habitat or non-habitat. To combine habitat (inclusion) and non-habitat (exclusion) polygons you will first need to use GIS software (e.g., the `gDifference` function in the R package **rgeos**) and save the result as a single SpatialPolygons object (e.g., as an .rds file).
+
+```{r, eval = FALSE}
+library(rgdal)
+library(rgos)
+setwd('d:/density secr 3.2/secrdesignapp')
+region <- rgdal::readOGR(dsn = 'OVforest.shp')
+# coordinates from text file
+coord <- read.table('excltest.txt')   # read boundary coordinates
+excluded <- secr:::boundarytoSP(coord)  # convert to SpatialPolygons
+newpoly <- gDifference (region, excluded)
+saveRDS(newpoly, file = 'newpoly.RDS')
+```
+
+The RDS file may then be used in Options | Habitat mask.
+
 ----------------------------------------------------
 # References <a name="references"></a>
 
