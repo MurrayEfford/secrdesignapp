@@ -3544,7 +3544,7 @@ server <- function(input, output, session) {
     ##############################################################################
 
     setBookmarkExclude(c("simulatebtn", "simulatebtn2", "spacingbtn", "appendbtn",
-                         "clearallbtn", "clearlastbtn",
+                         "clearallbtn", "clearlastbtn", "selectnonebtn", "selectallbtn",
                          "suggestbtn", "suggestlinebtn", "suggestfilebtn",
                          "resetbtn", "routebtn", "randompopbtn", "randomarraybtn", 
                          "selectfieldsbtn", "selecting"))
