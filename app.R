@@ -1876,28 +1876,12 @@ server <- function(input, output, session) {
         type <- if (input$maskshapebtn == 'Rectangular') 'traprect' else 'trapbuffer'
         buffer <- as.character(round(input$habxsigma * input$sigma,2))
 
-        if (!input$polygonbox) {
-            polycode <- ""
-            polyhabitat <- ""
-        }
-        else { 
-            if (is.null(input$habpolyfilename)) return(NULL)
+        polycode <- ""
+        polyhabitat <- ""
+        
+        if (input$polygonbox && !is.null(input$habpolyfilename)) { 
             polyhabitat <- input$includeexcludebtn == "Include"
-            
             polycode <- getSPcode(input$habpolyfilename, "poly", input$polygonbox)
-            # polyfilename <- input$habpolyfilename[1,1]
-            # if (tolower(tools::file_ext(polyfilename)) == "txt") {
-            #     polycode <- paste0( 
-            #         "coord <- read.table('", polyfilename, "')   # read boundary coordinates\n",
-            #         "poly <- secr:::boundarytoSP(coord)  # convert to SpatialPolygons\n")
-            # }
-            # else {
-            #     polycode <- paste0(
-            #         "poly <- rgdal::readOGR(dsn = '", 
-            #         tools::file_path_sans_ext(basename(polyfilename)), 
-            #         ".shp')    # polygon(s) from shapefile\n"
-            #     )
-            # }
         }
         paste0(polycode,
                "mask <- make.mask (", arrayname, 
@@ -3328,7 +3312,7 @@ server <- function(input, output, session) {
         
         if (input$showmaskbox) {
             plot (core, border = border, gridlines = FALSE)
-            plot (mask(), add = TRUE, col = grey(0.9))
+            plot (mask(), add = TRUE, col = grey(0.9), dots=F)
             plot(tmppop, add = TRUE, pch = 16, cex = 0.7, xpd = TRUE, frame = FALSE)
             plot (core, add = TRUE)
         }
