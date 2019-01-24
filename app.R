@@ -954,6 +954,7 @@ server <- function(input, output, session) {
                        "simRSE", "simRSEse", "simRB", "simRBse")
     fieldgroup1 <- 1:17
     fieldgroup2 <- 18:33
+    simfields <- summaryfields[27:33]
     
     showNotification(paste("secrdesign", desc$Version, desc$Date),
                      closeButton = FALSE, type = "message", duration = seconds)
@@ -2446,8 +2447,20 @@ server <- function(input, output, session) {
     # maxupload
     # areaunit
     # chequerboard
+    # simappendbox
     
     ##############################################################################
+    
+    observeEvent(input$simappendbox, ignoreInit = TRUE, {
+        if (input$simappendbox) {
+            sim <- c(input$fields2, simfields)
+            updateCheckboxGroupInput(session, "fields2", selected = sim)
+        }
+        else {
+            nosim <- input$fields2[!(input$fields2 %in% simfields)]
+            updateCheckboxGroupInput(session, "fields2", selected = nosim)
+        }
+    })
     
     observeEvent(input$nrepeats, {
         if (input$arrayinput=='Region' & input$nrepeats>1)
