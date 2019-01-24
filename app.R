@@ -705,7 +705,7 @@ ui <- function(request) {
                                                    ),
                                                    br(),
                                                    radioButtons("edgemethod", label = "Method for clusters at edge of region",
-                                                                choices = c("clip", "allowoverlap", "allinside"),
+                                                                choices = c("clip", "anyinside", "allinside"),
                                                                 selected = "clip", inline = TRUE),
                                                    br(),
                                                    div(style="height: 80px;",
@@ -714,6 +714,10 @@ ui <- function(request) {
                                                                             '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
                                                                  multiple = TRUE)),
                                                    uiOutput("exclusionfile"),
+                                                   fluidRow(
+                                                       column(9, offset=1,
+                                                              div(style="height: 20px;", checkboxInput("exclusionbox", "Apply exclusion", TRUE)))),
+                                                   br(),
                                                    fluidRow(
                                                        column(6, numericInput("maxupload", "Maximum file upload Mb",
                                                                 min = 5,
@@ -761,7 +765,7 @@ ui <- function(request) {
                                                    uiOutput("habitatfile"),
                                                    fluidRow(
                                                        column(10, offset = 1, div(style="height: 20px;",
-                                                                                 checkboxInput("polygonbox", "Clip to region", value = FALSE, width = 180)))
+                                                                                 checkboxInput("polygonbox", "Clip to region", value = TRUE, width = 180)))
                                                    ),
                                                    fluidRow(
                                                        column(10, offset = 1, radioButtons("includeexcludebtn", label = "",
@@ -1662,9 +1666,9 @@ server <- function(input, output, session) {
     }
     ##############################################################################
     
-    getSPcode <- function (inputfilename, varname) {
+    getSPcode <- function (inputfilename, varname, apply = TRUE) {
         filename <- inputfilename[1,1]
-        if (is.null(filename)) {
+        if (is.null(filename) || !apply) {
             return("")
         }
         else {
@@ -1748,8 +1752,8 @@ server <- function(input, output, session) {
             
             else if (input$arrayinput == "Region") {
                 
-                regioncode <- getSPcode(input$regionfilename, "region")
-                excludedcode <- getSPcode(input$exclusionfilename, "excluded")
+                regioncode <- getSPcode(input$regionfilename, "region", TRUE)
+                excludedcode <- getSPcode(input$exclusionfilename, "excluded", input$exclusionbox)
             
 
                 if (input$randomorigin) 
@@ -1806,8 +1810,13 @@ server <- function(input, output, session) {
                     rotatecode <- ""
                 }
                 
-                if (excludedcode != "") 
+                if (excludedcode != "") {
                     exclusioncode <- ", exclude = excluded"
+                    if (input$edgemethod == "allinside")
+                        exclusioncode <- c(exclusioncode, ", exclmethod = 'alloutside'")
+                    else if (input$edgemethod == "anyinside")
+                        exclusioncode <- c(exclusioncode, ", exclmethod = 'anyoutside'")
+                }
                 else
                     exclusioncode <- ""
                 
@@ -1875,7 +1884,7 @@ server <- function(input, output, session) {
             if (is.null(input$habpolyfilename)) return(NULL)
             polyhabitat <- input$includeexcludebtn == "Include"
             
-            polycode <- getSPcode(input$habpolyfilename, "poly")
+            polycode <- getSPcode(input$habpolyfilename, "poly", input$polygonbox)
             # polyfilename <- input$habpolyfilename[1,1]
             # if (tolower(tools::file_ext(polyfilename)) == "txt") {
             #     polycode <- paste0( 
@@ -2138,7 +2147,11 @@ server <- function(input, output, session) {
                                                  region = region(),
                                                  cluster = cluster,
                                                  edgemethod = input$edgemethod,
-                                                 exclude = exclusion())
+                                                 exclude = exclusion(),
+                                                 exclmethod = switch(input$edgemethod, 
+                                                                     allinside = "alloutside", 
+                                                                     anyinside = "anyoutside", 
+                                                                     "clip"))
                     }
                     else {
                         args <- list(spacing = input$sppgrid, 
@@ -2146,7 +2159,12 @@ server <- function(input, output, session) {
                                      region = region(),
                                      origin = origin,
                                      edgemethod = input$edgemethod,
-                                     exclude = exclusion())
+                                     exclude = exclusion(),
+                                     exclmethod = switch(input$edgemethod, 
+                                                         allinside = "alloutside", 
+                                                         anyinside = "anyoutside", 
+                                                         "clip"))
+                        
                         if (input$chequerboard)
                             args$chequerboard <- "white"
                         
@@ -2216,7 +2234,7 @@ server <- function(input, output, session) {
     
     ##############################################################################
     exclusion <- reactive( { 
-        if (!is.null(input$exclusionfilename)) {
+        if (!is.null(input$exclusionfilename) && input$exclusionbox) {
             readpolygon(input$exclusionfilename) 
         }
         else {
@@ -2607,7 +2625,8 @@ server <- function(input, output, session) {
         updateNumericInput(session, "habxsigma", value = 4)
         updateNumericInput(session, "habnx", value = 32)
         updateRadioButtons(session, "maskshapebtn", selected = "Rounded")
-        updateCheckboxInput(session, "polygonbox", "Clip to region", value = FALSE)
+        updateCheckboxInput(session, "polygonbox", value = TRUE)
+        updateCheckboxInput(session, "exclusionbox", value = TRUE)
         updateRadioButtons(session, "includeexcludebtn", selected = "Include")
 
         ## array plot
