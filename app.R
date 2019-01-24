@@ -758,14 +758,14 @@ ui <- function(request) {
                                                    ),
                                                    br(),
                                                    div(style="height: 80px;",
-                                                       fileInput("habpolyfilename", "Polygon shapefile (all parts)",
+                                                       fileInput("habpolyfilename", "Mask polygon file(s)",
                                                                  accept = c('.shp','.dbf','.sbn','.sbx',
                                                                             '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
                                                                  multiple = TRUE)),
                                                    uiOutput("habitatfile"),
                                                    fluidRow(
                                                        column(10, offset = 1, div(style="height: 20px;",
-                                                                                 checkboxInput("polygonbox", "Clip to region", value = TRUE, width = 180)))
+                                                                                 checkboxInput("polygonbox", "Clip to polygon(s)", value = TRUE, width = 180)))
                                                    ),
                                                    fluidRow(
                                                        column(10, offset = 1, radioButtons("includeexcludebtn", label = "",
@@ -1502,7 +1502,7 @@ server <- function(input, output, session) {
             ncores = input$ncores,
             byscenario = FALSE,
             seed = seed,
-            terse = T)
+            terse = TRUE, moves = TRUE)  ## arguments for summary.capthist
         
         if (fit)
             counts <- summary(count(sims))$OUTPUT[[1]]
@@ -2971,7 +2971,7 @@ server <- function(input, output, session) {
                     "  RBse = output['RB','se'] * 100,\n"
                 )
             fit <- input$packagebtn %in% c("openCR.fit", "secr.fit")
-            countcode <- if (fit) "summary(count(sims))$OUTPUT[[1]])\n" else
+            countcode <- if (fit) "summary(count(sims))$OUTPUT[[1]]\n" else
                 paste0(
                     "sumc <- function(x) {\n",
                     "    c(n = sum(!is.na(x)),\n",
@@ -3009,12 +3009,12 @@ server <- function(input, output, session) {
                 "    trapset = array, maskset = mask,",
                 " pop.args = list(Ndist = '", Ndist, "'),\n",
                 
-                "    fit = ", fit, ", extractfn = summary, ",
-                if (fit) paste0("fit.function = '", input$packagebtn, "',\n",
-                                "    fit.args = list(detectfn = '", input$detectfn, "', ",
-                                "method = '", input$method, "',\n",
-                                "        ", distncode, "),\n")
-                else paste0("terse = TRUE,\n"),
+                "    fit = ", fit, 
+                ", extractfn = summary, terse = TRUE, moves = TRUE, \n",
+                if (fit) paste0("    fit.function = '", input$packagebtn, "', ",
+                                "fit.args = list(detectfn = '", input$detectfn, "', \n",
+                                "        method = '", input$method, "', ", distncode, "),\n")
+                else paste0("terse = TRUE, moves = true, \n"),
                 
                 "    ncores = ", input$ncores, ", ",
                 "byscenario = FALSE, seed = ", if (input$seed==0) "NULL" else input$seed, 
