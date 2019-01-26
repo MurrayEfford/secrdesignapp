@@ -3023,10 +3023,11 @@ server <- function(input, output, session) {
                 " pop.args = list(Ndist = '", Ndist, "'),\n",
                 
                 "    fit = ", fit, 
-                ", extractfn = summary, terse = TRUE, moves = TRUE, \n",
-                if (fit) paste0("    fit.function = '", input$packagebtn, "', ",
-                                "fit.args = list(detectfn = '", input$detectfn, "', \n",
-                                "        method = '", input$method, "', ", distncode, "),\n")
+                ", extractfn = summary, ",
+                if (fit) paste0("fit.function = '", input$packagebtn, "', \n",
+                                "    fit.args = list(detectfn = '", input$detectfn, "', ",
+                                "method = '", input$method, "',\n", 
+                                "        ", distncode, "),\n")
                 else paste0("terse = TRUE, moves = true, \n"),
                 
                 "    ncores = ", input$ncores, ", ",
