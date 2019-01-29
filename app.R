@@ -3152,7 +3152,7 @@ server <- function(input, output, session) {
             nrmval$detperHR, '\n',
             kstr,
             "Effective sampling area = ",
-            areastr(nrmval$esa), star, " (mask ", areastr(nrmval$maskarea),")\n",
+            areastr(nrmval$esa), star, " (mask ", areastr(nrmval$maskarea * nrepeats()), star, ")\n",
             "Rule-of-thumb RSE = ",
             round(nrmval$rotRSE * 100, 1), "%", star, " (correction factor ", round(input$CFslider,3), ")",
             ## "\nRule-of-thumb RSE (binomial) = ",
