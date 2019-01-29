@@ -7,6 +7,7 @@ secrdesignversion <- packageVersion('secrdesign')
 if (compareVersion(as.character(secrdesignversion), '2.5.5') < 0)
     stop("secrdesignapp 1.1 requires secrdesign version 2.5.5 or later",
          call. = FALSE)
+openCRversion <- packageVersion('openCR')
 
 # requires package rgdal to read shapefiles
 # requires package sp for bbox and plot method for SpatialPolygons
@@ -276,6 +277,7 @@ ui <- function(request) {
                                                                            choices = c("Poisson", "Binomial"))
                                                     ),
                                                     checkboxInput("autorefresh", "  Auto refresh", TRUE)
+                                                    # checkboxInput("autoappend", "  Add on refresh", FALSE)
                                              )
                                          ),
                                          
@@ -1505,8 +1507,22 @@ server <- function(input, output, session) {
             seed = seed,
             terse = TRUE, moves = TRUE)  ## arguments for summary.capthist
         
-        if (fit)
-            counts <- summary(count(sims))$OUTPUT[[1]]
+        if (fit) {
+            if (compareVersion(as.character(secrdesignversion), '2.5.7') < 0) {
+                showNotification("Counts NA with fit, secrdesign < 2.5.7; use 'no fit'",
+                                 type = "warning", id = "countNA", duration = seconds)
+                counts <- data.frame(matrix(NA, nrow=3, ncol=3,
+                                            dimnames = list(c('Animals','Detections','Moves'),
+                                                            c('n','mean','se'))))
+            }
+            else {
+                if ((input$packagebtn == "openCR.fit") && compareVersion(as.character(openCRversion), '1.3.3') < 0) {
+                    showNotification("Moves NA with fit, openCR < 1.3.3",
+                                     type = "warning", id = "movesNA", duration = seconds)
+                }
+                counts <- summary(count(sims))$OUTPUT[[1]]
+            }
+        }
         else {  
             sumc <- function(x) {
                 c(n = sum(!is.na(x)),
@@ -2567,7 +2583,8 @@ server <- function(input, output, session) {
         updateNumericInput(session, "nrepeats", value = 1)
         updateTabsetPanel(session, "tabs", selected = "Array")
         updateRadioButtons(session, "distributionbtn", "Distribution", selected = "Poisson")
-        updateCheckboxInput(session, "autorefresh", "Auto refresh", TRUE)
+        updateCheckboxInput(session, "autorefresh", value = TRUE)
+        # updateCheckboxInput(session, "autoappend", value = FALSE)
 
         ## pop plot
         updateCheckboxInput(session, "showHRbox", "Display 95% home range", value = FALSE)
@@ -2984,7 +3001,9 @@ server <- function(input, output, session) {
                     "  RBse = output['RB','se'] * 100,\n"
                 )
             fit <- input$packagebtn %in% c("openCR.fit", "secr.fit")
-            countcode <- if (fit) "summary(count(sims))$OUTPUT[[1]]\n" else
+            countcode <- if (fit) {
+                    if (compareVersion(as.character(secrdesignversion), '2.5.7') < 0) "" else "summary(count(sims))$OUTPUT[[1]]\n" 
+                } else
                 paste0(
                     "sumc <- function(x) {\n",
                     "    c(n = sum(!is.na(x)),\n",
@@ -3215,6 +3234,7 @@ server <- function(input, output, session) {
 
                 "Number of moves (m) = ",
                 round(sims$nmov,2), " (SE ", round(sims$nmov.se, 2), ")\n")
+            
             if (sims$fit) {
                 out <- paste0(out,
                               "Simulated RSE = ",
