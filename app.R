@@ -3090,7 +3090,7 @@ server <- function(input, output, session) {
     output$nrmPrint <- renderText({
         progress <- Progress$new(session, min = 1, max = 15)
         on.exit(progress$close())
-        progress$set(message = 'Updating...',
+        progress$set(message = 'Refreshing...',
                      detail = '')
         nrmval <- nrm()
         if (is.null(nrmval)) return (NULL)
@@ -3594,6 +3594,7 @@ server <- function(input, output, session) {
          }
         state$values$simrvoutput <- simrv$output     # does not work 
         state$values$sumrv <- sumrv$value            # works
+        state$values$manualroute <- manualroute$seq
         state$values$port <- session$clientData$url_port
         ## can manually recover with e.g.
         ## readRDS('d:/density secr 3.2/secrdesignapp/shiny_bookmarks/9c88715bacc260cf/values.rds')$port
@@ -3603,6 +3604,7 @@ server <- function(input, output, session) {
         simrv$output <- state$values$simrvoutput
         sumrv$value <- state$values$sumrv
         current$unit <- input$areaunit
+        manualroute$seq <- state$values$manualroute
         updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"))
     })
     ##############################################################################
