@@ -1097,9 +1097,8 @@ server <- function(input, output, session) {
     ##############################################################################
     
     output$uipopN <- renderUI({
-        # if (!is.null(poprv$v))
-            helpText(HTML(paste0("Number in mask = ", nrow(pop()))))
-        # else ""
+        n <- if (is.null(pop())) 0 else nrow(pop())
+        helpText(HTML(paste0("Number in mask = ", n)))
     })
     
     output$uigridlines <- renderUI({
@@ -2267,7 +2266,7 @@ server <- function(input, output, session) {
         {
             poprv$v
             core <- detectorarray()
-            if (is.null(core)) {
+            if (is.null(core) || (input$D == 0)) {
                 return (NULL)
             }
             if (density() * maskarea(mask()) > 10000) {
@@ -2342,7 +2341,6 @@ server <- function(input, output, session) {
             if (input$distributionbtn == "Binomial") {
                 scensum$rotRSE <- scensum$rotRSEB     
             }
-            
             RSE <- 100*scensum$rotRSE
             if (is.na(RSE))
                 maxRSE <- 100
@@ -2353,6 +2351,7 @@ server <- function(input, output, session) {
                 else if (RSE<40) maxRSE <- 50
                 else maxRSE <- 100
             }
+            if (!is.finite(RSE)) RSE <- maxRSE
             updateSliderInput(session, "RSEslider",
                               min = 1.0,
                               max = maxRSE,
@@ -3334,7 +3333,7 @@ server <- function(input, output, session) {
         if (is.null(core)) return (NULL)
         border <- input$habxsigma * input$sigma  # consistent with mask()
         tmppop <- pop()
-        if (is.null(tmppop)) return()
+        n <- if (is.null(tmppop)) 0 else nrow(tmppop)
         tmpsig <- input$sigma
         #par(mar=c(0,1,0,1))
         if (input$pxyfillbox) {
@@ -3347,21 +3346,21 @@ server <- function(input, output, session) {
         if (input$showmaskbox) {
             plot (core, border = border, gridlines = FALSE)
             plot (mask(), add = TRUE, col = grey(0.9), dots=F)
-            plot(tmppop, add = TRUE, pch = 16, cex = 0.7, xpd = TRUE, frame = FALSE)
+            if (n>0) plot(tmppop, add = TRUE, pch = 16, cex = 0.7, xpd = TRUE, frame = FALSE)
             plot (core, add = TRUE)
         }
         else {
             plot (core, border = border, gridlines = FALSE)
-            plot(tmppop, pch = 16, cex = 0.7, xpd = TRUE, add = TRUE, frame = FALSE)
+            if (n>0) plot(tmppop, pch = 16, cex = 0.7, xpd = TRUE, add = TRUE, frame = FALSE)
             plot (core, add = TRUE)
             bbox <- sweep(apply(core, 2, range), MAR=1, STATS = c(-border,+border), FUN="+")
             bbox <- expand.grid(data.frame(bbox))[c(1,2,4,3),]
             polygon(bbox)
         }
-        if (input$showHRbox) {
+        if (input$showHRbox & (n>0)) {
             # rad <- rep(2.45 * tmpsig, nrow(tmppop))
             rad <- secr::circular.r(p = 0.95, detectfn = input$detectfn, sigma = tmpsig)
-            symbols(tmppop$x, tmppop$y, circles = rep(rad, nrow(tmppop)),
+            symbols(tmppop$x, tmppop$y, circles = rep(rad, n),
                     inches = FALSE, fg = grey(0.7), add = TRUE, xpd = FALSE)
         }
     })
