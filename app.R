@@ -1037,7 +1037,7 @@ server <- function(input, output, session) {
     
     output$shapefile <- renderUI({
         helptext <- ""
-        # if (!is.null(region())) {
+        arrrv$v <- 0  ## protect detectorarray against bad shapefile bookmark
         if (!is.null(input$regionfilename)) {
             pos <- grep(".shp", tolower(input$regionfilename[,1]))
             if (length(pos)>0)
@@ -1058,6 +1058,7 @@ server <- function(input, output, session) {
     
     output$exclusionfile <- renderUI({
         helptext <- ""
+        arrrv$v <- 0  ## protect detectorarray against bad shapefile bookmark
         if (!is.null(input$exclusionfilename)) {
             pos <- grep(".shp", tolower(input$exclusionfilename[,1]))
             if (length(pos)>0)
@@ -1078,6 +1079,7 @@ server <- function(input, output, session) {
     
     output$habitatfile <- renderUI({
         helptext <- ""
+        arrrv$v <- 0  ## protect detectorarray against bad shapefile bookmark
         if (!is.null(input$habpolyfilename)) {
             pos <- grep(".shp", tolower(input$habpolyfilename[,1]))
             if (length(pos)>0)
@@ -1183,6 +1185,17 @@ server <- function(input, output, session) {
     }
     ##############################################################################
     
+    shpfile <- function (filename) {
+        if (is.null(filename)) 
+            FALSE 
+        else {
+            if (is.data.frame(filename))
+                filename <- filename[,1]
+            length(grep(".shp", tolower(filename)))>0
+        }
+    }
+    ##############################################################################
+
     density <- function() {
         ## return density in animals / hectare
         if (input$areaunit == "ha")
@@ -2067,7 +2080,7 @@ server <- function(input, output, session) {
             simrv$current <- FALSE
             rotrv$current <- FALSE
             pxyrv$value <- NULL
-            arrrv$v
+            if (arrrv$v < 0) return(NULL)
             if (!input$autorefresh) return(NULL)
             trps <- NULL
             removeNotification("badarray")
@@ -3586,11 +3599,13 @@ server <- function(input, output, session) {
     
     # Save extra values in state$values when we bookmark
     onBookmark(function(state) {
-         if (!is.null(input$regionfilename)) {
-            pos <- grep(".shp", tolower(input$regionfilename[,1]))
-            if (length(pos)>0)
-                showNotification("ESRI shapefile will not be bookmarked", type = "warning", id = "noshapefile")
-         }
+        shp <- sapply(c(input$regionfilename, 
+                        input$exclusionfilename, 
+                        input$habpolyfilename), shpfile)
+        if (any(shp)) {
+            showNotification("ESRI shapefile will not be bookmarked", type = "error", id = "noshapefile")
+        }
+        state$values$shp <- shp
         state$values$simrvoutput <- simrv$output     # does not work 
         state$values$sumrv <- sumrv$value            # works
         state$values$manualroute <- manualroute$seq
@@ -3604,6 +3619,10 @@ server <- function(input, output, session) {
         sumrv$value <- state$values$sumrv
         current$unit <- input$areaunit
         manualroute$seq <- state$values$manualroute
+        if (any(state$values$shp)) {
+            arrrv$v <- -1
+            showNotification("Cannot restore ESRI shapefile(s); re-select", type = "error", id = "noshapefile2")
+        }
         updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"))
     })
     ##############################################################################
