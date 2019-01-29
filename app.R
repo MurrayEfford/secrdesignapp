@@ -739,7 +739,7 @@ ui <- function(request) {
                                          wellPanel(class = "mypanel", 
                                                    fluidRow(
                                                        column(6, 
-                                                              numericInput("habxsigma", "Buffer width (multiple of sigma)",
+                                                              numericInput("habxsigma", "Buffer width (x sigma)",
                                                                            min = 0,
                                                                            max = 20,
                                                                            value = 4,
@@ -2577,7 +2577,7 @@ server <- function(input, output, session) {
         updateNumericInput(session, "seedpgrid", value = 0)
 
         ## file
-        updateTextInput(session, "args", "Optional arguments for read.traps()",
+        updateTextInput(session, "args", 
                         value = "", placeholder = "e.g., skip = 1, sep = ','")
         updateNumericInput(session, "scalefactor", value = 1.0)
 
@@ -2593,7 +2593,7 @@ server <- function(input, output, session) {
         updateNumericInput(session, "noccasions", value = 5)
         updateNumericInput(session, "nrepeats", value = 1)
         updateTabsetPanel(session, "tabs", selected = "Array")
-        updateRadioButtons(session, "distributionbtn", "Distribution", selected = "Poisson")
+        updateRadioButtons(session, "distributionbtn", selected = "Poisson")
         updateCheckboxInput(session, "autorefresh", value = TRUE)
         # updateCheckboxInput(session, "autoappend", value = FALSE)
 
@@ -2603,7 +2603,7 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "onlymaskbox", "Restrict to mask", value = TRUE)
 
         ## power plot
-        updateCheckboxInput(session, "adjustRSEbox", "Adjust final RSE", value = TRUE)
+        updateCheckboxInput(session, "adjustRSEbox", value = TRUE)
         updateCheckboxInput(session, "powertype", "95% CI", value = TRUE)
         updateNumericInput(session, "xpos", value = 0)
 
@@ -2626,8 +2626,8 @@ server <- function(input, output, session) {
         updateNumericInput(session, "ncores", value = 1)
         updateNumericInput(session, "seed", value = 0)
         #updateNumericInput(session, "simnx", value = 32)
-        updateSelectInput(session, "method", "method", selected = "none")
-        updateRadioButtons(session, "packagebtn", "Fit simulated data", selected = "openCR.fit")
+        updateSelectInput(session, "method", selected = "none")
+        updateRadioButtons(session, "packagebtn", selected = "openCR.fit")
         updateCheckboxInput(session, "simappendbox", value = TRUE)
 
         updateCheckboxGroupInput(session, "fields1", selected = summaryfields[fieldgroup1])
@@ -2640,9 +2640,9 @@ server <- function(input, output, session) {
         ## detector array
         updateCheckboxInput(session, "lockxy", value = TRUE)
         updateCheckboxInput(session, "randomorigin", value = FALSE)
-        updateRadioButtons(session, "edgemethod", "Cluster edge method", selected = "clip")
+        updateRadioButtons(session, "edgemethod", selected = "clip")
         updateNumericInput(session, "maxupload", value = 5)
-        updateRadioButtons(session, "areaunit", "Area units", selected = "ha")
+        updateRadioButtons(session, "areaunit", selected = "ha")
 
         updateRadioButtons(session, "currency", selected = "$")
 
@@ -2655,8 +2655,8 @@ server <- function(input, output, session) {
         updateRadioButtons(session, "includeexcludebtn", selected = "Include")
 
         ## array plot
-        updateCheckboxInput(session, "entireregionbox", "Show entire region", value = TRUE)
-        updateCheckboxInput(session, "snaptodetector", "Snap to detector", value = FALSE)
+        updateCheckboxInput(session, "entireregionbox", value = TRUE)
+        updateCheckboxInput(session, "snaptodetector", value = FALSE)
         updateRadioButtons(session, "gridlines", selected = "None")
 
         ## pxy plot
