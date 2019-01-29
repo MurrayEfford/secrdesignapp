@@ -1037,7 +1037,6 @@ server <- function(input, output, session) {
     
     output$shapefile <- renderUI({
         helptext <- ""
-        arrrv$v <- 0  ## protect detectorarray against bad shapefile bookmark
         if (!is.null(input$regionfilename)) {
             pos <- grep(".shp", tolower(input$regionfilename[,1]))
             if (length(pos)>0)
@@ -1058,7 +1057,6 @@ server <- function(input, output, session) {
     
     output$exclusionfile <- renderUI({
         helptext <- ""
-        arrrv$v <- 0  ## protect detectorarray against bad shapefile bookmark
         if (!is.null(input$exclusionfilename)) {
             pos <- grep(".shp", tolower(input$exclusionfilename[,1]))
             if (length(pos)>0)
@@ -1079,7 +1077,6 @@ server <- function(input, output, session) {
     
     output$habitatfile <- renderUI({
         helptext <- ""
-        arrrv$v <- 0  ## protect detectorarray against bad shapefile bookmark
         if (!is.null(input$habpolyfilename)) {
             pos <- grep(".shp", tolower(input$habpolyfilename[,1]))
             if (length(pos)>0)
@@ -1430,8 +1427,11 @@ server <- function(input, output, session) {
     
     readpolygon <- function (fileupload) {
         poly <- NULL
-        if (!is.null(fileupload))
+        if (!is.null(fileupload) & is.data.frame(fileupload))
         {
+            if (!file.exists(fileupload[1,4])) {
+                return(NULL)   ## protect against bad shapefile
+            }
             ext <- tolower(tools::file_ext(fileupload[1,1]))
             if (ext == "txt") {
                 coord <- read.table(fileupload[1,4])
@@ -2080,7 +2080,6 @@ server <- function(input, output, session) {
             simrv$current <- FALSE
             rotrv$current <- FALSE
             pxyrv$value <- NULL
-            if (arrrv$v < 0) return(NULL)
             if (!input$autorefresh) return(NULL)
             trps <- NULL
             removeNotification("badarray")
@@ -3620,7 +3619,6 @@ server <- function(input, output, session) {
         current$unit <- input$areaunit
         manualroute$seq <- state$values$manualroute
         if (any(state$values$shp)) {
-            arrrv$v <- -1
             showNotification("Cannot restore ESRI shapefile(s); re-select", type = "error", id = "noshapefile2")
         }
         updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"))
