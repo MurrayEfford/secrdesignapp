@@ -2080,6 +2080,7 @@ server <- function(input, output, session) {
             simrv$current <- FALSE
             rotrv$current <- FALSE
             pxyrv$value <- NULL
+            arrrv$v  ## create dependency on randomarraybtn
             if (!input$autorefresh) return(NULL)
             trps <- NULL
             removeNotification("badarray")
