@@ -3436,8 +3436,11 @@ server <- function(input, output, session) {
             rect(xr[1],yr[1],xr[2],yr[2], col = NA, border = "black") 
         }
         if (input$pxyfillbox) {
-            strip.legend("right", legend = seq(0,1,0.1), title = "p.(x)", xpd = TRUE,
-                         legendtype='breaks', inset = 0.01, col = cols[3:12])
+            # strip.legend("right", legend = seq(0,1,0.1), title = "p.(x)", xpd = TRUE,
+            #              legendtype='breaks', inset = 0.01, col = cols[3:12])
+            strip.legend("right", legend = c(0,lev[1:10],1), title = "p.(x)", xpd = TRUE,
+                         legendtype='breaks', inset = 0.01, col = cols[1:11])
+            
         }
     })
     ##############################################################################
