@@ -1,7 +1,7 @@
 ---
 title: "secrdesign app 1.1"
 author: "Murray Efford"
-date: '2019-01-29'
+date: '2019-02-08'
 output:
   pdf_document:
     toc: yes
@@ -13,7 +13,7 @@ output:
 
 # An interactive app for designing spatially explicit capture--recapture studies
 
-## Murray Efford 2019-01-29
+## Murray Efford 2019-02-08
 
 # Contents
   [Introduction](#introduction)  
@@ -34,6 +34,12 @@ output:
 This Shiny application is an interactive interface to parts of the R package **secrdesign** ([Efford 2019a](#references)). It focuses on the effect of detector layout and other design variables on the precision of density estimates, measured by the relative standard error (RSE, aka CV). Vary settings on the [Design](#designspecs) page to obtain an immediate "rule-of-thumb" approximation to RSE, based on the expected numbers of recaptures and distinct individuals. The current source code is available from https://GitHub.com/MurrayEfford/secrdesignapp.
 
 The approximation is biased low for some layouts, especially when sample size is small. A correction factor may be applied to adjust the rule-of-thumb. Refine the approximation by [simulating](#simspecs) data from the chosen design; this may take a long time. Use "Add to summary" to include the current scenario in a spreadsheet for export.
+
+Documentation for **secrdesign** is available at www.otago.ac.nz/density. For example:
+
+<a href="https://www.otago.ac.nz/density/pdfs/secrdesign-manual.pdf"; target="_blank";>secrdesign-manual.pdf</a>   (details of each function)  
+<a href="https://www.otago.ac.nz/density/pdfs/secrdesign-tools.pdf"; target="_blank";>secrdesign-tools.pdf</a>   (optimal spacing etc.)    
+<a href="https://www.otago.ac.nz/density/pdfs/secrdesign-Enrm.pdf"; target="_blank";>secrdesign-Enrm.pdf</a>    (expected sample size)  
 
 Acknowledgement: Greg Trounson (Department of Mathematics and Statistics, University of Otago) has provided invaluable and continuing help by testing the app and maintaining it on the server.
 
@@ -397,7 +403,7 @@ Code is provided for users who want to go further. Multiple scenarios may be eva
 
 ### Fit simulated data
 
-**secrdesign** >= 2.5.5 allows a choice between two functions for fitting closed-population SECR models: `secr.fit` in package **secr** and `openCR.fit` in package **openCR** ([Efford 2018](#references)). The default is to use the faster multi-threaded code in `openCR.fit` (for this it is best to leave ncores = 1).
+**secrdesign** >= 2.5.7 allows a choice between two functions for fitting closed-population SECR models: `secr.fit` in package **secr** and `openCR.fit` in package **openCR** ([Efford 2019d](#references)). The default is to use the faster multi-threaded code in `openCR.fit` (for this it is best to leave ncores = 1).
 
 `Maximization method = 'none'` by-passes likelihood maximization and evaluates the Hessian (and hence the variance-covariance matrix) at the true values of the parameters. This is a fast way to predict \(\small \mbox{RSE}(\hat D)\); it is apparently reliable and requires few replicates. Bias is not estimated.
 
@@ -592,15 +598,15 @@ Borchers, D. L. and Efford, M. G. (2008) Spatially explicit
    maximum likelihood methods for capture--recapture
    studies. *Biometrics* **64**, 377--385.
    
-Efford, M. G. (2018) openCR: Open population capture--recapture models. R package version 1.3.2. https://CRAN.R-project.org/package=openCR
-
 Efford, M. G. (2019a) secrdesign: Sampling design for spatially explicit
   capture--recapture. R package version 2.5.7.
   https://CRAN.R-project.org/package=secrdesign
 
 Efford, M. G. (2019b) secr: Spatially explicit capture--recapture models. R package version 3.2.0. https://CRAN.R-project.org/package=secr
 
-Efford, M. G. (2019c) Non-circular home ranges and the estimation of population density. *Ecology* (in press).
+Efford, M. G. (2019c) Non-circular home ranges and the estimation of population density. *Ecology* 100(2), e02580.
+
+Efford, M. G. (2019d) openCR: Open population capture--recapture models. R package version 1.3.4. https://CRAN.R-project.org/package=openCR
 
 Efford, M. G., Dawson, D. K., Jhala, Y. V. and Qureshi, Q. (2016) 
 Density-dependent home-range size revealed by spatially explicit 
