@@ -4,8 +4,8 @@ library(secrdesign)
 
 secrversion <- packageVersion('secr')
 secrdesignversion <- packageVersion('secrdesign')
-if (compareVersion(as.character(secrdesignversion), '2.5.5') < 0)
-    stop("secrdesignapp 1.1 requires secrdesign version 2.5.5 or later",
+if (compareVersion(as.character(secrdesignversion), '2.5.7') < 0)
+    stop("secrdesignapp 1.2 requires secrdesign version 2.5.7 or later",
          call. = FALSE)
 openCRversion <- packageVersion('openCR')
 
@@ -24,14 +24,14 @@ seconds <- 6   ## default duration for showNotification()
 ui <- function(request) {
 
     fluidPage(
-        title = "secrdesignapp 1.1",
+        title = "secrdesignapp 1.2",
         includeCSS("secrdesignstyle.css"),
         withMathJax(),
         tags$head(tags$style(".mypanel{margin-top:5px; margin-bottom:10px; padding-bottom: 5px;}")),
         br(),
         navlistPanel(id = "navlist", widths = c(2,10), well=TRUE,
                      
-                     "secrdesign app 1.1",
+                     "secrdesign app 1.2",
                      
                      tabPanel("Design",
                               fluidRow(
@@ -925,19 +925,24 @@ ui <- function(request) {
                               withMathJax(includeMarkdown("help.rmd"))
                      ),
                      tabPanel("About",
-                              h2("secrdesign app 1.1"), br(),
+                              h2("secrdesign app 1.2"), br(),
                               
                               h5(paste("This Shiny application provides an interface to the R package 'secrdesign', version", 
                                        packageDescription("secrdesign")$Version), "."),
                               br(),
+                              h5("Copyright 2019 Murray Efford"),
+                              h5("The application is released under the"),
+                              a("GNU General Public License Version 3.0", href="https://www.gnu.org/licenses/gpl-3.0.txt", target="_blank"), br(),
+                              br(),
                               h5("For further information see "), 
                               a("www.otago.ac.nz/density", href="https://www.otago.ac.nz/density", target="_blank"), br(),
-                              a("CRAN.R-project.org/package=secrdesign", href="https://CRAN.R-project.org/package=secrdesign", target="_blank"),
-                              br(), br(),
+                              a("CRAN.R-project.org/package=secrdesign", href="https://CRAN.R-project.org/package=secrdesign", target="_blank"), br(),
+                              a("https://github.com/MurrayEfford/secrdesignapp", href="https://github.com/MurrayEfford/secrdesignapp", target="_blank"), br(),
+                              br(),
                               
                               h5("Citation"),
                               h5("[The preferred citation for this package is not finalised]"),
-                              h5("Efford, M. G. 2019. Interactive design of spatially explicit capture-recapture studies. In prep.")
+                              h5("Efford, M. G. 2019. Fast evaluation of study designs for spatially explicit capture-recapture. In prep.")
                      )
                      
         )
@@ -1520,20 +1525,11 @@ server <- function(input, output, session) {
             terse = TRUE, moves = TRUE)  ## arguments for summary.capthist
         
         if (fit) {
-            if (compareVersion(as.character(secrdesignversion), '2.5.7') < 0) {
-                showNotification("Counts NA with fit, secrdesign < 2.5.7; use 'no fit'",
-                                 type = "warning", id = "countNA", duration = seconds)
-                counts <- data.frame(matrix(NA, nrow=3, ncol=3,
-                                            dimnames = list(c('Animals','Detections','Moves'),
-                                                            c('n','mean','se'))))
+            if ((input$packagebtn == "openCR.fit") && compareVersion(as.character(openCRversion), '1.3.3') < 0) {
+                showNotification("Moves NA with fit, openCR < 1.3.3",
+                                 type = "warning", id = "movesNA", duration = seconds)
             }
-            else {
-                if ((input$packagebtn == "openCR.fit") && compareVersion(as.character(openCRversion), '1.3.3') < 0) {
-                    showNotification("Moves NA with fit, openCR < 1.3.3",
-                                     type = "warning", id = "movesNA", duration = seconds)
-                }
-                counts <- summary(count(sims))$OUTPUT[[1]]
-            }
+            counts <- summary(count(sims))$OUTPUT[[1]]
         }
         else {  
             sumc <- function(x) {
@@ -3282,6 +3278,7 @@ server <- function(input, output, session) {
     output$arrayPlot <- renderPlot( height = 340, width = 340, {
         tmpgrid <- detectorarray()
         if (is.null(tmpgrid)) return (NULL)
+        removeNotification("reloadtraps")
         par(mar = c(1,1,1,1), xpd = TRUE)
         if (input$arrayinput=='Region') {
             if (input$entireregionbox)
@@ -3628,6 +3625,48 @@ server <- function(input, output, session) {
         updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"))
     })
     ##############################################################################
+
+    ## use parameters provided in calling url
+    observe({
+        query <- parseQueryString(session$clientData$url_search)
+        
+        if (length(query)>0) {
+            updateTabsetPanel(session, "arrayinput", selected = "File")
+            
+            if (!is.null(query[['trapfilename']])) {
+                updateNumericInput(session, "trapfilename", value = query[['trapfilename']])
+                if (!is.null(query[['trapargs']])) {
+                    updateTextInput(session, "trapargs", query[['trapargs']])
+                }
+            }
+            
+            if (!is.null(query[['detector']])) {
+                updateSelectInput(session, "detector", selected = query[['detector']])
+            }
+            if (!is.null(query[['noccasions']])) {
+                updateNumericInput(session, "noccasions", value = as.numeric(query[['noccasions']]))
+            }
+            if (!is.null(query[['detectfnbtn']])) {
+                updateSelectInput(session, "detectfn", selected = query[['detectfnbtn']])
+            }
+            if (!is.null(query[['distributionbtn']])) {
+                updateRadioButtons(session, "distributionbtn", selected = query[['distributionbtn']])
+            }
+            if (!is.null(query[['D']])) {
+                updateNumericInput(session, "D", value = as.numeric(query[['D']]))
+            }
+            if (!is.null(query[['lambda0']])) {
+                updateNumericInput(session, "lambda0", value = as.numeric(query[['lambda0']]))
+            }
+            if (!is.null(query[['sigma']])) {
+                updateNumericInput(session, "sigma", value = as.numeric(query[['sigma']]))
+            }
+            ## display notification until arrayPlot successful
+            showNotification("browse to detector file or specify other array (Grid, Line, Region)", 
+                             type = "message", id = "reloadtraps", duration = NULL)
+            
+        }
+    })
 }
 
 ##################################################################################
