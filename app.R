@@ -319,7 +319,7 @@ ui <- function(request) {
                                                                                  downloadLink("downloadnrmcode", "R")),
                                                                 br(),
                                                                 conditionalPanel("output.nrmPrint!= ''",
-                                                                                 plotOutput("trafficlightPlot", height = 60)))
+                                                                                 plotOutput("trafficlightPlot", height = 60, click = "trafficClick")))
                                                      )
                                               )
                                           ),
@@ -1145,6 +1145,22 @@ server <- function(input, output, session) {
         }
     })
     
+    observeEvent(input$trafficClick, {
+        colour <- trafficlight(attr(detectorarray(), "arrayspan"), 
+                                   input$sigma, 
+                                   nrm()$Em, 
+                                   nrm()$rotRSE)
+        if (colour>2) {
+            if (nrm()$Em < 5) showNotification("Em < 5", duration = seconds)   
+            else if (nrm()$rotRSE>0.2) showNotification("RSE > 20%", duration = seconds)   
+            else showNotification("Array diameter < HR95")
+        }
+        else if (colour>1) {
+            showNotification("RSE > 15%", duration = seconds)   
+        }
+        
+    })
+     
     ##############################################################################
     ## miscellaneous functions
     
