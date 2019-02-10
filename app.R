@@ -314,7 +314,10 @@ ui <- function(request) {
                                                          column(11, verbatimTextOutput("nrmPrint")),
                                                          column(1, style='padding:0px;',
                                                                 conditionalPanel("output.nrmPrint!= ''",
-                                                                                 downloadLink("downloadnrmcode", "R")))
+                                                                                 downloadLink("downloadnrmcode", "R")),
+                                                                br(),
+                                                                conditionalPanel("output.nrmPrint!= ''",
+                                                                                 plotOutput("trafficlightPlot", height = 60)))
                                                      )
                                               )
                                           ),
@@ -3296,6 +3299,28 @@ server <- function(input, output, session) {
         }
     })
     ##############################################################################
+
+    output$trafficlightPlot <- renderPlot( height = 60, width = 20, {
+        if (!is.null(nrm())) {
+            smallarray <- (attr(detectorarray(), "arrayspan") / input$sigma) < 4.9
+            smallarray <- smallarray || nrm()$Em < 5
+            RSE <- nrm()$rotRSE
+            par(mar=c(0,0,0,0))
+            #cols <- c('green','orange','red') 
+            cols <- colors()[c(48, 653, 552)]
+            # cols <- c('#2dc937', '#e7b416', '#cc3232')
+            colour <- 1
+            if (RSE>0.20 || smallarray) colour <- 3
+            else if (RSE>0.15) colour <- 2
+            rect(0,0,20,60, col= grey(0.6), border = NA)
+            symbols(x = rep(0.50,3), y = 0.2 + (0:2) * 0.32, circles= rep(0.4,3), fg = grey(0.93), 
+                    bg = grey(0.93), inches = FALSE, add = TRUE)
+            symbols(x = 0.50, y = 0.2 + (colour-1)*0.32, circles= 0.4, fg = cols[colour], 
+                    bg = cols[colour], inches = FALSE, add = TRUE)
+            
+            
+        }
+    })
     
     output$routePlot <- renderPlot( height = 320, width = 300, {
         tmpgrid <- detectorarray()
