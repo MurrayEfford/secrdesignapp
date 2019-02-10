@@ -1,7 +1,7 @@
 ---
 title: "secrdesign app 1.1"
 author: "Murray Efford"
-date: '2019-02-08'
+date: '2019-02-10'
 output:
   pdf_document:
     toc: yes
@@ -13,7 +13,7 @@ output:
 
 # An interactive app for designing spatially explicit capture--recapture studies
 
-## Murray Efford 2019-02-08
+## Murray Efford 2019-02-10
 
 # Contents
   [Introduction](#introduction)  
@@ -283,6 +283,16 @@ $$\mbox{RSE}_B = \sqrt {\mbox{RSE}_P^2 - 1 / (DA)}.$$
 This adjustment is applied whenever a binomial distribution is selected.
 
 The raw "rule-of-thumb" RSE is further adjusted by a correction factor specified in [Options](#optionspecs). By default, the correction factor is also updated automatically to match the results from simulations whenever they are run.
+
+## Traffic light
+
+The traffic light provides a quick and dirty indication of whether you are on the right track. 
+
+* red -- design is deemed pathological (fewer than 5 movements expected, array span < diameter of 95% activity circle) or predicted RSE > 20%.  
+* amber -- predicted RSE in range 15--20%.  
+* green -- predicted RSE <15%  
+
+The suitability of these precision thresholds of course depends on the required power, and they are no more than a guide.  Estimates from scenarios with RSE>20% may exhibit bias, so it is wise to aim for lower RSE even if you think that precision is sufficient.
 
 ## Tabbed plots
 
