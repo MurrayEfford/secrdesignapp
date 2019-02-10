@@ -3100,12 +3100,14 @@ server <- function(input, output, session) {
             else {
                 clustertext <- cr <- ""
             }
-            if (glength/input$sigma > 100) 
-                ratio <- round(glength/input$sigma)
+            HR95 <- 2 * circular.r(detectfn = input$detectfn)
+            ratio <- glength/(input$sigma * HR95)
+            if (ratio > 100) 
+                ratio <- round(ratio)
             else 
-                ratio <- round(glength/input$sigma,1)
+                ratio <- round(ratio,2)
             paste0(nrow(gr), " ", input$detector, " detectors", clustertext, 
-                   "; ", cr, "diameter ", lengthstr(glength), " (", ratio, " sigma)")
+                   "; ", cr, "diameter ", lengthstr(glength), " (", ratio, " HR95)")
         }
         else ""
     })
@@ -3315,7 +3317,7 @@ server <- function(input, output, session) {
 
     trafficlight <- function(arrayspan, sigma, Em, RSE) {
         if (!is.null(Em)) {
-            badarray <- (arrayspan / sigma) < 4.9
+            badarray <- (arrayspan / sigma) < (circular.r(detectfn = input$detectfn)*2)
             badarray <- badarray | (Em < 5)
             RSE <- rep(RSE, length.out = length(badarray)) 
             colour <- rep(1, length(badarray))
