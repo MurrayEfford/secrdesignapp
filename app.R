@@ -19,6 +19,8 @@ openCRversion <- packageVersion('openCR')
 
 linewidth <- 2  # for various plots 
 seconds <- 6   ## default duration for showNotification()
+#trafficcols <- c("chartreuse1", "orange1", "red")
+trafficcols <- c("chartreuse1", "yellow1", "red")
 
 # Define UI 
 ui <- function(request) {
@@ -851,7 +853,15 @@ ui <- function(request) {
                                                                             min = 0.02, max = 2,
                                                                             value = 0.4,
                                                                             step = 0.02,
-                                                                            width = 180)))
+                                                                            width = 180))
+                                                       ),
+                                                   fluidRow(
+                                                       column(6,
+                                                              checkboxInput("trafficlightbox", 
+                                                                            "Traffic lights", 
+                                                                            value = TRUE, 
+                                                                            width = 180))
+                                                   )
                                          ),
                                          h2("Costing"),
                                          wellPanel(class = "mypanel",
@@ -1460,15 +1470,8 @@ server <- function(input, output, session) {
                 else stop("unrecognised boundary object in ", objlist[1])
             }
             else {
-                ## not working on restore bookmark 2019-01-24
-                dsnname <- dirname(fileupload[1,4])
-                for ( i in 1:nrow(fileupload)) {
-                    file.rename(fileupload[i,4], paste0(dsnname,"/",fileupload[i,1]))
-                }
-                filename <- list.files(dsnname, pattern="*.shp", full.names=FALSE)
-                layername <- tools::file_path_sans_ext(basename(filename))
-                if (is.null(filename) || 
-                    !(any(grepl(".shp", fileupload[,1])) &&
+
+                if (!(any(grepl(".shp", fileupload[,1])) &&
                       any(grepl(".dbf", fileupload[,1])) &&
                       any(grepl(".shx", fileupload[,1])))) {
                     showNotification("need shapefile components .shp, .dbf, .shx",
@@ -1479,6 +1482,13 @@ server <- function(input, output, session) {
                 else {
                     removeNotification(id = "nofile")
                     removeNotification(id = "norgdal")
+                    ## not working on restore bookmark 2019-01-24
+                    dsnname <- dirname(fileupload[1,4])
+                    ## make temp copy with uniform layername
+                    file.copy(from = fileupload[,4], 
+                              to = paste0(dsnname, "/temp.", tools::file_ext(fileupload[,4])),     
+                              overwrite = TRUE)
+                    layername <- "temp"
                     poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
                 }
             }
@@ -1578,6 +1588,7 @@ server <- function(input, output, session) {
         removeNotification("lownr")
         progress <- Progress$new(session, min=1, max=15)
         on.exit(progress$close())
+        R <- seq(input$fromR, input$toR, input$byR)
         if (sims) {
             progress$set(message = 'Simulating RSE for each spacing...')
             rotrv$output <- optimalSpacing(
@@ -1589,7 +1600,7 @@ server <- function(input, output, session) {
                 detectfn = input$detectfn,
                 fittedmodel = NULL,
                 xsigma = input$habxsigma,
-                R = seq(input$fromR, input$toR, input$byR),
+                R = R,
                 CF = input$CFslider,
                 distribution = tolower(input$distributionbtn),
                 fit.function = input$packagebtn,
@@ -1611,7 +1622,7 @@ server <- function(input, output, session) {
                 detectfn = input$detectfn,
                 fittedmodel = NULL,
                 xsigma = input$habxsigma,
-                R = seq(input$fromR, input$toR, input$byR),
+                R = R,
                 CF = input$CFslider,
                 distribution = tolower(input$distributionbtn),
                 fit.function = "none",
@@ -2676,6 +2687,8 @@ server <- function(input, output, session) {
         updateSelectInput(session, "testtype", selected = "two.sided")
         updateNumericInput(session, "minEffect", value = -99)
         updateNumericInput(session, "maxEffect", value = 150)
+        
+        updateCheckboxInput(session, "trafficlightbox", value = TRUE)
         updateNumericInput(session, "fromR", value = 0.2)
         updateNumericInput(session, "toR", value = 4)
         updateNumericInput(session, "byR", value = 0.2)
@@ -3300,25 +3313,33 @@ server <- function(input, output, session) {
     })
     ##############################################################################
 
+    trafficlight <- function(arrayspan, sigma, Em, RSE) {
+        if (!is.null(Em)) {
+            badarray <- (arrayspan / sigma) < 4.9
+            badarray <- badarray | (Em < 5)
+            RSE <- rep(RSE, length.out = length(badarray)) 
+            colour <- rep(1, length(badarray))
+            colour[(RSE>0.20) | badarray] <- 3
+            colour[(colour==1) & (RSE>0.15)] <- 2
+            colour
+        }
+        else {
+            NULL
+        }
+    }
+    
     output$trafficlightPlot <- renderPlot( height = 60, width = 20, {
         if (!is.null(nrm())) {
-            smallarray <- (attr(detectorarray(), "arrayspan") / input$sigma) < 4.9
-            smallarray <- smallarray || nrm()$Em < 5
-            RSE <- nrm()$rotRSE
+            colour <- trafficlight(attr(detectorarray(), "arrayspan"), 
+                                   input$sigma, 
+                                   nrm()$Em, 
+                                   nrm()$rotRSE)
             par(mar=c(0,0,0,0))
-            #cols <- c('green','orange','red') 
-            cols <- colors()[c(48, 653, 552)]
-            # cols <- c('#2dc937', '#e7b416', '#cc3232')
-            colour <- 1
-            if (RSE>0.20 || smallarray) colour <- 3
-            else if (RSE>0.15) colour <- 2
             rect(0,0,20,60, col= grey(0.6), border = NA)
             symbols(x = rep(0.50,3), y = 0.2 + (0:2) * 0.32, circles= rep(0.4,3), fg = grey(0.93), 
                     bg = grey(0.93), inches = FALSE, add = TRUE)
-            symbols(x = 0.50, y = 0.2 + (colour-1)*0.32, circles= 0.4, fg = cols[colour], 
-                    bg = cols[colour], inches = FALSE, add = TRUE)
-            
-            
+            symbols(x = 0.50, y = 0.2 + (colour-1)*0.32, circles= 0.4, # fg = trafficcols[colour], 
+                    bg = trafficcols[colour], inches = FALSE, add = TRUE)
         }
     })
     
@@ -3497,6 +3518,17 @@ server <- function(input, output, session) {
         if (rotrv$current){
             par(mar=c(5,6,3,6))      
             plot(rotrv$output, plottype = "RSE", col = "blue", lwd = linewidth, cex = 1.1)
+            ## traffic lights 2019-02-11
+            if (input$trafficlightbox) {
+                R <- rotrv$output$rotRSE$values$R
+                Em <- rotrv$output$rotRSE$values$m
+                RSE <- rotrv$output$rotRSE$values$RSE
+                arrayspan <- attr(detectorarray(), 'arrayspan') * R
+                lights <- trafficlight(arrayspan, input$sigma, Em, RSE)
+                symbols(R, y = rep(0,length(R)), inches=FALSE, circles = rep(0.06, length(R)), 
+                        #fg = trafficcols[lights], 
+                        bg = trafficcols[lights], add = TRUE, xpd = TRUE)
+            }
         }
         else NULL
     })
