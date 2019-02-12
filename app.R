@@ -1158,6 +1158,9 @@ server <- function(input, output, session) {
         else if (colour>1) {
             showNotification("RSE > 15%", duration = seconds)   
         }
+        else {
+            showNotification("RSE <= 15%", duration = seconds)   
+        }
         
     })
      
@@ -3352,11 +3355,12 @@ server <- function(input, output, session) {
                                    input$sigma, 
                                    nrm()$Em, 
                                    nrm()$rotRSE)
+            radius <- 0.45
             par(mar=c(0,0,0,0))
             rect(0,0,20,60, col= grey(0.6), border = NA)
-            symbols(x = rep(0.50,3), y = 0.2 + (0:2) * 0.32, circles= rep(0.4,3), fg = grey(0.93), 
+            symbols(x = rep(0.50,3), y = 0.2 + (0:2) * 0.32, circles= rep(radius,3), # fg = grey(0.93), 
                     bg = grey(0.93), inches = FALSE, add = TRUE)
-            symbols(x = 0.50, y = 0.2 + (colour-1)*0.32, circles= 0.4, # fg = trafficcols[colour], 
+            symbols(x = 0.50, y = 0.2 + (colour-1)*0.32, circles= radius, # fg = trafficcols[colour], 
                     bg = trafficcols[colour], inches = FALSE, add = TRUE)
         }
     })

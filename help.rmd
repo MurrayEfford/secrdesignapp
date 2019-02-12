@@ -286,7 +286,7 @@ The raw "rule-of-thumb" RSE is further adjusted by a correction factor specified
 
 ## Traffic light
 
-The traffic light provides a quick and dirty indication of whether you are on the right track. 
+The traffic light provides a quick and dirty indication of whether you are on the right track. Click on red or amber lights to see the reason.
 
 * red -- design is deemed pathological (fewer than 5 movements expected, array span < diameter of 95% activity circle) or predicted RSE > 20%.  
 * amber -- predicted RSE in range 15--20%.  
