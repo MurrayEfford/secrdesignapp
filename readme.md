@@ -1,21 +1,20 @@
-# secrdesignapp 1.1
+# secrdesignapp 1.2
 
 secrdesignapp is a partial interactive interface to the R package [secrdesign](https://CRAN.R-project.org/package=secrdesign). See the Help tab for details.
 
-The main new feature in version 1.1 is support for systematic and random designs within a region of interest.
+The main new feature in version 1.1 was support for systematic and random designs within a region of interest. Version 1.2 has many small improvements, including traffic lights and other warnings.
 
 Click this link to run secrdesignapp 1.1 in your web browser from a University of Otago server:
 
 [secrdesignapp](https://www.stats.otago.ac.nz/secrdesignapp)
 
-Simulations may run faster on your own machine, and the GitHub version is always the latest. To run secrdesignapp 1.1 in a local R session directly from GitHub:
+Simulations may run faster on your own machine, and the GitHub version is always the latest (now secrdesignapp 1.2). To run in a local R session directly from GitHub:
 
 ```r
 library(shiny)
 runGitHub("secrdesignapp", "MurrayEfford")
 ```
-
-Version 1.1 requires secr >= 3.2.0 and secrdesign >= 2.5.6. Some simulation features require secrdesign >= 2.5.7 and openCR 1.3.3 that are not yet on CRAN.
+Version 1.2 requires secr >= 3.2.0, openCR >= 1.3.4 and secrdesign >= 2.5.7. Also shinyjs and various other suggested R packages.
 
 If you intend to use bookmarking on your local machine to store the state of `secrdesignapp` then specify the 'port' and 'destdir' arguments, e.g.,
 
