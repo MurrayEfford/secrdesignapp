@@ -1145,25 +1145,6 @@ server <- function(input, output, session) {
         }
     })
     
-    observeEvent(input$trafficClick, {
-        colour <- trafficlight(attr(detectorarray(), "arrayspan"), 
-                                   input$sigma, 
-                                   nrm()$Em, 
-                                   nrm()$rotRSE)
-        if (colour>2) {
-            if (nrm()$Em < 5) showNotification("Em < 5", duration = seconds)   
-            else if (nrm()$rotRSE>0.2) showNotification("RSE > 20%", duration = seconds)   
-            else showNotification("Array diameter < HR95")
-        }
-        else if (colour>1) {
-            showNotification("RSE > 15%", duration = seconds)   
-        }
-        else {
-            showNotification("RSE <= 15%", duration = seconds)   
-        }
-        
-    })
-     
     ##############################################################################
     ## miscellaneous functions
     
@@ -1681,8 +1662,8 @@ server <- function(input, output, session) {
             En = round(nrm()$En,1),
             Er = round(nrm()$Er,1),
             Em = round(nrm()$Em,1),
-            rotRSE = round(nrm()$rotRSE * 100, 1),
-            CF = round(nrm()$CF, 3),
+            rotRSE = round(nrm()$rotRSE * input$CFslider * 100, 1),
+            CF = round(input$CFslider, 3),
             # perkm = input$perkm,
             # perarry = input$perarray,
             # perdetr = input$perdetector,
@@ -2370,7 +2351,8 @@ server <- function(input, output, session) {
             scensum <- scenarioSummary(scen,
                                        trapset = trps,
                                        mask = msk,
-                                       CF = input$CFslider,  
+                                       ## CF = input$CFslider,  
+                                       CF = 1,  
                                        routelength = pathl / 1000,
                                        costing = TRUE,
                                        setupoccasion = input$setupoccasion,
@@ -2383,7 +2365,7 @@ server <- function(input, output, session) {
             if (input$distributionbtn == "Binomial") {
                 scensum$rotRSE <- scensum$rotRSEB     
             }
-            RSE <- 100*scensum$rotRSE
+            RSE <- 100*scensum$rotRSE*input$CFslider
             if (is.na(RSE))
                 maxRSE <- 100
             else {
@@ -2801,6 +2783,11 @@ server <- function(input, output, session) {
             }
         }
     })
+    ##############################################################################
+    
+    observeEvent(c(input$noccasions, input$nrepeats, input$distributionbtn), {
+        simrv$current <- FALSE
+    })
     
     ##############################################################################
     
@@ -2817,7 +2804,27 @@ server <- function(input, output, session) {
         removeModal()
         runspacing(sims = TRUE)   ## 2018-12-07 included sims = TRUE
     })
+    ##############################################################################
     
+    observeEvent(input$trafficClick, {
+        RSE <- nrm()$rotRSE * input$CFslider
+        colour <- trafficlight(attr(detectorarray(), "arrayspan"), 
+                               input$sigma, 
+                               nrm()$Em, 
+                               RSE)
+        if (colour>2) {
+            if (nrm()$Em < 5) showNotification("Em < 5", duration = seconds)   
+            else if (RSE>0.2) showNotification("RSE > 20%", duration = seconds)   
+            else showNotification("Array diameter < HR95")
+        }
+        else if (colour>1) {
+            showNotification("RSE > 15%", duration = seconds)   
+        }
+        else {
+            showNotification("RSE <= 15%", duration = seconds)   
+        }
+        
+    })
     ##############################################################################
     
     observeEvent(input$randompopbtn, ignoreInit = TRUE, {
@@ -3142,6 +3149,8 @@ server <- function(input, output, session) {
         star <- if (nrepeats()>1) "*" else ""
         nrepeatstr <- if (nrepeats()>1) paste0("\n* ", nrepeats(), " arrays") else ""
         Pxyval <- Pxy()
+        
+        k <- density()^0.5 * input$sigma / 100
         kstr <- if (input$detectfn=="HHN") paste0(
             "Overlap coefficient k = ",
             round(density()^0.5 * input$sigma / 100,3), '\n')
@@ -3152,11 +3161,26 @@ server <- function(input, output, session) {
         else
             paste0( "\nTotal cost = ", input$currency, sprintf("%.2f", nrmval$totalcost), star)
         
+        rotstr <- paste0("Rule-of-thumb RSE = ",
+            round(nrmval$rotRSE * input$CFslider * 100, 1), "%", star, 
+            " (correction factor ", round(input$CFslider,3), ")")
+            
+        simstr <- if (is.null(simrv$output) || !simrv$current)
+            ""
+        else
+            paste0("\nSimulated RSE = ", round(simrv$output$RSE, 1), "%", star,
+                   " (SE ",  round(simrv$output$RSEse, 2), "%)")
+            
         if (attr(detectorarray(), "arrayspan") < (5 * input$sigma)) {
             removeNotification("lownr")
             showNotification("Pathological design - array span < 5.sigma",
                              type = "warning", id = "zeronm", duration = NULL)
         }
+        if (k<0.2 || k>1.5) {
+                showNotification(paste0("Unlikely combination of D and sigma  (k = ", round(k,2), ")"),
+                                 type = "warning", id = "unlikelyk", duration = NULL)
+        }
+            
         if (!any(is.na(c(nrmval$En, nrmval$Er, nrmval$Em)))) {
             if (nrmval$Em<5) {
                 removeNotification("lownr")
@@ -3187,11 +3211,10 @@ server <- function(input, output, session) {
             kstr,
             "Effective sampling area = ",
             areastr(nrmval$esa), star, " (mask ", areastr(nrmval$maskarea * nrepeats()), star, ")\n",
-            "Rule-of-thumb RSE = ",
-            round(nrmval$rotRSE * 100, 1), "%", star, " (correction factor ", round(input$CFslider,3), ")",
-            ## "\nRule-of-thumb RSE (binomial) = ",
-            ## round(nrmval$rotRSEbin * 100, 1), "% (correction factor ", round(input$CFslider,3), ")",
-            coststr, nrepeatstr
+            rotstr, 
+            simstr, 
+            coststr, 
+            nrepeatstr
         )
     })
     ##############################################################################
@@ -3235,7 +3258,7 @@ server <- function(input, output, session) {
                    "Optimal spacing (absolute) = ",
                    round(temp$rotRSE$optimum.spacing, 1), " m", '\n',
                    "Minimum rule-of-thumb RSE = ",
-                   round(temp$rotRSE$minimum.RSE*100, 1), " %  (correction factor ", 
+                   round(temp$rotRSE$minimum.RSE*input$CFslider*100, 1), " %  (correction factor ", 
                    round(input$CFslider,3), ")")
         }
         else NULL
@@ -3354,7 +3377,7 @@ server <- function(input, output, session) {
             colour <- trafficlight(attr(detectorarray(), "arrayspan"), 
                                    input$sigma, 
                                    nrm()$Em, 
-                                   nrm()$rotRSE)
+                                   nrm()$rotRSE*input$CFslider)
             radius <- 0.45
             par(mar=c(0,0,0,0))
             rect(0,0,20,60, col= grey(0.6), border = NA)
