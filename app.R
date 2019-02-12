@@ -3156,6 +3156,10 @@ server <- function(input, output, session) {
             round(density()^0.5 * input$sigma / 100,3), '\n')
         else ""
         
+        esastr <- paste0("Effective sampling area = ",
+            areastr(nrmval$esa), star, " (mask ", 
+            areastr(nrmval$maskarea * nrepeats()), star, ")\n")
+
         coststr <- if (is.null(nrmval$totalcost) || is.na(nrmval$totalcost) || (nrmval$totalcost<=0))
             ""
         else
@@ -3209,8 +3213,7 @@ server <- function(input, output, session) {
             "Median detectors per 95% home range = ", 
             nrmval$detperHR, '\n',
             kstr,
-            "Effective sampling area = ",
-            areastr(nrmval$esa), star, " (mask ", areastr(nrmval$maskarea * nrepeats()), star, ")\n",
+            esastr,
             rotstr, 
             simstr, 
             coststr, 
