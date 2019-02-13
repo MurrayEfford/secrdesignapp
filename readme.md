@@ -8,13 +8,13 @@ Click this link to run secrdesignapp 1.1 in your web browser from a University o
 
 [secrdesignapp](https://www.stats.otago.ac.nz/secrdesignapp)
 
-Simulations may run faster on your own machine, and the GitHub version is always the latest (now secrdesignapp 1.2). To run in a local R session directly from GitHub:
+Simulations may run faster on your own machine, and the GitHub version is always the latest (now secrdesignapp 1.2). There is also a limit to the number of concurrent users on the server. To run in a local R session directly from GitHub, first install R packages 'shiny' and 'shinyjs'; then paste and run this code at the R command prompt:
 
 ```r
 library(shiny)
 runGitHub("secrdesignapp", "MurrayEfford")
 ```
-Version 1.2 requires secr >= 3.2.0, openCR >= 1.3.4 and secrdesign >= 2.5.7. Also shinyjs and various other suggested R packages.
+Version 1.2 requires secr >= 3.2.0, openCR >= 1.3.4 and secrdesign >= 2.5.7. Various other R packages may be needed for specific operations.
 
 If you intend to use bookmarking on your local machine to store the state of `secrdesignapp` then specify the 'port' and 'destdir' arguments, e.g.,
 
