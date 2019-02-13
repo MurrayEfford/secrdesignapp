@@ -675,7 +675,8 @@ ui <- function(request) {
                                                       fluidRow(
                                                           column(6,
                                                                  # Show a plot of the rule-of-thumb RSE
-                                                                 plotOutput("RSEPlot", width = "520px", height = "400px")
+                                                                 plotOutput("RSEPlot", width = "520px", height = "400px", 
+                                                                            click="spacingTrafficClick")
                                                           )
                                                       )
                                              ),
@@ -2939,24 +2940,45 @@ server <- function(input, output, session) {
     })
     ##############################################################################
     
+    trafficNotification <- function (colour, RSE, Em) {
+        if (!is.na(colour) & !is.na(Em)) {
+            if (colour>2) {
+                if (Em < 5) showNotification("Em < 5", duration = seconds)   
+                else if (RSE>0.2) showNotification("RSE > 20%", duration = seconds)   
+                else showNotification("Array diameter < HR95")
+            }
+            else if (colour>1) {
+                showNotification("RSE > 15%", duration = seconds)   
+            }
+            else {
+                showNotification("RSE <= 15%", duration = seconds)   
+            }
+        }
+    }
+    ##############################################################################
+    
     observeEvent(input$trafficClick, {
         RSE <- nrm()$rotRSE * input$CFslider
+        Em <- nrm()$Em
         colour <- trafficlight(attr(detectorarray(), "arrayspan"), 
                                input$sigma, 
-                               nrm()$Em, 
+                               Em,
                                RSE)
-        if (colour>2) {
-            if (nrm()$Em < 5) showNotification("Em < 5", duration = seconds)   
-            else if (RSE>0.2) showNotification("RSE > 20%", duration = seconds)   
-            else showNotification("Array diameter < HR95")
-        }
-        else if (colour>1) {
-            showNotification("RSE > 15%", duration = seconds)   
-        }
-        else {
-            showNotification("RSE <= 15%", duration = seconds)   
-        }
-        
+        trafficNotification (colour, RSE, Em)        
+    })
+    ##############################################################################
+    
+    observeEvent(input$spacingTrafficClick, {
+        req(rotrv$output)
+        R <- seq(input$fromR, input$toR, input$byR)
+        Rout <- input$spacingTrafficClick$x       
+        RSE <- approx(R, rotrv$output$rotRSE$values$RSE, Rout)$y
+        Em <- approx(R, rotrv$output$rotRSE$values$m, Rout)$y
+        colour <- trafficlight(attr(detectorarray(), "arrayspan") * Rout,
+                               input$sigma, 
+                               Em, 
+                               RSE)
+        trafficNotification (colour, RSE, Em)        
     })
     ##############################################################################
     
@@ -3708,6 +3730,7 @@ server <- function(input, output, session) {
     })
     ##############################################################################
     
+    
     output$RSEPlot <- renderPlot({
         ## rotrv$output is an object with class "optimalSpacing" with plot method in secrdesign
         if (rotrv$current){
@@ -3721,7 +3744,6 @@ server <- function(input, output, session) {
                 arrayspan <- attr(detectorarray(), 'arrayspan') * R
                 lights <- trafficlight(arrayspan, input$sigma, Em, RSE)
                 symbols(R, y = rep(0,length(R)), inches=FALSE, circles = rep(0.06, length(R)), 
-                        #fg = trafficcols[lights], 
                         bg = trafficcols[lights], add = TRUE, xpd = TRUE)
             }
         }
