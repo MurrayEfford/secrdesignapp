@@ -1,6 +1,7 @@
 # renamed from secrdesignapp.R
 
 library(secrdesign)
+library(shinyjs)
 
 secrversion <- packageVersion('secr')
 secrdesignversion <- packageVersion('secrdesign')
@@ -19,7 +20,6 @@ openCRversion <- packageVersion('openCR')
 
 linewidth <- 2  # for various plots 
 seconds <- 6   ## default duration for showNotification()
-#trafficcols <- c("chartreuse1", "orange1", "red")
 trafficcols <- c("chartreuse1", "yellow1", "red")
 
 # Define UI 
@@ -29,6 +29,7 @@ ui <- function(request) {
         title = "secrdesignapp 1.2",
         includeCSS("secrdesignstyle.css"),
         withMathJax(),
+        useShinyjs(),
         tags$head(tags$style(".mypanel{margin-top:5px; margin-bottom:10px; padding-bottom: 5px;}")),
         br(),
         navlistPanel(id = "navlist", widths = c(2,10), well=TRUE,
@@ -119,7 +120,7 @@ ui <- function(request) {
                                                                 helpText(HTML(paste0("Requires text file with detector ID ",
                                                                                      "and x-y coordinates in three columns,",
                                                                                      " as for secr::read.traps"))),
-                                                                textInput("args", "Optional arguments for read.traps()",
+                                                                textInput("trapargs", "Optional arguments for read.traps()",
                                                                           value = "", placeholder = "e.g., skip = 1, sep = ','"),
                                                                 br(),
                                                                 fluidRow(
@@ -1055,7 +1056,7 @@ server <- function(input, output, session) {
     
     output$shapefile <- renderUI({
         helptext <- ""
-        if (!is.null(input$regionfilename)) {
+        if (!is.null(regionrv$data)) {
             pos <- grep(".shp", tolower(input$regionfilename[,1]))
             if (length(pos)>0)
                 helptext <- paste0(input$regionfilename[pos,1])
@@ -1075,7 +1076,7 @@ server <- function(input, output, session) {
     
     output$exclusionfile <- renderUI({
         helptext <- ""
-        if (!is.null(input$exclusionfilename)) {
+        if (!is.null(exclusionrv$data)) {
             pos <- grep(".shp", tolower(input$exclusionfilename[,1]))
             if (length(pos)>0)
                 helptext <- paste0(input$exclusionfilename[pos,1])
@@ -1095,7 +1096,7 @@ server <- function(input, output, session) {
     
     output$habitatfile <- renderUI({
         helptext <- ""
-        if (!is.null(input$habpolyfilename)) {
+        if (!is.null(habpolyrv$data)) {
             pos <- grep(".shp", tolower(input$habpolyfilename[,1]))
             if (length(pos)>0)
                 helptext <- paste0(input$habpolyfilename[pos,1])
@@ -1414,7 +1415,10 @@ server <- function(input, output, session) {
         detectpar <- list(lambda0 = input$lambda0, sigma = input$sigma)
         if (nrow(detectorarray()) > 1) {
             if (arrinput == "File") {
-                array0 <- readtrapfile(1)
+                temp <- traprv$scale
+                traprv$scale <- 1.0   ## not sure this triggers re-read 2019-02-13
+                array0 <- traprv$data
+                traprv$scale <- temp
             }
             if (arrinput %in% c("Grid", "Line")) {
                 lower <- input$fromR
@@ -1773,12 +1777,12 @@ server <- function(input, output, session) {
             
             else if (input$arrayinput == "File") {
                 
-                args <- input$args
-                if (args != "")
-                    args <- paste0(", ", args)
+                trapargs <- input$trapargs
+                if (trapargs != "")
+                    trapargs <- paste0(", ", trapargs)
                 code <- paste0("array <- read.traps ('", 
                                input$trapfilename[1,"name"],
-                               "', detector = '", input$detector, "'", args, ")\n")
+                               "', detector = '", input$detector, "'", trapargs, ")\n")
                 if (input$scalefactor != 1.0) {
                     code <- paste0(code, 
                                    "# optional scaling about centroid\n",
@@ -1821,9 +1825,12 @@ server <- function(input, output, session) {
                                           "    spacing = ", input$spline, ")\n")
                 }
                 else if (input$clustertype == "File") {
+                    trapargs <- input$trapargs
+                    if (trapargs != "")
+                        trapargs <- paste0(", ", trapargs)
                     clustercode <- paste0("cluster <- read.traps ('",
                                           input$trapfilename[1,"name"],
-                                          "', detector = '", input$detector, "')\n")
+                                          "', detector = '", input$detector, "', ", trapargs, ")\n")
                 }
                 else {
                     if (input$regiontype == "Systematic")
@@ -1966,8 +1973,8 @@ server <- function(input, output, session) {
     ##############################################################################
     
     maskOK <- function () {
-        if (!is.null(poly())) {
-            sum(pointsInPolygon(detectorarray(), poly())) > 0
+        if (!is.null(habpolyrv$data)) {
+            sum(pointsInPolygon(detectorarray(), habpolyrv$data)) > 0
         }
         else TRUE
     }
@@ -2058,32 +2065,33 @@ server <- function(input, output, session) {
     
     ##############################################################################
     
-    readtrapfile <- function (scale) {
-        inFile <- input$trapfilename
-        trps <- NULL
-        if (!is.null(inFile)) {
-            filename <- input$trapfilename[1,"datapath"]
-            if (is.null(filename))
-                stop("provide valid filename")
-            args <- input$args
-            if (args != "")
-                args <- paste0(", ", args)
-            readtrapscall <- paste0("read.traps (filename, detector = input$detector", args, ")")
-            trps <- try(eval(parse(text = readtrapscall)))
-            if (scale != 1.0) {
-                # trps[,] <- trps[,] * scale
-                meanxy <- apply(trps,2,mean)
-                trps[,1] <- (trps[,1]- meanxy[1]) * scale + meanxy[1]
-                trps[,2] <- (trps[,2]- meanxy[2]) * scale + meanxy[2]
-            }
-            
-            if (!inherits(trps, "traps")) {
-                showNotification("invalid trap file or arguments; try again",
-                                 type = "warning", id = "badarray", duration = seconds)
-            }
-        }    
-        trps
-    }
+    # readtrapfile <- function (scale) {
+    #     inFile <- input$trapfilename
+    #     trps <- NULL
+    #     if (!is.null(inFile)) {
+    #         filename <- input$trapfilename[1,"datapath"]
+    #         if (is.null(filename))
+    #             stop("provide valid filename")
+    #         trapargs <- input$trapargs
+    #         if (trapargs != "")
+    #             trapargs <- paste0(", ", trapargs)
+    #         readtrapscall <- paste0("read.traps (filename, detector = input$detector", trapargs, ")")
+    #         trps <- try(eval(parse(text = readtrapscall)))
+    #         if (scale != 1.0) {
+    #             # trps[,] <- trps[,] * scale
+    #             meanxy <- apply(trps,2,mean)
+    #             trps[,1] <- (trps[,1]- meanxy[1]) * scale + meanxy[1]
+    #             trps[,2] <- (trps[,2]- meanxy[2]) * scale + meanxy[2]
+    #         }
+    #         
+    #         if (!inherits(trps, "traps")) {
+    #             showNotification("invalid trap file or arguments; try again",
+    #                              type = "warning", id = "badarray", duration = seconds)
+    #         }
+    #     }    
+    #     trps
+    # }
+    ##############################################################################
     
     detectorarray <- reactive(
         {
@@ -2104,13 +2112,14 @@ server <- function(input, output, session) {
                                   spacing = input$spline)
             }
             else if (input$arrayinput == 'File') {
-                trps <- readtrapfile(input$scalefactor)
+                traprv$scale <- input$scalefactor
+                trps <- traprv$data
             }
             else if (input$arrayinput=='Region') {
                 if (input$nrepeats>1) {
                     updateNumericInput(session, "nrepeats", value = 1)
                 }
-                if (is.null(region())) {
+                if (is.null(regionrv$data)) {
                     trps <- NULL
                 }
                 else {
@@ -2123,7 +2132,7 @@ server <- function(input, output, session) {
                         origin <- NULL
                     }
                     else {
-                        origin <- sp::bbox(region())[,1] + input$sppgrid/2
+                        origin <- sp::bbox(regionrv$data)[,1] + input$sppgrid/2
                     }
                     if (input$clustertype == "Grid") {
                         cluster <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
@@ -2135,7 +2144,8 @@ server <- function(input, output, session) {
                                              spacing = input$spline)
                     }
                     else if (input$clustertype == "File") {
-                        cluster <- readtrapfile(input$scalefactor)
+                        traprv$scale <- input$scalefactor
+                        cluster <- traprv$data
                     }
                     else {
                         cluster <- make.grid(1, 1, detector = input$detector)
@@ -2143,7 +2153,7 @@ server <- function(input, output, session) {
                     
                     #########################################################
                     ## check expected number
-                    regionarea <- polyarea(region())
+                    regionarea <- polyarea(regionrv$data)
                     npercluster <- nrow(cluster)
                     if (input$regiontype == "Systematic")
                         expectedndetector <- regionarea/(input$sppgrid/100)^2 * npercluster
@@ -2167,10 +2177,10 @@ server <- function(input, output, session) {
                         if (ntrps > 0)
                             trps <- trap.builder(n = ntrps, 
                                                  method = input$randomtype,
-                                                 region = region(),
+                                                 region = regionrv$data,
                                                  cluster = cluster,
                                                  edgemethod = input$edgemethod,
-                                                 exclude = exclusion(),
+                                                 exclude = exclusionrv$data,
                                                  exclmethod = switch(input$edgemethod, 
                                                                      allinside = "alloutside", 
                                                                      anyinside = "anyoutside", 
@@ -2179,10 +2189,10 @@ server <- function(input, output, session) {
                     else {
                         args <- list(spacing = input$sppgrid, 
                                      cluster = cluster, 
-                                     region = region(),
+                                     region = regionrv$data,
                                      origin = origin,
                                      edgemethod = input$edgemethod,
-                                     exclude = exclusion(),
+                                     exclude = exclusionrv$data,
                                      exclmethod = switch(input$edgemethod, 
                                                          allinside = "alloutside", 
                                                          anyinside = "anyoutside", 
@@ -2277,7 +2287,7 @@ server <- function(input, output, session) {
                           buffer = input$habxsigma * input$sigma,
                           nx = input$habnx,
                           type = if (input$maskshapebtn=='Rectangular') 'traprect' else 'trapbuffer',
-                          poly = poly(),
+                          poly = habpolyrv$data,
                           poly.habitat = input$includeexcludebtn == "Include",
                           keep.poly = FALSE)
         msk
@@ -2319,7 +2329,7 @@ server <- function(input, output, session) {
     ##############################################################################
     
     Pxy <- reactive({
-        # DOES NOT USE poly()
+        # DOES NOT USE habpolyrv$data
         invalidateOutputs()
         trps <- detectorarray()
         # msk <- make.mask(trps, buffer = input$sigma * input$pxyborder, nx = input$pxynx)
@@ -2415,12 +2425,118 @@ server <- function(input, output, session) {
     sumrv <- reactiveValues(
         value = read.csv(text = paste(summaryfields, collapse = ", "))
     )
+    
+    ##############################################################################
+
+    ## using advice of Joe Cheng 2018-03-23 to allow resetting of fileInputs
+    ## https://stackoverflow.com/questions/49344468/resetting-fileinput-in-shiny-app
+    
+    traprv <- reactiveValues(
+        data = NULL,
+        clear = FALSE,
+        scale = 1.0
+    )
+    
+    regionrv <- reactiveValues(
+        data = NULL,
+        clear = FALSE
+    )
+
+    exclusionrv <- reactiveValues(
+        data = NULL,
+        clear = FALSE
+    )
+
+    habpolyrv <- reactiveValues(
+        data = NULL,
+        clear = FALSE
+    )
+
     ##############################################################################
     
     ## observe
     
     ##############################################################################
     
+    ## read trap file
+    observe({
+        req(input$trapfilename)
+        req(!traprv$clear)
+        filename <- input$trapfilename[1,"datapath"]
+        if (is.null(filename))
+            stop("provide valid filename")
+        trapargs <- input$trapargs
+        if (trapargs != "")
+            trapargs <- paste0(", ", trapargs)
+        readtrapcall <-  paste0("read.traps (filename, detector = input$detector", trapargs, ")")
+        traprv$data <- try(eval(parse(text = readtrapcall)))
+        if (!inherits(traprv$data, "traps")) {
+            showNotification("invalid trap file or arguments; try again",
+                             type = "error", id = "badtrap", duration = seconds)
+            traprv$data <- NULL
+        }
+        else {
+            if (traprv$scale != 1.0) {
+                meanxy <- apply(traprv$data,2,mean)
+                traprv$data[,1] <- (traprv$data[,1]- meanxy[1]) * traprv$scale + meanxy[1]
+                traprv$data[,2] <- (traprv$data [,2]- meanxy[2]) * traprv$scale + meanxy[2]
+            }
+            
+        }    
+    })
+    ##############################################################################
+    
+    ## read region file
+    observe({
+        req(input$regionfilename)
+        req(!regionrv$clear)
+        if (input$arrayinput == 'Region') {
+            regionrv$data <- readpolygon(input$regionfilename) 
+        }
+        else {
+            regionrv$data <- NULL
+        }
+    })
+    ##############################################################################
+    
+    ## read exclusion file
+    observe({
+        req(input$exclusionfilename)
+        req(!exclusionrv$clear)
+        exclusionrv$data <- readpolygon(input$exclusionfilename) 
+    })
+    ##############################################################################
+    
+    ## read habpoly file
+    observe({
+        req(input$habpolyfilename)
+        req(!habpolyrv$clear)
+        habpolyrv$data <- readpolygon(input$habpolyfilename) 
+    })
+    ##############################################################################
+    
+
+    
+    observeEvent(input$trapfilename, {
+        traprv$clear <- FALSE
+    }, priority = 1000)
+    ##############################################################################
+
+    observeEvent(input$regionfilename, {
+        regionrv$clear <- FALSE
+    }, priority = 1000)
+    ##############################################################################
+
+    observeEvent(input$exclusionfilename, {
+        exclusionrv$clear <- FALSE
+    }, priority = 1000)
+    ##############################################################################
+
+    observeEvent(input$habpolyfilename, {
+        habpolyrv$clear <- FALSE
+    }, priority = 1000)
+    ##############################################################################
+
     observe({
         if (input$lockxy) {
             updateNumericInput(session, "spx", value = input$spy)
@@ -2696,6 +2812,22 @@ server <- function(input, output, session) {
         updateNumericInput(session, "simbyR", value = 0.4)
         
         invalidateOutputs()
+        
+        traprv$data <- NULL
+        traprv$clear <- TRUE
+        reset('trapfilename')
+
+        regionrv$data <- NULL
+        regionrv$clear <- TRUE
+        reset('regionfilename')
+        
+        exclusionrv$data <- NULL
+        exclusionrv$clear <- TRUE
+        reset('exclusionfilename')
+        
+        habpolyrv$data <- NULL
+        habpolyrv$clear <- TRUE
+        reset('habpolyfilename')
     })
     
     ##############################################################################
@@ -3345,12 +3477,12 @@ server <- function(input, output, session) {
         par(mar = c(1,1,1,1), xpd = TRUE)
         if (input$arrayinput=='Region') {
             if (input$entireregionbox)
-                sp::plot(region())
+                sp::plot(regionrv$data)
             else 
                 plot (tmpgrid, gridlines = (input$gridlines != "None"), gridspace = as.numeric(input$gridlines))
-            if (!is.null(exclusion()))
-                sp::plot(exclusion(), add = TRUE, col = 'lightblue', border = 'lightblue')
-            sp::plot(region(), add = TRUE)
+            if (!is.null(exclusionrv$data))
+                sp::plot(exclusionrv$data, add = TRUE, col = 'lightblue', border = 'lightblue')
+            sp::plot(regionrv$data, add = TRUE)
             plot (tmpgrid, add = TRUE,  gridlines = (input$gridlines != "None"), gridspace = as.numeric(input$gridlines))
         }
         else {
@@ -3512,7 +3644,7 @@ server <- function(input, output, session) {
                      detectfn = input$detectfn,
                      detectpar = list(sigma = input$sigma, lambda0 = input$lambda0),
                      noccasions = input$noccasions, drawlabels = drawlabels,
-                     binomN = NULL, levels = lev, poly = poly(), 
+                     binomN = NULL, levels = lev, poly = habpolyrv$data, 
                      poly.habitat = input$includeexcludebtn == "Include",
                      plt = TRUE, add = TRUE,
                      col = col, fill = cols)
@@ -3704,13 +3836,6 @@ server <- function(input, output, session) {
     
     # Save extra values in state$values when we bookmark
     onBookmark(function(state) {
-        shp <- sapply(c(input$regionfilename, 
-                        input$exclusionfilename, 
-                        input$habpolyfilename), shpfile)
-        if (any(shp)) {
-            showNotification("ESRI shapefile will not be bookmarked", type = "error", id = "noshapefile")
-        }
-        state$values$shp <- shp
         state$values$simrvoutput <- simrv$output     # does not work 
         state$values$sumrv <- sumrv$value            # works
         state$values$manualroute <- manualroute$seq
@@ -3724,9 +3849,6 @@ server <- function(input, output, session) {
         sumrv$value <- state$values$sumrv
         current$unit <- input$areaunit
         manualroute$seq <- state$values$manualroute
-        if (any(state$values$shp)) {
-            showNotification("Cannot restore ESRI shapefile(s); re-select", type = "error", id = "noshapefile2")
-        }
         updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"))
     })
     ##############################################################################
