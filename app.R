@@ -412,6 +412,77 @@ ui <- function(request) {
                               )
                      ),
                      
+                     tabPanel("Habitat mask",
+                              
+                              fluidRow(
+                                  column(4,
+                                         
+                                         br(),
+                                         wellPanel(class = "mypanel", 
+                                                   fluidRow(
+                                                       column(6, 
+                                                              numericInput("habxsigma", "Buffer width (x sigma)",
+                                                                           min = 0,
+                                                                           max = 20,
+                                                                           value = 4,
+                                                                           step = 0.5,
+                                                                           width = 180)),
+                                                              column(6,
+                                                              numericInput("habnx", "Mesh dimension nx",
+                                                                           min = 10,
+                                                                           max = 1000,
+                                                                           value = 32,
+                                                                           step = 1,
+                                                                           width = 180)
+                                                       )
+                                                       # column(6,
+                                                       #        br(),
+                                                       #        actionButton("suggestbuffer", "Suggest width", width = 130,
+                                                       #                     title = "Based on either fitted model or RPSV"))
+                                                   ),
+                                                   fluidRow(
+                                                        column(12, 
+                                                               radioButtons("maskshapebtn", label = "Shape",
+                                                                           choices = c("Rectangular", "Trap buffer"), 
+                                                                           selected = "Trap buffer", inline = TRUE)
+                                                        )
+                                                   )
+                                         ),
+                                         wellPanel(class = "mypanel", 
+                                                   br(),
+                                                   div(style="height: 80px;",
+                                                       fileInput("habpolyfilename", "Mask polygon file(s)",
+                                                                 accept = c('.shp','.dbf','.sbn','.sbx',
+                                                                            '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
+                                                                 multiple = TRUE)),
+                                                   uiOutput("habitatfile"),
+                                                   fluidRow(
+                                                       column(10, 
+                                                              checkboxInput("polygonbox", "Clip to polygon(s)", value = TRUE),
+                                                              radioButtons("includeexcludebtn", label = "",
+                                                                           choices = c("Include", "Exclude"), 
+                                                                           selected = "Include", inline = TRUE)
+                                                       )
+                                                   )
+                                         )
+                                  ),
+                                  column(4, plotOutput("maskPlot"),
+                                         conditionalPanel ("output.trapsUploaded", fluidRow(
+                                             column(3, offset = 1, checkboxInput("dotsbox", "dots", value = FALSE, width = 180)),
+                                             column(3, offset = 1, checkboxInput("xpdbox", "xpd", value = FALSE, width = 180)),
+                                             column(4, checkboxInput("maskedge2", "show mask edge", value = FALSE))
+                                         ))
+                                  ),
+                                  column(3, 
+                                         h2("Summary"),
+                                         fluidRow(
+                                             column(12, 
+                                                    verbatimTextOutput("maskPrint"))
+                                         )
+                                  )
+                              )
+                     ),
+                     
                      tabPanel("Costing",
                               fluidRow(
                                   column(3,
@@ -741,46 +812,14 @@ ui <- function(request) {
                                                    checkboxInput("lockxy", "Couple row and column dimensions", TRUE)
                                          ),
                                          
-                                         h2("Habitat mask"),
-                                         wellPanel(class = "mypanel", 
-                                                   fluidRow(
-                                                       column(6, 
-                                                              numericInput("habxsigma", "Buffer width (x sigma)",
-                                                                           min = 0,
-                                                                           max = 20,
-                                                                           value = 4,
-                                                                           step = 0.5,
-                                                                           width = 250),
-                                                              numericInput("habnx", "Mesh dimension nx",
-                                                                           min = 10,
-                                                                           max = 1000,
-                                                                           value = 32,
-                                                                           step = 1,
-                                                                           width = 180)
-                                                       ),
-                                                       column(6, 
-                                                              radioButtons("maskshapebtn", label = "Shape",
-                                                                           choices = c("Rectangular", "Rounded"), 
-                                                                           selected = "Rounded")
-                                                       )
-                                                   ),
-                                                   br(),
-                                                   div(style="height: 80px;",
-                                                       fileInput("habpolyfilename", "Mask polygon file(s)",
-                                                                 accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                            '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
-                                                                 multiple = TRUE)),
-                                                   uiOutput("habitatfile"),
-                                                   fluidRow(
-                                                       column(10, offset = 1, div(style="height: 20px;",
-                                                                                 checkboxInput("polygonbox", "Clip to polygon(s)", value = TRUE, width = 180)))
-                                                   ),
-                                                   fluidRow(
-                                                       column(10, offset = 1, radioButtons("includeexcludebtn", label = "",
-                                                                                          choices = c("Include", "Exclude"), 
-                                                                                          selected = "Include", inline = TRUE))
-                                                   )
+                                         h2("Costing"),
+                                         wellPanel(class = "mypanel",
+                                                   radioButtons("currency", label = "Currency symbol",
+                                                                choices = c("$", "\U00A3", "\U00A5", 
+                                                                            "\U20AC", "Rs"),  # , "\U20A8" rupees fail
+                                                                selected = "$", inline = TRUE)
                                          )
+                                         
                                   ),
                                   
                                   column(3,
@@ -863,13 +902,6 @@ ui <- function(request) {
                                                                             value = TRUE, 
                                                                             width = 180))
                                                    )
-                                         ),
-                                         h2("Costing"),
-                                         wellPanel(class = "mypanel",
-                                                   radioButtons("currency", label = "Currency symbol",
-                                                                choices = c("$", "\U00A3", "\U00A5", 
-                                                                            "\U20AC", "Rs"),  # , "\U20A8" rupees fail
-                                                                selected = "$", inline = TRUE)
                                          )
                                   ),
                                   
@@ -1925,7 +1957,7 @@ server <- function(input, output, session) {
         polycode <- ""
         polyhabitat <- ""
         
-        if (input$polygonbox && !is.null(input$habpolyfilename)) { 
+        if (input$polygonbox && !is.null(habpolyrv$data)) { 
             polyhabitat <- input$includeexcludebtn == "Include"
             polycode <- getSPcode(input$habpolyfilename, "poly", input$polygonbox)
         }
@@ -2244,53 +2276,24 @@ server <- function(input, output, session) {
     )
     ##############################################################################
     
-    poly <- reactive( {
-        if (input$polygonbox) {
-            readpolygon(input$habpolyfilename)
-        }
-        else {
-            NULL
-        }
-    }
-    )
-    ##############################################################################
-    
-    region <- reactive( { 
-        if (input$arrayinput == 'Region') {
-            readpolygon(input$regionfilename) 
-        }
-        else {
-            NULL
-        }
-    }
-    )
-    
-    ##############################################################################
-    exclusion <- reactive( { 
-        if (!is.null(input$exclusionfilename) && input$exclusionbox) {
-            readpolygon(input$exclusionfilename) 
-        }
-        else {
-            NULL
-        }
-    }
-    )
-    ##############################################################################
-    
     mask <- reactive( {
         rotrv$current <- FALSE
         pxyrv$value <- NULL
-        if (!maskOK()) showNotification("no detectors in habitat polygon(s)",
-                                        type = "warning", id = "notrapsinpoly",
-                                        duration = seconds)
-        msk <- make.mask (detectorarray(),
-                          buffer = input$habxsigma * input$sigma,
-                          nx = input$habnx,
-                          type = if (input$maskshapebtn=='Rectangular') 'traprect' else 'trapbuffer',
-                          poly = habpolyrv$data,
-                          poly.habitat = input$includeexcludebtn == "Include",
-                          keep.poly = FALSE)
-        msk
+        if (!is.null(detectorarray())) {
+            if (!maskOK()) showNotification("no detectors in habitat polygon(s)",
+                                            type = "warning", id = "notrapsinpoly",
+                                            duration = seconds)
+            make.mask (detectorarray(),
+                       buffer = input$habxsigma * input$sigma,
+                       nx = input$habnx,
+                       type = if (input$maskshapebtn=='Rectangular') 'traprect' else 'trapbuffer',
+                       poly = habpolyrv$data,
+                       poly.habitat = input$includeexcludebtn == "Include",
+                       keep.poly = FALSE)
+        }
+        else {
+            NULL
+        }
     }
     )
     ##############################################################################
@@ -2514,9 +2517,7 @@ server <- function(input, output, session) {
         habpolyrv$data <- readpolygon(input$habpolyfilename) 
     })
     ##############################################################################
-    
 
-    
     observeEvent(input$trapfilename, {
         traprv$clear <- FALSE
     }, priority = 1000)
@@ -3091,6 +3092,10 @@ server <- function(input, output, session) {
     
     ##############################################################################
 
+    output$trapsUploaded <- reactive({
+        return(!is.null(detectorarray()))
+    })
+    
     # observeEvent(input$summarybtn, {
     #     ap <- isolate(input$appendbox)
     #     filename <- isolate(input$savefilename)
@@ -3115,7 +3120,16 @@ server <- function(input, output, session) {
     # spacingPrint 
     # spacingPrint2
     # simPrint 
+    # maskPrint
     
+    ##############################################################################
+    
+    output$maskPrint <- renderPrint({
+        if (is.null(mask()))
+            cat("No mask yet\n")
+        else 
+            summary(mask())
+    })
     ##############################################################################
     
     output$spacingcodePrint <- renderText ({
@@ -3467,6 +3481,7 @@ server <- function(input, output, session) {
     ## RSEPlot
     ## nrmPlot
     ## costPlot
+    ## maskPlot
     
     ##############################################################################
     
@@ -3760,6 +3775,26 @@ server <- function(input, output, session) {
     })
     ##############################################################################
     
+    output$maskPlot <- renderPlot({
+        core <- detectorarray()
+        if (is.null(core)) return (NULL)
+        par(mar=c(2,2,2,2), xaxs='i', yaxs='i', xpd = input$xpdbox)
+        
+        plot (core, border = input$habxsigma * input$sigma, gridlines = FALSE)
+        plot (mask(), add = TRUE, col = grey(0.94 - input$dotsbox/5), dots = input$dotsbox)
+        plot (core, add = TRUE)
+        if (!is.null(habpolyrv$data) && input$polygonbox) {
+            sp::plot(habpolyrv$data, add = TRUE)
+        }
+        if (input$maskedge2) {
+            plotMaskEdge(mask(), add = TRUE)
+        }
+        
+        if (!input$xpdbox)
+            box()
+    })
+    ##############################################################################
+    
     ## rendertable
     
     ##############################################################################
@@ -3817,7 +3852,8 @@ server <- function(input, output, session) {
     )
    
     outputOptions(output, "validspacing", suspendWhenHidden = FALSE)
-    
+    outputOptions(output, "trapsUploaded", suspendWhenHidden = FALSE)
+
     ##############################################################################
     # tidy end of session - app closes in R
     # ?apparently incompatible with bookmarking 2019-01-17

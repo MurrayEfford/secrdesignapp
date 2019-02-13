@@ -1,7 +1,7 @@
 ---
 title: "secrdesign app 1.1"
 author: "Murray Efford"
-date: '2019-02-10'
+date: '2019-02-13'
 output:
   pdf_document:
     toc: yes
@@ -13,11 +13,12 @@ output:
 
 # An interactive app for designing spatially explicit capture--recapture studies
 
-## Murray Efford 2019-02-10
+## Murray Efford 2019-02-13
 
 # Contents
   [Introduction](#introduction)  
   [Design](#designspecs)  
+  [Habitat mask](#habspecs)  
   [Costing](#costspecs)  
   [Simulation](#simspecs)  
   [Spacing](#spacingspecs)  
@@ -276,7 +277,7 @@ least once ([Borchers and Efford 2008](#references)). \(a\) varies with the numb
 7\. See explanation below. <br>
 8\. The diameter of an array is the greatest distance between two detectors. Arrays less than \(5\sigma\) in diameter may not be large enough to estimate sigma reliably. <br>
 
-Many of the Results require integration over possible animal locations. This is approximated by summing pixels in the 'habitat mask' defined in Options | Habitat mask. The mask specification is usually not critical, but you may wish to play (e.g., cut nx to 32 for faster refresh). 
+Many of the Results require integration over possible animal locations. This is approximated by summing pixels in the 'habitat mask' defined in [Habitat mask](#habspecs). The mask specification is usually not critical, but you may wish to play (e.g., cut nx to 32 for faster refresh). 
 
 The relative standard error RSE (aka CV) is a measure of estimator precision. \(\small \mbox{RSE}(\hat D) = \mbox{SE} (\hat D) / \hat D \). For a particular design the precision may be predicted approximately from the expected values of \(n\) and \(r\) -- this is the "rule-of-thumb" RSE. The approximation is intended for Poisson-distributed $n$ (see [Distribution](#distribution)). Sampling variance is predictably less when $n$ is binomial; the binomial $\mbox{RSE}_B$ for a given Poisson $\mbox{RSE}_P$ depends on the effective sampling area $a$ and total mask area $A$ as follows
 $$\mbox{RSE}_B = \sqrt {\mbox{RSE}_P^2 - 1 / (DA)}.$$
@@ -331,6 +332,12 @@ The default method assumes that \(\small \mbox{RSE}(\hat D)\) is the same in the
 #### Confidence interval for population change
 
 As an alternative to conventional power analysis we can construct intervals for the estimated ratio of densities, given the true ratio and the sampling errors. The interval is the region between the upper and lower curves for a given true population change on the x axis. 
+
+----------------------------------------------------
+
+# Habitat mask  <a name="habspecs"></a>
+
+Settings here should be self explanatory. See [secr-habitatmasks.pdf] for background. The default buffer multiplier (4) may be inadequate when detectfn = 'HEX'.
 
 ----------------------------------------------------
 
@@ -599,7 +606,7 @@ newpoly <- gDifference (region, excluded)
 saveRDS(newpoly, file = 'newpoly.RDS')
 ```
 
-The RDS file may then be used in Options | Habitat mask.
+The RDS file may then be used in Habitat mask | Mask polygon files.
 
 ----------------------------------------------------
 # References <a name="references"></a>
@@ -655,3 +662,4 @@ To adjust for density-dependent RSE we assume that a difference in RSE between s
 
 --------------------------------------------------------------
 [secrdesign-Enrm.pdf]: http://www.otago.ac.nz/density/pdfs/secrdesign-tools.pdf
+[secr-habitatmasks.pdf]: http://www.otago.ac.nz/density/pdfs/secr-habitatmasks.pdf
