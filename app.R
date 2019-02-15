@@ -1,5 +1,3 @@
-# renamed from secrdesignapp.R
-
 library(secrdesign)
 library(shinyjs)
 
@@ -652,7 +650,7 @@ ui <- function(request) {
                                              ),
                                              column(6, 
                                                     checkboxInput("spacingsimbox", "with simulations", value = FALSE, width = 200),
-                                                    helpText(HTML('See Simulation for control options'))
+                                                    helpText(HTML('See Simulation for options'))
                                              )
                                          )
                                   ),
@@ -1603,16 +1601,36 @@ server <- function(input, output, session) {
             nmov.se = counts['Moves', 'se'])
         if (fit) {
             predicted <- summary(predict(sims))$OUTPUT[[1]]
-            simrv$output$RB <- predicted['RB','mean'] * 100
-            simrv$output$RBse <- predicted['RB','se'] * 100
+            if (input$method=='none') {
+                    simrv$output$RB <- NA   
+                    simrv$output$RBse <- NA   
+            }
+            else {    
+                if (input$packagebtn == 'openCR.fit') {
+                    D <- sapply(predict(sims)$output[[1]],'[', 'D','estimate') / input$nrepeats
+                    seD <- sapply(predict(sims)$output[[1]],'[', 'D','SE.estimate') / input$nrepeats
+                    RB <- (D - density()) / density() * 100
+                    simrv$output$RB <- mean(RB, na.rm = TRUE) 
+                    simrv$output$RBse <- sd(RB, na.rm=TRUE) / sqrt(sum(!is.na(RB))) 
+                }
+                else {
+                    simrv$output$RB <- predicted['RB','mean'] * 100
+                    simrv$output$RBse <- predicted['RB','se'] * 100
+                }
+            }
             simrv$output$RSE <- predicted['RSE','mean'] * 100
             simrv$output$RSEse <- predicted['RSE','se'] * 100
             simrv$current <- TRUE
             if (input$updateCFbox) {
-                ## CF = simulated / naive RSE value
                 CF <- predicted['RSE','mean'] / nrm()$rotRSE
                 updateSliderInput(session, "CFslider", value = CF)
             }
+        }
+        else {
+            simrv$output$RSE <- NA   
+            simrv$output$RSEse <- NA   
+            simrv$output$RB <- NA   
+            simrv$output$RBse <- NA   
         }
         simrv$current <- TRUE
 
@@ -1647,6 +1665,14 @@ server <- function(input, output, session) {
                 ncores = input$ncores,
                 method = input$method
             )
+            
+            if ((compareVersion(as.character(secrdesignversion), '2.5.8') < 0) &
+                (input$packagebtn == "openCR.fit")) {
+                ## bug fixed in 2.5.8
+                rotrv$output$RB <- (rotrv$output$RB+1) / input$nrepeats - 1
+                rotrv$output$RBse <- rep(NA, nrow(rotrv$output))
+            }
+
         }
         else {
             progress$set(message = 'Approximating RSE for each spacing...')
@@ -2919,7 +2945,8 @@ server <- function(input, output, session) {
     })
     ##############################################################################
     
-    observeEvent(c(input$noccasions, input$nrepeats, input$distributionbtn), {
+    observeEvent(c(input$D, input$detectfn, input$lambda0, input$sigma, 
+                   input$noccasions, input$nrepeats, input$distributionbtn), {
         simrv$current <- FALSE
     })
     
@@ -3232,7 +3259,7 @@ server <- function(input, output, session) {
             fitcode <- if (fit)
                 paste0("output <- summary(predict(sims))$OUTPUT[[1]]\n",
                        "c(sims$proctime,\n",
-                       RBcode,
+                       ## RBcode,  suppress until nrepeat bug fixed 2019-02-15
                        "  RSE = output['RSE','mean'] * 100,\n",
                        "  RSEse = output['RSE','se'] * 100\n)")
             else ""
