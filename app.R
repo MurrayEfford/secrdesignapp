@@ -323,7 +323,7 @@ ui <- function(request) {
                                                                                  downloadLink("downloadnrmcode", "R")),
                                                                 br(),
                                                                 conditionalPanel("output.nrmPrint!= ''",
-                                                                                 plotOutput("trafficlightPlot", height = 60, click = "trafficClick")))
+                                                                                 plotOutput("trafficlightPlot", height = 60, hover = "trafficClick")))
                                                      )
                                               )
                                           ),
@@ -679,7 +679,7 @@ ui <- function(request) {
                                                           column(6,
                                                                  # Show a plot of the rule-of-thumb RSE
                                                                  plotOutput("RSEPlot", width = "520px", height = "400px", 
-                                                                            click="spacingTrafficClick")
+                                                                            hover="spacingTrafficClick")
                                                           )
                                                       )
                                              ),
@@ -2973,15 +2973,15 @@ server <- function(input, output, session) {
     trafficNotification <- function (colour, RSE, Em) {
         if (!is.na(colour) & !is.na(Em)) {
             if (colour>2) {
-                if (Em < 5) showNotification("Em < 5", duration = seconds)   
-                else if (RSE>0.2) showNotification("RSE > 20%", duration = seconds)   
-                else showNotification("Array diameter < HR95")
+                if (Em < 5) showNotification("Em < 5", id = "traffic", duration = seconds)   
+                else if (RSE>0.2) showNotification("RSE > 20%", id = "traffic", duration = seconds)   
+                else showNotification("Array diameter < HR95", id = "traffic")
             }
             else if (colour>1) {
-                showNotification("RSE > 15%", duration = seconds)   
+                showNotification("RSE > 15%", id = "traffic", duration = seconds)   
             }
             else {
-                showNotification("RSE <= 15%", duration = seconds)   
+                showNotification("RSE <= 15%", id = "traffic", duration = seconds)   
             }
         }
     }
