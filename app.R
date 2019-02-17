@@ -1,3 +1,6 @@
+## 2019-02-17 suppressed scaling factor for detectors from file
+## 2019-02-17 suppress 'lownr' notification - rely on traffic lights
+
 library(secrdesign)
 library(shinyjs)
 
@@ -120,17 +123,19 @@ ui <- function(request) {
                                                                                      " as for secr::read.traps"))),
                                                                 textInput("trapargs", "Optional arguments for read.traps()",
                                                                           value = "", placeholder = "e.g., skip = 1, sep = ','"),
-                                                                br(),
-                                                                fluidRow(
-                                                                    column (6, numericInput("scalefactor",
-                                                                                            "Scaling factor",
-                                                                                            value = 1.0,
-                                                                                            min = 0, 
-                                                                                            max = 100, 
-                                                                                            step = 0.01)),
-                                                                    column (6, br(), actionButton("suggestfilebtn", "Suggest factor",
-                                                                           title = "Find spacing factor at which E(n) = E(r)")))
-                                                                
+                                                                br()
+                                                                # ,
+                                                                # fluidRow(
+                                                                #     column (6, numericInput("scalefactor",
+                                                                #                             "Scaling factor",
+                                                                #                             value = 1.0,
+                                                                #                             min = 0,
+                                                                #                             max = 100,
+                                                                #                             step = 0.01)),
+                                                                #     column (6, br(), actionButton("suggestfilebtn", "Suggest factor",
+                                                                #            title = "Find spacing factor at which E(n) = E(r)"))
+                                                                # )
+                                                                # 
                                                        ),
                                                        tabPanel("Region",
                                                                 br(),
@@ -1639,8 +1644,7 @@ server <- function(input, output, session) {
     }
     
     runspacing <- function(sims = FALSE) {
-        
-        removeNotification("lownr")
+        ## removeNotification("lownr")
         progress <- Progress$new(session, min=1, max=15)
         on.exit(progress$close())
         R <- seq(input$fromR, input$toR, input$byR)
@@ -1842,14 +1846,14 @@ server <- function(input, output, session) {
                 code <- paste0("array <- read.traps ('", 
                                input$trapfilename[1,"name"],
                                "', detector = '", input$detector, "'", trapargs, ")\n")
-                if (input$scalefactor != 1.0) {
-                    code <- paste0(code, 
-                                   "# optional scaling about centroid\n",
-                                   "meanxy <- apply(array,2,mean)\n",
-                                   "array[,1] <- (array[,1]- meanxy[1]) * ", input$scalefactor, " + meanxy[1]\n",
-                                   "array[,2] <- (array[,2]- meanxy[2]) * ", input$scalefactor, " + meanxy[2]\n")
-                    #"array[,] <- array[,] * ", input$scalefactor, "\n")
-                }
+                # if (input$scalefactor != 1.0) {
+                #     code <- paste0(code, 
+                #                    "# optional scaling about centroid\n",
+                #                    "meanxy <- apply(array,2,mean)\n",
+                #                    "array[,1] <- (array[,1]- meanxy[1]) * ", input$scalefactor, " + meanxy[1]\n",
+                #                    "array[,2] <- (array[,2]- meanxy[2]) * ", input$scalefactor, " + meanxy[2]\n")
+                #     #"array[,] <- array[,] * ", input$scalefactor, "\n")
+                # }
             }
             
             else if (input$arrayinput == "Region") {
@@ -2171,7 +2175,7 @@ server <- function(input, output, session) {
                                   spacing = input$spline)
             }
             else if (input$arrayinput == 'File') {
-                traprv$scale <- input$scalefactor
+                traprv$scale <- 1.0 # input$scalefactor
                 trps <- traprv$data
             }
             else if (input$arrayinput=='Region') {
@@ -2203,7 +2207,7 @@ server <- function(input, output, session) {
                                              spacing = input$spline)
                     }
                     else if (input$clustertype == "File") {
-                        traprv$scale <- input$scalefactor
+                        traprv$scale <- 1.0 # input$scalefactor
                         cluster <- traprv$data
                     }
                     else {
@@ -2684,20 +2688,20 @@ server <- function(input, output, session) {
     
     ##############################################################################
     
-    observeEvent(input$suggestfilebtn, {
-        ## Grid
-        ## E[n] == E[r]
-        if (!input$autorefresh) {
-            showNotification("enable auto refresh",
-                             type = "error", id = "nosuggestfile", duration = seconds)
-        }
-        else {
-            optimalfactor <- n.eq.r()
-            if (!is.na(optimalfactor)) {
-                updateNumericInput(session, "scalefactor", value = round(optimalfactor,2))
-            }
-        }
-    })
+    # observeEvent(input$suggestfilebtn, {
+    #     ## Grid
+    #     ## E[n] == E[r]
+    #     if (!input$autorefresh) {
+    #         showNotification("enable auto refresh",
+    #                          type = "error", id = "nosuggestfile", duration = seconds)
+    #     }
+    #     else {
+    #         optimalfactor <- n.eq.r()
+    #         if (!is.na(optimalfactor)) {
+    #             updateNumericInput(session, "scalefactor", value = round(optimalfactor,2))
+    #         }
+    #     }
+    # })
     ##############################################################################
     
     observeEvent(input$resetbtn, {
@@ -2735,7 +2739,7 @@ server <- function(input, output, session) {
         ## file
         updateTextInput(session, "args", 
                         value = "", placeholder = "e.g., skip = 1, sep = ','")
-        updateNumericInput(session, "scalefactor", value = 1.0)
+        # updateNumericInput(session, "scalefactor", value = 1.0)
 
         ## parameters
         updateNumericInput(session, "D", "D (animals / ha)", value = 5)
@@ -2915,7 +2919,6 @@ server <- function(input, output, session) {
             else {
                 runspacing(sims = TRUE)
             }
-            
         }
         else {
             runspacing(sims = FALSE)
@@ -2927,7 +2930,7 @@ server <- function(input, output, session) {
     observeEvent(c(input$simulatebtn, input$simulatebtn2), ignoreInit = TRUE, {
         ## ignoreInit blocks initial execution when simulatebtn2 goes from NULL to 0
         if (!is.null(detectorarray())) {
-            removeNotification("lownr")
+            ## removeNotification("lownr")
             methodfactor <- 1 + ((input$method != "none") * 4)
             functionfactor <- switch(input$packagebtn, secr.fit = 4, openCR.fit = 1, 0.1)
             detectorfactor <- switch(input$detector, proximity = 1, single = 0.6, multi = 0.6, count = 4)
@@ -3371,7 +3374,7 @@ server <- function(input, output, session) {
                    " (SE ",  round(simrv$output$RSEse, 2), "%)")
             
         if (attr(detectorarray(), "arrayspan") < (5 * input$sigma)) {
-            removeNotification("lownr")
+            ## removeNotification("lownr")
             showNotification("Pathological design - array span < 5.sigma",
                              type = "warning", id = "zeronm", duration = NULL)
         }
@@ -3382,19 +3385,19 @@ server <- function(input, output, session) {
             
         if (!any(is.na(c(nrmval$En, nrmval$Er, nrmval$Em)))) {
             if (nrmval$Em<5) {
-                removeNotification("lownr")
+                ## removeNotification("lownr")
                 showNotification("Pathological design - E(m) less than 5",
                                  type = "warning", id = "zeronm", duration = NULL)
             }
             else {
                 removeNotification("zeronm")
-                if (nrmval$En<20 | nrmval$Er<20) {
-                    showNotification("Low E(n) or E(r) - simulate to check RSE",
-                                     type = "warning", id = "lownr", duration = NULL)
-                }
-                else {
-                    removeNotification("lownr")
-                }
+                # if (nrmval$En<20 | nrmval$Er<20) {
+                #     showNotification("Low E(n) or E(r) - simulate to check RSE",
+                #                      type = "warning", id = "lownr", duration = NULL)
+                # }
+                # else {
+                #     removeNotification("lownr")
+                # }
             }
         }
         paste0(
