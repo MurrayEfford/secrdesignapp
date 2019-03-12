@@ -4,7 +4,7 @@ secrdesignapp is a partial interactive interface to the R package [secrdesign](h
 
 The main new feature in version 1.1 was support for systematic and random designs within a region of interest. Version 1.2 has many small improvements, including traffic lights and other warnings.
 
-Click this link to run secrdesignapp 1.1 in your web browser from a University of Otago server:
+Click this link to run secrdesignapp 1.2 in your web browser from a University of Otago server:
 
 [secrdesignapp](https://www.stats.otago.ac.nz/secrdesignapp)
 
