@@ -7,7 +7,7 @@ library(shinyjs)
 secrversion <- packageVersion('secr')
 secrdesignversion <- packageVersion('secrdesign')
 if (compareVersion(as.character(secrdesignversion), '2.5.7') < 0)
-    stop("secrdesignapp 1.2 requires secrdesign version 2.5.7 or later",
+    stop("secrdesignapp 1.3 requires secrdesign version 2.5.7 or later",
          call. = FALSE)
 openCRversion <- packageVersion('openCR')
 
@@ -27,7 +27,7 @@ trafficcols <- c("chartreuse1", "yellow1", "red")
 ui <- function(request) {
 
     fluidPage(
-        title = "secrdesignapp 1.2",
+        title = "secrdesignapp 1.3",
         includeCSS("secrdesignstyle.css"),
         withMathJax(),
         useShinyjs(),
@@ -35,7 +35,7 @@ ui <- function(request) {
         br(),
         navlistPanel(id = "navlist", widths = c(2,10), well=TRUE,
                      
-                     "secrdesign app 1.2",
+                     "secrdesign app 1.3",
                      
                      tabPanel("Design",
                               fluidRow(
@@ -968,16 +968,24 @@ ui <- function(request) {
                                                        column(4, actionButton("resetCFbtn", "Reset", title = "Reset slider to default for current array input"))
                                                    )
                                          ),
-                                         h2("Traffic light RSE thresholds"),
+                                         h2("Traffic light thresholds"),
                                          wellPanel(class = "mypanel", 
                                                    fluidRow(
-                                                       column(6, numericInput("maxgreen", "Max green",
+                                                       column(6, numericInput("minEm", "Minimum E(m)",
+                                                                              min = 0,
+                                                                              max = 100,
+                                                                              value = 5,
+                                                                              step = 1,
+                                                                              width = 180))
+                                                       ),
+                                                   fluidRow(
+                                                       column(6, numericInput("maxgreen", "Max RSE% green",
                                                                               min = 0,
                                                                               max = 100,
                                                                               value = 15,
                                                                               step = 1,
                                                                               width = 180)),
-                                                       column (6, numericInput("maxamber", "Max amber",
+                                                       column (6, numericInput("maxamber", "Max RSE% amber",
                                                                                min = 0,
                                                                                max = 100,
                                                                                value = 20,
@@ -992,7 +1000,7 @@ ui <- function(request) {
                               withMathJax(includeMarkdown("help.rmd"))
                      ),
                      tabPanel("About",
-                              h2("secrdesign app 1.2"), br(),
+                              h2("secrdesign app 1.3"), br(),
                               
                               h5(paste("This Shiny application provides an interface to the R package 'secrdesign', version", 
                                        packageDescription("secrdesign")$Version), "."),
@@ -1008,8 +1016,7 @@ ui <- function(request) {
                               br(),
                               
                               h5("Citation"),
-                              h5("[The preferred citation for this package is not finalised]"),
-                              h5("Efford, M. G. 2019. Fast evaluation of study designs for spatially explicit capture-recapture. In prep.")
+                              h5("Efford, M. G. and Boulanger, J. 2019. Fast evaluation of study designs for spatially explicit capture-recapture. Ecological Applications (submitted)")
                      )
                      
         )
@@ -3582,7 +3589,7 @@ server <- function(input, output, session) {
     trafficlight <- function(arrayspan, sigma, Em, RSE) {
         if (!is.null(Em)) {
             badarray <- (arrayspan / sigma) < (circular.r(detectfn = input$detectfn)*2)
-            badarray <- badarray | (Em < 5)
+            badarray <- badarray | (Em < input$minEm)
             RSE <- rep(RSE, length.out = length(badarray)) 
             colour <- rep(1, length(badarray))
             colour[(RSE>(input$maxamber/100)) | badarray] <- 3
@@ -3966,6 +3973,7 @@ server <- function(input, output, session) {
         query <- parseQueryString(session$clientData$url_search)
         
         if (length(query)>0) {
+            # browser()
             updateTabsetPanel(session, "arrayinput", selected = "File")
             
             if (!is.null(query[['trapfilename']])) {
