@@ -967,6 +967,23 @@ ui <- function(request) {
                                                                                width = 180)),
                                                        column(4, actionButton("resetCFbtn", "Reset", title = "Reset slider to default for current array input"))
                                                    )
+                                         ),
+                                         h2("Traffic light RSE thresholds"),
+                                         wellPanel(class = "mypanel", 
+                                                   fluidRow(
+                                                       column(6, numericInput("maxgreen", "Max green",
+                                                                              min = 0,
+                                                                              max = 100,
+                                                                              value = 15,
+                                                                              step = 1,
+                                                                              width = 180)),
+                                                       column (6, numericInput("maxamber", "Max amber",
+                                                                               min = 0,
+                                                                               max = 100,
+                                                                               value = 20,
+                                                                               step = 1,
+                                                                               width = 180))
+                                                   )
                                          )
                                   )
                               )
@@ -2829,6 +2846,9 @@ server <- function(input, output, session) {
         updateSliderInput(session, "CFslider", value = 1.0)
         updateCheckboxInput(session, "updateCFbox", value = TRUE)
 
+        updateNumericInput(session, "maxgreen", value = 15)
+        updateNumericInput(session, "maxamber", value = 20)
+        
         updateRadioButtons(session, "powerplotbtn", selected = "Null hypothesis power")
 
         updateNumericInput(session, "alpha", value = 0.05)
@@ -3565,8 +3585,8 @@ server <- function(input, output, session) {
             badarray <- badarray | (Em < 5)
             RSE <- rep(RSE, length.out = length(badarray)) 
             colour <- rep(1, length(badarray))
-            colour[(RSE>0.20) | badarray] <- 3
-            colour[(colour==1) & (RSE>0.15)] <- 2
+            colour[(RSE>(input$maxamber/100)) | badarray] <- 3
+            colour[(colour==1) & (RSE>(input$maxgreen/100))] <- 2
             colour
         }
         else {
