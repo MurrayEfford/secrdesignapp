@@ -2939,7 +2939,9 @@ server <- function(input, output, session) {
                 nrm()$En * input$noccasions * input$nrepl * 
                 length(seq(input$fromR, input$toR, input$simbyR)) *
                 methodfactor * functionfactor * detectorfactor
-            
+            ## 2019-03-13
+            ## arbitrarily boost expected time because server slow
+            time <- time * 3
             if (time > 0.2) {
                 showModal(spacingOKModal(time))
             }
@@ -2966,7 +2968,10 @@ server <- function(input, output, session) {
             time <- nrow(mask()) * nrow(detectorarray()) / 4.5e9 * ## blocked 2019-01-14 nrepeats() * 
                 En * input$noccasions * input$nrepl * 
                 methodfactor * functionfactor * detectorfactor
-            if (time > 0.2)
+            ## 2019-03-13
+            ## arbitrarily boost expected time because server slow
+            time <- time * 3
+                        if (time > 0.2)
                 showModal(OKModal(time))
             else {
                 runsims()
