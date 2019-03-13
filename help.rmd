@@ -44,7 +44,9 @@ Documentation for **secrdesign** is available at www.otago.ac.nz/density. For ex
 
 Acknowledgement: Greg Trounson (Department of Mathematics and Statistics, University of Otago) has provided invaluable and continuing help by testing the app and maintaining it on the server.
 
-Tip: on small displays, running your browser in full-screen mode will avoid the need to scroll down (often F11 will get you there; otherwise try the options menu).
+TIP: on small displays, running your browser in full-screen mode will avoid the need to scroll down (often F11 will get you there; otherwise try the options menu).
+
+TIP: you can run the latest version of secrdesignapp on your own machine directly from GitHub - see the link above.
 
 IMPORTANT NOTE: Maximising precision is only one component of study design. Sampling must also be representative of the population in the region of interest. Linear arrays are unreliable when home ranges are elongated in a common direction ([Efford 2019c](#references)).
 
@@ -566,13 +568,13 @@ The table may be downloaded as a comma-separated text file or in the RDS format 
 
 Here are some known pitfalls
 
-## Bookmark fails with shapefile polygons
-
-This is a known bug that cannot be addressed immediately. It is avoided by saving SpatialPolygons as .rds or .rdata files.
-
 ## Slow simulations when ncores > 1
 
 This is a combined result of (i) when ncores = 1 all available cores are used for highly efficient multithreading by openCR.fit(), and (ii) parallel processing incurs substantial overheads of its own.
+
+## Slow simulations, no obvious reason
+
+Run secrdesignapp from GitHub on your own machine for the best performance. See https://GitHub.com/MurrayEfford/secrdesignapp. You will need to install R packages secr, openCR, secrdesign, shiny and shinyjs. 
 
 ## Components of a shapefile must be selected and uploaded together
 
