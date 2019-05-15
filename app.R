@@ -239,6 +239,12 @@ ui <- function(request) {
                                                                              choices = c("HHN","HEX"),
                                                                              selected = "HHN", width=110))
                                                    ),
+                                                   # fluidRow(
+                                                   #     column(6, selectInput("model2D", "model2D",
+                                                   #                           choices = c("poisson","cluster", "even"),
+                                                   #                           selected = "Poisson", width=160)),
+                                                   #     column(6, textInput("details", "details", value = "", 
+                                                   #                placeholder = "sim.popn argument"))),
                                                    fluidRow(
                                                        column(6, numericInput("lambda0",
                                                                               "lambda0",
@@ -1572,6 +1578,9 @@ server <- function(input, output, session) {
         array <- detectorarray()
         msk <- mask()
         Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
+        # detail <- if (input$model2D == 'cluster') 
+        #     eval(parse(text = paste0("list(", input$details, ")"))) 
+        # else NULL
         fit <- input$packagebtn %in% c('openCR.fit', 'secr.fit')
         fitargs = list(detectfn = input$detectfn, 
                        method = input$method, 
@@ -1594,6 +1603,7 @@ server <- function(input, output, session) {
             fit = fit,
             fit.function = if(fit) input$packagebtn else NULL,
             extractfn = summary,
+            # pop.args = list(Ndist = Ndist, model2D = input$model2D, details = detail),
             pop.args = list(Ndist = Ndist),
             fit.args = if (fit) fitargs else NULL,
             ncores = input$ncores,
@@ -2367,6 +2377,9 @@ server <- function(input, output, session) {
             }
             else removeNotification("bigpop")
             Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
+            # detail <- if (input$model2D %in% c("cluster")) 
+            #     eval(parse(text = paste0("list(", input$details, ")")))
+            # else NULL
             if (input$onlymaskbox) {
                 if (nrow(mask())==0) {
                     showNotification("incompatible mask",
@@ -2378,8 +2391,10 @@ server <- function(input, output, session) {
                 }
             }
             else { # rectangular area
+                detail <- NULL
                 pop <- sim.popn (D = density(), core=core, Ndist = Ndist,
-                                 buffer = input$habxsigma * input$sigma)
+                                 buffer = input$habxsigma * input$sigma,
+                                 model2D = input$model2D, details = detail)
             }
             pop
         }
@@ -2971,7 +2986,7 @@ server <- function(input, output, session) {
             ## 2019-03-13
             ## arbitrarily boost expected time because server slow
             time <- time * 3
-                        if (time > 0.2)
+            if (time > 0.2)
                 showModal(OKModal(time))
             else {
                 runsims()
@@ -3270,6 +3285,7 @@ server <- function(input, output, session) {
         else {
             D  <- density() * nrepeats()
             Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
+            # detail <- if (input$model2D == 'cluster') paste0("details = list(", input$details, ")") else "details = NULL"
             distncode <- if (input$packagebtn == "secr.fit")
                 paste0("details = list(distribution = '", tolower(input$distributionbtn), "')")
             else
@@ -3318,9 +3334,9 @@ server <- function(input, output, session) {
                 "sims <- run.scenarios (",
                 "nrepl = ", input$nrepl, ", ",
                 "scenarios = scen, \n",
-                "    trapset = array, maskset = mask,",
-                " pop.args = list(Ndist = '", Ndist, "'),\n",
-                
+                "    trapset = array, maskset = mask, \n",
+                # "    pop.args = list(Ndist = '", Ndist, "', model2D = '", input$model2D, "', ", detail, "),\n",
+                "    pop.args = list(Ndist = '", Ndist, "),\n",
                 "    fit = ", fit, 
                 ", extractfn = summary, ",
                 if (fit) paste0("fit.function = '", input$packagebtn, "', \n",
