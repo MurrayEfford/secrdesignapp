@@ -439,6 +439,14 @@ If the 'Add to summary' box is ticked then simulation results are added automati
     <td> method used for likelihood maximization by fitting function<sup>1</sup> </td>
   </tr>
   <tr>
+    <td>2-D distribution</td>
+    <td> `model2D` argument of sim.popn </td>
+  </tr>
+  <tr>
+    <td>other details</td>
+    <td> free-form arguments passed in `details` list to sim.popn </td>
+  </tr>
+  <tr>
     <td>Replicates </td>
     <td> number of replicate simulations<sup>2</sup> </td>
   </tr>
@@ -458,6 +466,26 @@ If the 'Add to summary' box is ticked then simulation results are added automati
 3\. Simulations are spread across multiple cores if ncores > 1. There may be little gain in speed. The maximum number of cores is determined automatically with `parallel::detectCores`.  <br>
 4\. Set a value greater than zero if you wish results to be repeatable. (Zero translates as NULL in the seed passed to `run.scenarios`) <br>
 <br>
+
+The 2-D (spatial) distribution of simulated activity centres is controlled in `sim.popn` by the argument `model2D`. These values are offered in secrdesignapp:
+
+<table style="width:40%">
+  <tr>
+    <td>poisson </td>
+    <td> random uniform (Poisson) distribution </td>
+  </tr>
+  <tr>
+    <td>cluster</td>
+    <td> clustered (Neyman-Scott) distribution controlled by parameters mu (mean number per cluster) 
+    and hsigma (SD of bivariate normal within-cluster scatter)<sup>1</sup> </td>
+  </tr>
+  <tr>
+    <td>even</td>
+    <td> systematic grid of points, each jittered uniformly within its 'cell' </td>
+  </tr>
+</table> 
+<br>
+1\. The defaults mu=1 and hsigma=0 result in no clustering; vary these for a clustered distribution. The effect is shown in the Popn viewer on the Design page when 'Restrict to mask' is not selected. <br>
 
 ## Results
 
@@ -641,29 +669,6 @@ Stevens, D. L. Jr and Olsen, A. R. (2004) Spatially balanced sampling of natural
 
 ----------------------------------------------------
 
-# Appendix 1. Power calculation for comparison of two density estimates <a name="appendix1"></a>
-
-We want to predict the power of a comparison between two independent surveys as a function of the effect size (\( \small D_{21}\) = final density as fraction of initial density) and the predicted precision of the estimates, expressed as relative standard error RSE. The power calculation assumes log-normal errors in both the initial and final surveys. Log-normal errors are natural for estimates of density (we use a log link function for maximising the likelihood, and rely on symmetrical Wald intervals on the log scale).
-
-For a log normal distribution the variance on the log scale is \( \small \sigma^2 = \log (1 + \mbox{CV}^2) \) where CV is the coefficient of variation on the arithmetic scale (equivalent here to RSE).
-
-The mean \(\mu\) on the log scale is related to the mean \(m\) on the arithmetic scale by \( \small \mu = \log \frac{m}{\sqrt { 1 + \mbox{CV}^2}} \).
-
-We conduct a \(z\)-test on the log scale. The effect size is \( \small \mu_2 - \mu_1 \). In general we must allow for differing RSE in the two surveys, which affects both the effect size and its variance, as follows.
-
-$$ \small \mu_2 - \mu_1 = \log \frac{m_2}{\sqrt {1 + \mbox{CV}_2^2}} - \log \frac{m_1}{\sqrt {1 + \mbox{CV}_1^2}}. $$
-This reduces to 
-$$ \small \mu_2 - \mu_1 = \log \frac{m_2}{m_1} + \log \frac{\sqrt {1 + \mbox{CV}_1^2}}{\sqrt {1 + \mbox{CV}_2^2}}. $$
-For equal CV the second term drops out.
-
-The variance of the effect on the log scale is approximated by the sum of the respective variances:
-
-$$ \small \sigma_{21}^2 = \log(1 + \mbox{CV}_1^2) + \log(1 + \mbox{CV}_2^2).$$
-The standardised difference on the log scale \( \frac{\mu_2 - \mu_1}{\sigma_{21}} \) is compared to a standard normal variate at the desired alpha level.
-
-In our application we replace \( \small m_2 / m_1 \) by \( \small D_{21}\) and \( \small \mbox{CV}_1 \) by RSE. 
-
-To adjust for density-dependent RSE we assume that a difference in RSE between surveys is inversely proportional to the square root of \( \small D_{21} \) (this follows the logic of the rule-of-thumb in which both \(n\) and \(r\) scale with density). Thus \( \small \mbox{CV}_2 = \mbox{RSE} / \sqrt{D_{21}} \).
 
 --------------------------------------------------------------
 [secrdesign-Enrm.pdf]: http://www.otago.ac.nz/density/pdfs/secrdesign-tools.pdf
