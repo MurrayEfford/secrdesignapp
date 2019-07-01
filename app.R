@@ -425,54 +425,71 @@ ui <- function(request) {
                               
                               fluidRow(
                                   column(4,
-                                         
-                                         br(),
-                                         wellPanel(class = "mypanel", 
-                                                   fluidRow(
-                                                       column(6, 
-                                                              numericInput("habxsigma", "Buffer width (x sigma)",
-                                                                           min = 0,
-                                                                           max = 20,
-                                                                           value = 4,
-                                                                           step = 0.5,
-                                                                           width = 180)),
-                                                              column(6,
-                                                              numericInput("habnx", "Mesh dimension nx",
-                                                                           min = 10,
-                                                                           max = 1000,
-                                                                           value = 32,
-                                                                           step = 1,
-                                                                           width = 180)
-                                                       )
-                                                       # column(6,
-                                                       #        br(),
-                                                       #        actionButton("suggestbuffer", "Suggest width", width = 130,
-                                                       #                     title = "Based on either fitted model or RPSV"))
-                                                   ),
-                                                   fluidRow(
-                                                        column(12, 
-                                                               radioButtons("maskshapebtn", label = "Shape",
-                                                                           choices = c("Rectangular", "Trap buffer"), 
-                                                                           selected = "Trap buffer", inline = TRUE)
-                                                        )
-                                                   )
-                                         ),
-                                         wellPanel(class = "mypanel", 
-                                                   br(),
-                                                   div(style="height: 80px;",
-                                                       fileInput("habpolyfilename", "Mask polygon file(s)",
-                                                                 accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                            '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
-                                                                 multiple = TRUE)),
-                                                   uiOutput("habitatfile"),
-                                                   fluidRow(
-                                                       column(10, 
-                                                              checkboxInput("polygonbox", "Clip to polygon(s)", value = TRUE),
-                                                              radioButtons("includeexcludebtn", label = "",
-                                                                           choices = c("Include", "Exclude"), 
-                                                                           selected = "Include", inline = TRUE)
-                                                       )
-                                                   )
+                                         tabsetPanel(
+                                             type = "pills", id = "masktype", selected = "Build",
+                                             
+                                             tabPanel("Build",
+                                                      wellPanel(class = "mypanel", 
+                                                                fluidRow(
+                                                                    column(6, 
+                                                                           numericInput("habxsigma", "Buffer width (x sigma)",
+                                                                                        min = 0,
+                                                                                        max = 20,
+                                                                                        value = 4,
+                                                                                        step = 0.5,
+                                                                                        width = 180)),
+                                                                    column(6,
+                                                                           numericInput("habnx", "Mesh dimension nx",
+                                                                                        min = 10,
+                                                                                        max = 1000,
+                                                                                        value = 32,
+                                                                                        step = 1,
+                                                                                        width = 180)
+                                                                    )
+                                                                    # column(6,
+                                                                    #        br(),
+                                                                    #        actionButton("suggestbuffer", "Suggest width", width = 130,
+                                                                    #                     title = "Based on either fitted model or RPSV"))
+                                                                ),
+                                                                fluidRow(
+                                                                    column(12, 
+                                                                           radioButtons("maskshapebtn", label = "Shape",
+                                                                                        choices = c("Rectangular", "Trap buffer"), 
+                                                                                        selected = "Trap buffer", inline = TRUE)
+                                                                    )
+                                                                )
+                                                      ),
+                                                      wellPanel(class = "mypanel", 
+                                                                div(style="height: 80px;",
+                                                                    fileInput("habpolyfilename", "Mask polygon file(s)",
+                                                                              accept = c('.shp','.dbf','.sbn','.sbx',
+                                                                                         '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
+                                                                              multiple = TRUE)),
+                                                                uiOutput("habitatfile"),
+                                                                fluidRow(
+                                                                    column(10, 
+                                                                           checkboxInput("polygonbox", "Clip to polygon(s)", value = TRUE),
+                                                                           radioButtons("includeexcludebtn", label = "",
+                                                                                        choices = c("Include", "Exclude"), 
+                                                                                        selected = "Include", inline = TRUE)
+                                                                    )
+                                                                )
+                                                      )
+                                             ),
+                                             tabPanel("File", 
+                                                      wellPanel(class = "mypanel", 
+                                                                div(style = "height: 80px;",
+                                                                    fileInput("maskfilename", "Mask file",
+                                                                              accept = c('.txt'), 
+                                                                              multiple = FALSE)),
+                                                                numericInput("maskcov", "Covariate for relative density",
+                                                                             min = 0,
+                                                                             max = 0,
+                                                                             value = 0,
+                                                                             step = 1,
+                                                                             width = 180)
+                                                      )
+                                             ) 
                                          )
                                   ),
                                   column(4, plotOutput("maskPlot"),
@@ -1022,7 +1039,7 @@ ui <- function(request) {
                               br(),
                               
                               h5("Citation"),
-                              h5("Efford, M. G. and Boulanger, J. 2019. Fast evaluation of study designs for spatially explicit capture-recapture. Ecological Applications (submitted)")
+                              h5("Efford, M. G. and Boulanger, J. (2019) Fast evaluation of study designs for spatially explicit capture-recapture. Methods in Ecology and Evolution (in press)")
                      )
                      
         )
@@ -2016,6 +2033,7 @@ server <- function(input, output, session) {
     ##############################################################################
     
     maskcode <- function (arrayname) {
+        if (input$masktype == 'Build') {
         type <- if (input$maskshapebtn == 'Rectangular') 'traprect' else 'trapbuffer'
         buffer <- as.character(round(input$habxsigma * input$sigma,2))
 
@@ -2034,6 +2052,11 @@ server <- function(input, output, session) {
                if (polycode == "") "" else ",\n    poly = poly",
                if (polycode == "") "" else ", poly.habitat = ", polyhabitat,
                ")\n")
+        }
+        else {
+            if (!is.null(input$maskfilename))
+            paste0("mask <- read.mask ('", input$maskfilename[1,1], "')\n")
+        }
     }
     ##############################################################################
     
@@ -2344,20 +2367,25 @@ server <- function(input, output, session) {
     mask <- reactive( {
         rotrv$current <- FALSE
         pxyrv$value <- NULL
-        if (!is.null(detectorarray())) {
-            if (!maskOK()) showNotification("no detectors in habitat polygon(s)",
-                                            type = "warning", id = "notrapsinpoly",
-                                            duration = seconds)
-            make.mask (detectorarray(),
-                       buffer = input$habxsigma * input$sigma,
-                       nx = input$habnx,
-                       type = if (input$maskshapebtn=='Rectangular') 'traprect' else 'trapbuffer',
-                       poly = habpolyrv$data,
-                       poly.habitat = input$includeexcludebtn == "Include",
-                       keep.poly = FALSE)
+        if (input$masktype=="Build") {
+            if (!is.null(detectorarray())) {
+                if (!maskOK()) showNotification("no detectors in habitat polygon(s)",
+                                                type = "warning", id = "notrapsinpoly",
+                                                duration = seconds)
+                make.mask (detectorarray(),
+                           buffer = input$habxsigma * input$sigma,
+                           nx = input$habnx,
+                           type = if (input$maskshapebtn=='Rectangular') 'traprect' else 'trapbuffer',
+                           poly = habpolyrv$data,
+                           poly.habitat = input$includeexcludebtn == "Include",
+                           keep.poly = FALSE)
+            }
+            else {
+                NULL
+            }
         }
         else {
-            NULL
+            maskrv$data
         }
     }
     )
@@ -2525,6 +2553,11 @@ server <- function(input, output, session) {
         clear = FALSE
     )
 
+    maskrv <- reactiveValues(
+        data = NULL,
+        clear = FALSE
+    )
+
     ##############################################################################
     
     ## observe
@@ -2588,6 +2621,23 @@ server <- function(input, output, session) {
     })
     ##############################################################################
 
+    ## read mask file
+    observe({
+        req(input$maskfilename)
+        req(!maskrv$clear)
+        maskrv$data <- NULL
+        if (input$masktype == 'File') {
+            if (!is.null(input$maskfilename))
+            maskrv$data <- read.mask(input$maskfilename[1,4], header = TRUE) 
+            covar <- covariates(maskrv$data)
+            if (!is.null(covar)) {
+                updateNumericInput(session, "maskcov", max = ncol(covar))
+                # updateNumericInput(session, "maskcov", value = 1)
+            }
+        }
+    })
+    ##############################################################################
+    
     observeEvent(input$trapfilename, {
         traprv$clear <- FALSE
     }, priority = 1000)
@@ -2605,6 +2655,11 @@ server <- function(input, output, session) {
 
     observeEvent(input$habpolyfilename, {
         habpolyrv$clear <- FALSE
+    }, priority = 1000)
+    ##############################################################################
+
+    observeEvent(input$maskfilename, {
+        maskrv$clear <- FALSE
     }, priority = 1000)
     ##############################################################################
 
@@ -2902,6 +2957,10 @@ server <- function(input, output, session) {
         habpolyrv$data <- NULL
         habpolyrv$clear <- TRUE
         reset('habpolyfilename')
+
+        maskrv$data <- NULL
+        maskrv$clear <- TRUE
+        reset('maskfilename')
     })
     
     ##############################################################################
@@ -3336,7 +3395,7 @@ server <- function(input, output, session) {
                 "scenarios = scen, \n",
                 "    trapset = array, maskset = mask, \n",
                 # "    pop.args = list(Ndist = '", Ndist, "', model2D = '", input$model2D, "', ", detail, "),\n",
-                "    pop.args = list(Ndist = '", Ndist, "),\n",
+                "    pop.args = list(Ndist = '", Ndist, "'),\n",
                 "    fit = ", fit, 
                 ", extractfn = summary, ",
                 if (fit) paste0("fit.function = '", input$packagebtn, "', \n",
@@ -3379,7 +3438,7 @@ server <- function(input, output, session) {
             else 
                 ratio <- round(ratio,2)
             paste0(nrow(gr), " ", input$detector, " detectors", clustertext, 
-                   "; ", cr, "diameter ", lengthstr(glength), " (", ratio, " HR95)")
+                   "; ", cr, "diameter ", lengthstr(glength), " (", ratio, " HR95) ")
         }
         else ""
     })
@@ -3877,21 +3936,44 @@ server <- function(input, output, session) {
     
     output$maskPlot <- renderPlot({
         core <- detectorarray()
+        msk <- mask()
         if (is.null(core)) return (NULL)
         par(mar=c(2,2,2,2), xaxs='i', yaxs='i', xpd = input$xpdbox)
         
-        plot (core, border = input$habxsigma * input$sigma, gridlines = FALSE)
-        plot (mask(), add = TRUE, col = grey(0.94 - input$dotsbox/5), dots = input$dotsbox)
-        plot (core, add = TRUE)
-        if (!is.null(habpolyrv$data) && input$polygonbox) {
-            sp::plot(habpolyrv$data, add = TRUE)
+        if (input$masktype == "Build") {
+            plot (core, border = input$habxsigma * input$sigma, gridlines = FALSE)
+            plot (msk, add = TRUE, col = grey(0.94 - input$dotsbox/5), dots = input$dotsbox)
+            plot (core, add = TRUE)
+            if (!is.null(habpolyrv$data) && input$polygonbox) {
+                sp::plot(habpolyrv$data, add = TRUE)
+            }
         }
-        if (input$maskedge2) {
-            plotMaskEdge(mask(), add = TRUE)
+        else {
+            if (!is.null(msk)) {
+                if (input$maskcov == 0) {
+                    cov <- NULL
+                    plot (msk, col = grey(0.94 - input$dotsbox/5), dots = input$dotsbox,
+                          covariate = cov)
+                }
+                else {
+                    covar <- covariates(msk)
+                    if (any(covar[,input$maskcov]<0)) stop ("density must be positive")
+                    covar[,input$maskcov] <- input$D * covar[,input$maskcov] / mean(covar[,input$maskcov], na.rm = T)
+                    covname <- 'D'
+                    names(covar)[input$maskcov] <- covname
+                    covariates(msk) <- covar
+                    plot (msk, dots = input$dotsbox, covariate = covname)
+                }
+                plot (core, add = TRUE)
+            }
+        }    
+        if (!is.null(msk)) {
+            if (input$maskedge2) {
+                plotMaskEdge(msk, add = TRUE)
+            }
+            if (!input$xpdbox)
+                box()
         }
-        
-        if (!input$xpdbox)
-            box()
     })
     ##############################################################################
     
