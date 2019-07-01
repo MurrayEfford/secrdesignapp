@@ -590,25 +590,27 @@ ui <- function(request) {
                                   column(5,
                                          h2("Simulation control"),
                                          fluidRow(
-                                             column(6, 
+                                             column(7, 
                                                     wellPanel(class = "mypanel", 
                                                               radioButtons("packagebtn", label = "Function to fit SECR model", 
-                                                                           choices = c("openCR.fit", "secr.fit", "no fit")),
-                                                              selectInput("method", "Maximization method",
+                                                                           choices = c("openCR.fit", "secr.fit", "no fit"), 
+                                                                           selected = "openCR.fit", inline = TRUE),
+                                                              # selectInput("method", "Maximization method",
+                                                              #             choices = c("Newton-Raphson", "Nelder-Mead", "none"),
+                                                              #             selected = "none", width=160),
+                                                              radioButtons("method", label = "Maximization method",
                                                                           choices = c("Newton-Raphson", "Nelder-Mead", "none"),
-                                                                          selected = "none", width=160),
-                                                              checkboxInput("simappendbox", "Add to Summary", TRUE)
+                                                                          selected = "none", inline = TRUE),
+                                                              br(),
+                                                              fluidRow(
+                                                                  column(5, selectInput("model2D", "2-D distribution",
+                                                                                        choices = c("poisson","cluster", "even"),
+                                                                                        selected = "poisson", width=160)),
+                                                                  column(7, textInput("details", "other details", value = "",
+                                                                                      placeholder = "sim.popn argument")))
                                                     )
                                              ),
-                                             column(6,
-                                                    
-                                                    fluidRow(
-                                                       column(5, selectInput("model2D", "2-D distribution",
-                                                                             choices = c("poisson","cluster", "even"),
-                                                                             selected = "poisson", width=160)),
-                                                       column(7, textInput("details", "other details", value = "",
-                                                                  placeholder = "sim.popn argument"))),
-                                                    
+                                             column(5,
                                                     wellPanel(class = "mypanel", 
                                                               
                                                               fluidRow(
@@ -627,6 +629,8 @@ ui <- function(request) {
                                                                                          step = 1,
                                                                                          width = 180))),
                                                               fluidRow(
+                                                                  column(6, checkboxInput("simappendbox", 
+                                                                                          "Add to Summary", TRUE)),
                                                                   column(6, numericInput("seed",
                                                                                          "Random seed",
                                                                                          min = 0,
@@ -634,17 +638,9 @@ ui <- function(request) {
                                                                                          value = 0,
                                                                                          step = 1,
                                                                                          width = 180))
-                                                                  # ,
-                                                                  # column(6, numericInput("simnx",
-                                                                  #                        "nx",
-                                                                  #                        min = 10,
-                                                                  #                        max = 1000,
-                                                                  #                        value = 32,
-                                                                  #                        step = 1,
-                                                                  #                        width = 180))
+
                                                               )
                                                     ),
-                                                    
                                                     br(),
                                                     actionButton("simulatebtn", "Click to execute", width = 200)
                                                     
@@ -2890,7 +2886,8 @@ server <- function(input, output, session) {
         updateCheckboxGroupInput(session, "model2D", selected = 'poisson')
         updateTextInput(session, "details", value = '')
         
-        updateSelectInput(session, "method", selected = "none")
+        # updateSelectInput(session, "method", selected = "none")
+        updateRadioButtons(session, "method", selected = "none")
         updateRadioButtons(session, "packagebtn", selected = "openCR.fit")
         updateCheckboxInput(session, "simappendbox", value = TRUE)
 
