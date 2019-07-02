@@ -266,7 +266,7 @@ ui <- function(request) {
                                                                            "Occasions",
                                                                            value = 5,
                                                                            min = 1,
-                                                                           max = 100,
+                                                                           max = 200,
                                                                            step = 1,
                                                                            width = 220),
                                                               numericInput("nrepeats",
@@ -776,11 +776,11 @@ ui <- function(request) {
                                                     conditionalPanel("output.selectingfields == 'TRUE'",
                                                                      checkboxGroupInput("fields2", "",
                                                                                         choices = c("detperHR", "k", "En", "Er", "Em",
-                                                                                                    "rotRSE", "CF", "route", "cost", "simfn",  "nrepl", "simtime",
-                                                                                                    "simRSE", "simRSEse", "simRB", "simRBse"),
+                                                                                                    "rotRSE", "CF", "route", "cost", "simfn",  "model2D", "details", 
+                                                                                                    "nrepl", "simtime", "simRSE", "simRSEse", "simRB", "simRBse"),
                                                                                         selected = c("detperHR", "k", "En", "Er", "Em",
-                                                                                                     "rotRSE", "CF", "route", "cost", "simfn",  "nrepl", "simtime",
-                                                                                                     "simRSE", "simRSEse", "simRB", "simRBse")
+                                                                                                     "rotRSE", "CF", "route", "cost", "simfn",  "model2D", "details", 
+                                                                                                     "nrepl", "simtime", "simRSE", "simRSEse", "simRB", "simRBse")
                                                                      )
                                                     )                                                  
                                              )
@@ -1053,11 +1053,11 @@ server <- function(input, output, session) {
     summaryfields <- c("date", "time", "note", "detector", "source", "nx", "ny", "spacex", "spacey",
                        "ndetectors", "noccasions", "nrepeats", "distribution", "detectfn", 
                        "D", "lambda0", "sigma", "detperHR", "k", "En", "Er", "Em",
-                       "rotRSE", "CF", "route", "cost", "simfn",  "nrepl", "simtime", 
+                       "rotRSE", "CF", "route", "cost", "simfn", "model2D", "details", "nrepl", "simtime", 
                        "simRSE", "simRSEse", "simRB", "simRBse")
     fieldgroup1 <- 1:17
-    fieldgroup2 <- 18:33
-    simfields <- summaryfields[27:33]
+    fieldgroup2 <- 18:35
+    simfields <- summaryfields[27:35]
     
     showNotification(paste("secrdesign", desc$Version, desc$Date),
                      closeButton = FALSE, type = "message", duration = seconds)
@@ -1613,7 +1613,7 @@ server <- function(input, output, session) {
             sigma = input$sigma,
             detectfn = input$detectfn,
             recapfactor = 1)
-        sims <- run.scenarios (
+        sims <- try(run.scenarios (
             nrepl = input$nrepl,
             scenarios = scen,
             trapset = array,
@@ -1627,14 +1627,22 @@ server <- function(input, output, session) {
             ncores = input$ncores,
             byscenario = FALSE,
             seed = seed,
-            terse = TRUE, moves = TRUE)  ## arguments for summary.capthist
+            terse = TRUE, moves = TRUE))  ## arguments for summary.capthist
         
+        ## empty data.frame 2019-07-02
+        counts <- as.data.frame(matrix(nrow = 3,ncol = 3, 
+                                       dimnames=list(c('Animals','Detections','Moves'),
+                                                     c('n','mean','se'))))
         if (fit) {
-            if ((input$packagebtn == "openCR.fit") && compareVersion(as.character(openCRversion), '1.3.3') < 0) {
-                showNotification("Moves NA with fit, openCR < 1.3.3",
-                                 type = "warning", id = "movesNA", duration = seconds)
+            if (!inherits(sims, 'try-error')) {
+                if ((input$packagebtn == "openCR.fit") && compareVersion(as.character(openCRversion), '1.3.3') < 0) {
+                    showNotification("Moves NA with fit, openCR < 1.3.3",
+                                     type = "warning", id = "movesNA", duration = seconds)
+                }
+                fitsum <- summary(count(sims))
+                if (is.list(fitsum))
+                    counts <- fitsum$OUTPUT[[1]]
             }
-            counts <- summary(count(sims))$OUTPUT[[1]]
         }
         else {  
             sumc <- function(x) {
@@ -1649,14 +1657,14 @@ server <- function(input, output, session) {
             nrepl = input$nrepl,
             method = input$method,
             fit = fit,
-            proctime = sims$proctime,
+            proctime = if (inherits(sims, 'try-error')) NA else sims$proctime,
             n = counts['Animals', 'mean'],
             n.se = counts['Animals', 'se'],
             ndet = counts['Detections', 'mean'],
             ndet.se = counts['Detections', 'se'],
             nmov = counts['Moves', 'mean'],
             nmov.se = counts['Moves', 'se'])
-        if (fit) {
+        if (fit && !inherits(sims, 'try-error')) {
             predicted <- summary(predict(sims))$OUTPUT[[1]]
             if (input$method=='none') {
                     simrv$output$RB <- NA   
@@ -1797,6 +1805,8 @@ server <- function(input, output, session) {
         
         simdf <- data.frame(
             simfn = "",
+            model2D = "",
+            details = "",
             nrepl = NA,
             simtime = NA,
             simRSE = NA, 
@@ -1806,6 +1816,8 @@ server <- function(input, output, session) {
         
         if (simrv$current && !is.null(simrv$output$fit)) {
             simdf$simfn <- input$packagebtn
+            simdf$model2D <- input$model2D
+            simdf$details <- input$details
             simdf$nrepl <- input$nrepl
             simdf$simtime <- round(simrv$output$proctime,2)
             if (simrv$output$fit) {
@@ -1814,7 +1826,7 @@ server <- function(input, output, session) {
                 simdf$simRB <- simrv$output$RB
                 simdf$simRBse <- simrv$output$RBse
             }
-            newfields <- unique(c(isolate(input$fields2), c("simfn", "nrepl", "simtime") ))
+            newfields <- unique(c(isolate(input$fields2), c("simfn", "model2D", "nrepl", "simtime") ))
         }
         
         df <- cbind(df, simdf)
