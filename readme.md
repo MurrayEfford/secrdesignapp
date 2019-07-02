@@ -36,3 +36,4 @@ OVforest.shp |||
 OVforest.shx |||
 excltest.txt | OV polygon to demonstrate exclusion feature | Options - Detector array - Excluded region |
 regionxy.txt | text file of a hypothetical study area boundary |Design - Region and Options - Habitat clip to polygons|
+masktest.txt | text file of a hypothetical mask | Habitat mask - File|
