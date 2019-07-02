@@ -480,12 +480,13 @@ The 2-D (spatial) distribution of simulated activity centres is controlled in `s
     and hsigma (SD of bivariate normal within-cluster scatter)<sup>1</sup> </td>
   </tr>
   <tr>
-    <td>even</td>
+    <td>even<sup>2</sup></td>
     <td> systematic grid of points, each jittered uniformly within its 'cell' </td>
   </tr>
 </table> 
 <br>
 1\. The defaults mu=1 and hsigma=0 result in no clustering; vary these for a clustered distribution. The effect is shown in the Popn viewer on the Design page when 'Restrict to mask' is not selected. <br>
+2\. Distribution of N (Ndist) coerced to 'fixed' in `sim.popn`<br>
 
 ## Results
 
