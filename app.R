@@ -2047,28 +2047,28 @@ server <- function(input, output, session) {
     
     maskcode <- function (arrayname) {
         if (input$masktype == 'Build') {
-        type <- if (input$maskshapebtn == 'Rectangular') 'traprect' else 'trapbuffer'
-        buffer <- as.character(round(input$habxsigma * input$sigma,2))
-
-        polycode <- ""
-        polyhabitat <- ""
-        
-        if (input$polygonbox && !is.null(habpolyrv$data)) { 
-            polyhabitat <- input$includeexcludebtn == "Include"
-            polycode <- getSPcode(input$habpolyfilename, "poly", input$polygonbox)
-        }
-        paste0(polycode,
-               "mask <- make.mask (", arrayname, 
-               ", buffer = ", buffer, 
-               ", nx = ", input$habnx, 
-               ", type = '", type, "'",  
-               if (polycode == "") "" else ",\n    poly = poly",
-               if (polycode == "") "" else ", poly.habitat = ", polyhabitat,
-               ")\n")
+            type <- if (input$maskshapebtn == 'Rectangular') 'traprect' else 'trapbuffer'
+            buffer <- as.character(round(input$habxsigma * input$sigma,2))
+            
+            polycode <- ""
+            polyhabitat <- ""
+            
+            if (input$polygonbox && !is.null(habpolyrv$data)) { 
+                polyhabitat <- input$includeexcludebtn == "Include"
+                polycode <- getSPcode(input$habpolyfilename, "poly", input$polygonbox)
+            }
+            paste0(polycode,
+                   "mask <- make.mask (", arrayname, 
+                   ", buffer = ", buffer, 
+                   ", nx = ", input$habnx, 
+                   ", type = '", type, "'",  
+                   if (polycode == "") "" else ",\n    poly = poly",
+                   if (polycode == "") "" else ", poly.habitat = ", polyhabitat,
+                   ")\n")
         }
         else {
             if (!is.null(input$maskfilename))
-            paste0("mask <- read.mask ('", input$maskfilename[1,1], "')\n")
+                paste0("mask <- read.mask ('", input$maskfilename[1,1], "')\n")
         }
     }
     ##############################################################################
@@ -3968,10 +3968,10 @@ server <- function(input, output, session) {
     output$maskPlot <- renderPlot({
         core <- detectorarray()
         msk <- mask()
-        if (is.null(core)) return (NULL)
         par(mar=c(2,2,2,2), xaxs='i', yaxs='i', xpd = input$xpdbox)
         
         if (input$masktype == "Build") {
+            if (is.null(core)) return (NULL)
             plot (core, border = input$habxsigma * input$sigma, gridlines = FALSE)
             plot (msk, add = TRUE, col = grey(0.94 - input$dotsbox/5), dots = input$dotsbox)
             plot (core, add = TRUE)
@@ -3995,7 +3995,7 @@ server <- function(input, output, session) {
                     covariates(msk) <- covar
                     plot (msk, dots = input$dotsbox, covariate = covname)
                 }
-                plot (core, add = TRUE)
+                if (inherits(core, 'traps')) plot (core, add = TRUE)
             }
         }    
         if (!is.null(msk)) {
