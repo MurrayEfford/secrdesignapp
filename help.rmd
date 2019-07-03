@@ -32,9 +32,9 @@ output:
 
 # Introduction  <a name="introduction"></a>
 
-This Shiny application is an interactive interface to parts of the R package **secrdesign** ([Efford 2019a](#references)). It focuses on the effect of detector layout and other design variables on the precision of density estimates, measured by the relative standard error (RSE, aka CV). Vary settings on the [Design](#designspecs) page to obtain an immediate "rule-of-thumb" approximation to RSE, based on the expected numbers of recaptures and distinct individuals. The current source code is available from https://GitHub.com/MurrayEfford/secrdesignapp.
+This Shiny application is an interactive interface to parts of the R package **secrdesign** ([Efford 2019a](#references)). It focuses on the effect of detector layout and other design variables on the precision of density estimates, measured by the relative standard error (RSE, aka CV). Vary settings on the [Design](#designspecs) page to obtain an immediate "rule-of-thumb" approximation to RSE($\hat D$), based on the expected numbers of recaptures and distinct individuals ([Efford and Boulanger 2019]). The current source code is available from https://GitHub.com/MurrayEfford/secrdesignapp.
 
-The application makes use of an approximation for RSE($\hat D$) ([Efford and Boulanger 2019]). The approximation is biased low for some layouts, especially when sample size is small. A correction factor may be applied to adjust the rule-of-thumb. Refine the approximation by [simulating](#simspecs) data from the chosen design; this may take a long time. Use "Add to summary" to include the current scenario in a spreadsheet for export.
+The approximation is biased low for some layouts, especially when sample size is small. A correction factor may be applied to adjust the approximation. Refine the approximation by [simulating](#simspecs) data from the chosen design; this may take a long time. The correction factor is updated automatically from simulation results (see Options to suppress this). Use "Add to summary" to include the current scenario in a spreadsheet for export.
 
 Documentation for **secrdesign** is available at www.otago.ac.nz/density. For example:
 
@@ -323,11 +323,11 @@ Two styles of plot are offered (see Options | Power plot)
 
 #### Power for test of null hypothesis 
 
-Probability of detecting a change in density in a 2-survey comparison as a function of effect size for a given expected \(\small \mbox{RSE}(\hat D)\). See [Appendix 1](#appendix1) for the computation method.
+Probability of detecting a change in density in a 2-survey comparison as a function of effect size for a given expected \(\small \mbox{RSE}(\hat D)\). See [Efford and Boulanger 2019] for the computation method.
 
 Effect size is the ratio of final density \(\small D_2\) to initial density \(\small D_1\) expressed as a percentage. The alpha level is specified in Options (default \(\small \alpha = 0.05\)). 
 
-The curve is initially computed for the rule-of-thumb RSE from the current design. Use the slider to vary this. Especially, consider adding a safety margin for underestimation of RSE.
+The curve is initially computed with the approximated RSE from the current design. Use the slider to vary this. Especially, consider adding a safety margin for underestimation of RSE.
 
 The default method assumes that \(\small \mbox{RSE}(\hat D)\) is the same in the initial and final surveys. It is more likely that \(\small \mbox{RSE}(\hat D)\) will increase as density declines. An adjustment is applied to the final RSE when the 'Adjust RSE' box is ticked:  \(\small \mbox{RSE}(\hat D_2) =   \sqrt {D_1/D_2} \mbox{RSE}(\hat D_1) \).
 

@@ -419,7 +419,7 @@ ui <- function(request) {
                      tabPanel("Habitat mask",
                               
                               fluidRow(
-                                  column(4,
+                                  column(3,
                                          tabsetPanel(
                                              type = "pills", id = "masktype", selected = "Build",
                                              
@@ -487,7 +487,7 @@ ui <- function(request) {
                                              ) 
                                          )
                                   ),
-                                  column(4, plotOutput("maskPlot"),
+                                  column(5, plotOutput("maskPlot"),
                                          conditionalPanel ("output.trapsUploaded", fluidRow(
                                              column(3, offset = 1, checkboxInput("dotsbox", "dots", value = FALSE, width = 180)),
                                              column(3, offset = 1, checkboxInput("xpdbox", "xpd", value = FALSE, width = 180)),
@@ -2389,7 +2389,7 @@ server <- function(input, output, session) {
                            buffer = input$habxsigma * input$sigma,
                            nx = input$habnx,
                            type = if (input$maskshapebtn=='Rectangular') 'traprect' else 'trapbuffer',
-                           poly = habpolyrv$data,
+                           poly = if (input$polygonbox) habpolyrv$data else NULL,
                            poly.habitat = input$includeexcludebtn == "Include",
                            keep.poly = FALSE)
             }
