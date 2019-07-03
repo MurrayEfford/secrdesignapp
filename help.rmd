@@ -321,7 +321,7 @@ Contours of the overall detection probability \(p_\cdot(\mathbf x)\) ('Pxy' is t
 
 Two styles of plot are offered (see Options | Power plot)
 
-#### Power for test of null hypothesis 
+1\. Power for test of null hypothesis 
 
 Probability of detecting a change in density in a 2-survey comparison as a function of effect size for a given expected \(\small \mbox{RSE}(\hat D)\). See [Efford and Boulanger 2019] for the computation method.
 
@@ -331,7 +331,7 @@ The curve is initially computed with the approximated RSE from the current desig
 
 The default method assumes that \(\small \mbox{RSE}(\hat D)\) is the same in the initial and final surveys. It is more likely that \(\small \mbox{RSE}(\hat D)\) will increase as density declines. An adjustment is applied to the final RSE when the 'Adjust RSE' box is ticked:  \(\small \mbox{RSE}(\hat D_2) =   \sqrt {D_1/D_2} \mbox{RSE}(\hat D_1) \).
 
-#### Confidence interval for population change
+2\. Confidence interval for population change
 
 As an alternative to conventional power analysis we can construct intervals for the estimated ratio of densities, given the true ratio and the sampling errors. The interval is the region between the upper and lower curves for a given true population change on the x axis. 
 
