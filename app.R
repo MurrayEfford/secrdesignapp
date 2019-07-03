@@ -477,12 +477,17 @@ ui <- function(request) {
                                                                     fileInput("maskfilename", "Mask file",
                                                                               accept = c('.txt'), 
                                                                               multiple = FALSE)),
-                                                                numericInput("maskcov", "Covariate for relative density",
+                                                                br(),
+                                                                fluidRow(
+                                                                    column(6,numericInput("maskcov", "Focal covariate",
                                                                              min = 0,
                                                                              max = 0,
                                                                              value = 0,
                                                                              step = 1,
-                                                                             width = 180)
+                                                                             width = 180)),
+                                                                    column(6, br(), checkboxInput("scaleD", "Rescale density",
+                                                                                            value = FALSE))
+                                                                )
                                                       )
                                              ) 
                                          )
@@ -2646,7 +2651,6 @@ server <- function(input, output, session) {
             covar <- covariates(maskrv$data)
             if (!is.null(covar)) {
                 updateNumericInput(session, "maskcov", max = ncol(covar))
-                # updateNumericInput(session, "maskcov", value = 1)
             }
         }
     })
@@ -2926,7 +2930,9 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "polygonbox", value = TRUE)
         updateCheckboxInput(session, "exclusionbox", value = TRUE)
         updateRadioButtons(session, "includeexcludebtn", selected = "Include")
-
+        updateCheckboxInput(session, "scaleD", value = FALSE)
+        updateNumericInput(session, "maskcov", value = 0)
+        
         ## array plot
         updateCheckboxInput(session, "entireregionbox", value = TRUE)
         updateCheckboxInput(session, "snaptodetector", value = FALSE)
@@ -3988,8 +3994,12 @@ server <- function(input, output, session) {
                 }
                 else {
                     covar <- covariates(msk)
-                    if (any(covar[,input$maskcov]<0)) stop ("density must be positive")
-                    covar[,input$maskcov] <- input$D * covar[,input$maskcov] / mean(covar[,input$maskcov], na.rm = T)
+                    D <- as.numeric(covar[,input$maskcov])
+                    if (any(D<0)) stop ("density must be positive")
+                    if (input$scaleD)
+                        covar[,input$maskcov] <- input$D * D / mean(D, na.rm = T)
+                    else
+                        covar[,input$maskcov] <- D
                     covname <- 'D'
                     names(covar)[input$maskcov] <- covname
                     covariates(msk) <- covar
