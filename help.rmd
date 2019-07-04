@@ -329,7 +329,7 @@ Effect size is the ratio of final density \(\small D_2\) to initial density \(\s
 
 The curve is initially computed with the approximated RSE from the current design. Use the slider to vary this. Especially, consider adding a safety margin for underestimation of RSE.
 
-The default method assumes that \(\small \mbox{RSE}(\hat D)\) is the same in the initial and final surveys. It is more likely that \(\small \mbox{RSE}(\hat D)\) will increase as density declines. An adjustment is applied to the final RSE when the 'Adjust RSE' box is ticked:  \(\small \mbox{RSE}(\hat D_2) =   \sqrt {D_1/D_2} \mbox{RSE}(\hat D_1) \).
+It is likely that \(\small \mbox{RSE}(\hat D)\) will increase as density declines. By default, an adjustment is applied to the final RSE:  \(\small \mbox{RSE}(\hat D_2) =   \sqrt {D_1/D_2} \mbox{RSE}(\hat D_1) \). This may be removed by unticking the 'Adjust final RSE' box.
 
 2\. Confidence interval for population change
 
@@ -339,7 +339,9 @@ As an alternative to conventional power analysis we can construct intervals for 
 
 # Habitat mask  <a name="habspecs"></a>
 
-Settings here should be self explanatory. See [secr-habitatmasks.pdf] for background. The default buffer multiplier (4) may be inadequate when detectfn = 'HEX'.
+Settings here should be self explanatory. See [secr-habitatmasks.pdf] for background. 
+
+The mask may either be built by buffering around the detector array (see Design) or imported from a text file. The default buffer multiplier (4) may be inadequate when detectfn = 'HEX'. The format of the text file is that exported from **secr** >3.2.1with `write.mask`
 
 ----------------------------------------------------
 
@@ -627,7 +629,7 @@ A systematic or random array defined with a Region polygon may exclude sites tha
 
 ```{r, eval = FALSE}
 library(rgdal)
-library(rgos)
+library(rgeos)
 setwd('d:/density secr 3.2/secrdesignapp')
 region <- rgdal::readOGR(dsn = 'OVforest.shp')
 # coordinates from text file
