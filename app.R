@@ -3858,7 +3858,8 @@ server <- function(input, output, session) {
                      detectfn = input$detectfn,
                      detectpar = list(sigma = input$sigma, lambda0 = input$lambda0),
                      noccasions = input$noccasions, drawlabels = drawlabels,
-                     binomN = NULL, levels = lev, poly = habpolyrv$data, 
+                     binomN = NULL, levels = lev, 
+                     poly = if (input$polygonbox) habpolyrv$data else NULL, 
                      poly.habitat = input$includeexcludebtn == "Include",
                      plt = TRUE, add = TRUE,
                      col = col, fill = cols)
