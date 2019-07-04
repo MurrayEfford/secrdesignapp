@@ -2111,8 +2111,13 @@ server <- function(input, output, session) {
     ##############################################################################
     
     maskOK <- function () {
-        if (!is.null(habpolyrv$data)) {
+        if (input$masktype == 'Build' && !is.null(habpolyrv$data)) {
             sum(pointsInPolygon(detectorarray(), habpolyrv$data)) > 0
+        }
+        else if (input$masktype == 'File' && !is.null(maskrv$data)) {
+            ## "If poly is a mask object then its cells must be aligned
+            ##  to the x- and y- axes"
+            sum(pointsInPolygon(detectorarray(), maskrv$data)) > 0
         }
         else TRUE
     }
@@ -2406,6 +2411,11 @@ server <- function(input, output, session) {
             }
         }
         else {
+            if (!maskOK()) {
+                    showNotification("no detectors in mask",
+                                     type = "warning", id = "notrapsinmask",
+                                     duration = seconds)
+            }
             maskrv$data
         }
     }
