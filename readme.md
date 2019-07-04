@@ -44,6 +44,6 @@ OVforest.shx |||
 excltest.txt | OV polygon to demonstrate exclusion feature | Options - Detector array - Excluded region |
 regionxy.txt | text file of a hypothetical study area boundary |Design - Region and Options - Habitat clip to polygons|
 
-##Reference
+### Reference
 
 Efford, M. G. and Boulanger, J. (2019) Fast evaluation of study designs for spatially explicit capture-recapture. Methods in Ecology and Evolution (in press)
