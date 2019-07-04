@@ -2,7 +2,7 @@
 
 secrdesignapp is a partial interactive interface to the R package [secrdesign](https://CRAN.R-project.org/package=secrdesign). See the Help tab for details.
 
-The main new feature in version 1.1 was support for systematic and random designs within a region of interest. Version 1.2 has many small improvements, including traffic lights and other warnings. Version 1.3 (July 2019) introduces
+The main new feature in version 1.1 was support for systematic and random designs within a region of interest. Version 1.2 has many small improvements, including traffic lights and other warnings. Version 1.3 (July 2019) introduces -
 
 * user control of traffic light thresholds
 * user-specified 2-D distribution models for *simulated* activity centres ('cluster' and 'even' as alternatives to Poisson)
