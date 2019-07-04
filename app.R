@@ -2387,9 +2387,12 @@ server <- function(input, output, session) {
         pxyrv$value <- NULL
         if (input$masktype=="Build") {
             if (!is.null(detectorarray())) {
-                if (!maskOK()) showNotification("no detectors in habitat polygon(s)",
-                                                type = "warning", id = "notrapsinpoly",
-                                                duration = seconds)
+                if (!maskOK()) {
+                    showNotification("no detectors in polygon(s); clipping switched off",
+                                     type = "warning", id = "notrapsinpoly",
+                                     duration = seconds)
+                    updateCheckboxInput(session, "polygonbox", value = FALSE)
+                }
                 make.mask (detectorarray(),
                            buffer = input$habxsigma * input$sigma,
                            nx = input$habnx,
