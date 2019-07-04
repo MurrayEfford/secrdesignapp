@@ -3909,7 +3909,8 @@ server <- function(input, output, session) {
         ## rotrv$output is an object with class "optimalSpacing" with plot method in secrdesign
         if (rotrv$current){
             par(mar=c(5,6,3,6))      
-            plot(rotrv$output, plottype = "RSE", col = "blue", lwd = linewidth, cex = 1.1)
+            plot(rotrv$output, plottype = "RSE", col = "blue", lwd = linewidth, cex = 1.1,
+                 ylab = expression(paste("Approximate RSE ", hat(italic(D)))))
             ## traffic lights 2019-02-11
             if (input$trafficlightbox) {
                 R <- rotrv$output$rotRSE$values$R
@@ -4117,8 +4118,8 @@ server <- function(input, output, session) {
         query <- parseQueryString(session$clientData$url_search)
         
         if (length(query)>0) {
-            # browser()
-            updateTabsetPanel(session, "arrayinput", selected = "File")
+            # suppress 2019-07-05: no longer needed?
+            # updateTabsetPanel(session, "arrayinput", selected = "File")
             
             if (!is.null(query[['trapfilename']])) {
                 updateNumericInput(session, "trapfilename", value = query[['trapfilename']])
@@ -4148,9 +4149,10 @@ server <- function(input, output, session) {
             if (!is.null(query[['sigma']])) {
                 updateNumericInput(session, "sigma", value = as.numeric(query[['sigma']]))
             }
+            # suppress 2019-07-05: no longer needed?
             ## display notification until arrayPlot successful
-            showNotification("browse to detector file or specify other array (Grid, Line, Region)", 
-                             type = "message", id = "reloadtraps", duration = NULL)
+            # showNotification("browse to detector file or specify other array (Grid, Line, Region)", 
+            #                  type = "message", id = "reloadtraps", duration = NULL)
             
         }
     })
