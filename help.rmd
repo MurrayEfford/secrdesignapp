@@ -54,7 +54,7 @@ IMPORTANT NOTE: Maximising precision is only one component of study design. Samp
 
 *Use settings on this page to specify a detector layout, population and sampling parameters. The settings are interpreted in various plots and used for calculations shown in the Results window. They are also used for calculations on later pages (Costing, Spacing, Simulation).* \(\renewcommand{\vec}[1]{\mathbf{#1}}\)
 
-## Detector array
+## Detector array <a name="detectorarray"></a>
 
 <table style="width:40%">
   <tr>
@@ -123,8 +123,6 @@ A region is a study area within which detectors will be placed either systematic
 * an ESRI polygon shapefile with at least three component files (.shp, .dbf and .shx) selected together. 
 
 See Options | Detector array to control the clipping of clusters that cross the boundary of the region.
-
-A region based on an ESRI shapefile cannot at present be restored from a bookmark (see [Troubleshooting](#troubles)).
 
 #### Systematic
 
@@ -341,7 +339,24 @@ As an alternative to conventional power analysis we can construct intervals for 
 
 Settings here should be self explanatory. See [secr-habitatmasks.pdf] for background. 
 
-The mask may either be built by buffering around the detector array (see Design) or imported from a text file. The default buffer multiplier (4) may be inadequate when detectfn = 'HEX'. The format of the text file is that exported from **secr** >3.2.1with `write.mask`
+The mask may either be imported from a text file ('File') or built by buffering around the [detector array](#detectorarray) from the Design page ('Build'). The format of the text file is that exported from **secr** >3.2.1with `write.mask` (basically two columns, the x- and y-coordinates). The default buffer multiplier for the 'Build' option (4) may be inadequate when detectfn = 'HEX'. 
+
+## Plotting options
+
+<table style="width:40%">
+  <tr>
+    <td>dots</td>
+    <td>display mask points as dots rather than filled cells</td>
+  </tr>
+  <tr>
+    <td>xpd</td>
+    <td>clip plot and suppress enclosing box </td>
+  </tr>
+  <tr>
+    <td>show mask edge</td>
+    <td>use secr::plotMaskEdge to outline mask</td>
+  </tr>
+</table> 
 
 ----------------------------------------------------
 
