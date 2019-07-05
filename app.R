@@ -21,6 +21,7 @@ openCRversion <- packageVersion('openCR')
 
 linewidth <- 2  # for various plots 
 seconds <- 6   ## default duration for showNotification()
+errorduration <- NULL
 trafficcols <- c("chartreuse1", "yellow1", "red")
 
 # Define UI 
@@ -123,19 +124,9 @@ ui <- function(request) {
                                                                                      " as for secr::read.traps"))),
                                                                 textInput("trapargs", "Optional arguments for read.traps()",
                                                                           value = "", placeholder = "e.g., skip = 1, sep = ','"),
-                                                                br()
-                                                                # ,
-                                                                # fluidRow(
-                                                                #     column (6, numericInput("scalefactor",
-                                                                #                             "Scaling factor",
-                                                                #                             value = 1.0,
-                                                                #                             min = 0,
-                                                                #                             max = 100,
-                                                                #                             step = 0.01)),
-                                                                #     column (6, br(), actionButton("suggestfilebtn", "Suggest factor",
-                                                                #            title = "Find spacing factor at which E(n) = E(r)"))
-                                                                # )
-                                                                # 
+                                                                verbatimTextOutput("traptext"),
+                                                                tags$head(tags$style("#traptext{overflow-y:scroll; max-height: 100px; 
+                                                                                     background: ghostwhite;}"))
                                                        ),
                                                        tabPanel("Region",
                                                                 br(),
@@ -477,6 +468,14 @@ ui <- function(request) {
                                                                     fileInput("maskfilename", "Mask file",
                                                                               accept = c('.txt'), 
                                                                               multiple = FALSE)),
+                                                                helpText(HTML(paste0("Requires text file with ",
+                                                                                     "x-y coordinates in first two columns,",
+                                                                                     " as for secr::read.mask"))),
+                                                                textInput("maskargs", "Optional arguments for read.mask()",
+                                                                          value = "header = TRUE", placeholder = "e.g., sep = ','"),
+                                                                verbatimTextOutput("masktext"),
+                                                                tags$head(tags$style("#masktext{overflow-y:scroll; max-height: 125px; 
+                                                                                     background: ghostwhite;}")),
                                                                 br(),
                                                                 fluidRow(
                                                                     column(6,numericInput("maskcov", "Focal covariate",
@@ -493,7 +492,7 @@ ui <- function(request) {
                                          )
                                   ),
                                   column(5, plotOutput("maskPlot"),
-                                         conditionalPanel ("output.trapsUploaded", fluidRow(
+                                         conditionalPanel ("output.maskUploaded", fluidRow(
                                              column(3, offset = 1, checkboxInput("dotsbox", "dots", value = FALSE, width = 180)),
                                              column(3, offset = 1, checkboxInput("xpdbox", "xpd", value = FALSE, width = 180)),
                                              column(4, checkboxInput("maskedge2", "show mask edge", value = FALSE))
@@ -1517,7 +1516,7 @@ server <- function(input, output, session) {
             }
             R <- try(uniroot(nminr, interval = c(lower, upper)))
             if (inherits(R, "try-error") || R$iter==0) {
-                showNotification("optimal value not found", type = "error", id = "nooptimum", duration = seconds)
+                showNotification("optimal value not found", type = "error", id = "nooptimum", duration = errorduration)
                 return(NA)
             }
             else {
@@ -1544,6 +1543,12 @@ server <- function(input, output, session) {
             ext <- tolower(tools::file_ext(fileupload[1,1]))
             if (ext == "txt") {
                 coord <- read.table(fileupload[1,4])
+                if (!is.numeric(coord) || (ncol(coord)<2)) {
+                    showNotification("bad polygon file(s); clipping switched off",
+                                     type = "error", id = "nopolyfile", duration = errorduration)
+                    updateCheckboxInput(session, "polygonbox", value = FALSE)
+                    return(NULL)
+                }
                 poly <- secr:::boundarytoSP(coord[,1:2])
             }
             else if (ext %in% c("rdata", "rda", "rds")) {
@@ -1566,10 +1571,11 @@ server <- function(input, output, session) {
                       any(grepl(".dbf", fileupload[,1])) &&
                       any(grepl(".shx", fileupload[,1])))) {
                     showNotification("need shapefile components .shp, .dbf, .shx",
-                                     type = "error", id = "nofile", duration = seconds)
+                                     type = "error", id = "nofile", duration = errorduration)
                 }
                 else  if (!requireNamespace("rgdal"))
-                    showNotification("need package rgdal to read shapefile", type = "error", id = "norgdal", duration = seconds)
+                    showNotification("need package rgdal to read shapefile", type = "error", id = "norgdal", 
+                                     duration =errorduration)
                 else {
                     removeNotification(id = "nofile")
                     removeNotification(id = "norgdal")
@@ -2072,8 +2078,12 @@ server <- function(input, output, session) {
                    ")\n")
         }
         else {
+            maskargs <- input$maskargs
+            if (maskargs != "")
+                maskargs <- paste0(", ", maskargs)
+            
             if (!is.null(input$maskfilename))
-                paste0("mask <- read.mask ('", input$maskfilename[1,1], "')\n")
+                paste0("mask <- read.mask ('", input$maskfilename[1,1], maskargs, "')\n")
         }
     }
     ##############################################################################
@@ -2208,34 +2218,6 @@ server <- function(input, output, session) {
     
     ##############################################################################
     
-    # readtrapfile <- function (scale) {
-    #     inFile <- input$trapfilename
-    #     trps <- NULL
-    #     if (!is.null(inFile)) {
-    #         filename <- input$trapfilename[1,"datapath"]
-    #         if (is.null(filename))
-    #             stop("provide valid filename")
-    #         trapargs <- input$trapargs
-    #         if (trapargs != "")
-    #             trapargs <- paste0(", ", trapargs)
-    #         readtrapscall <- paste0("read.traps (filename, detector = input$detector", trapargs, ")")
-    #         trps <- try(eval(parse(text = readtrapscall)))
-    #         if (scale != 1.0) {
-    #             # trps[,] <- trps[,] * scale
-    #             meanxy <- apply(trps,2,mean)
-    #             trps[,1] <- (trps[,1]- meanxy[1]) * scale + meanxy[1]
-    #             trps[,2] <- (trps[,2]- meanxy[2]) * scale + meanxy[2]
-    #         }
-    #         
-    #         if (!inherits(trps, "traps")) {
-    #             showNotification("invalid trap file or arguments; try again",
-    #                              type = "warning", id = "badarray", duration = seconds)
-    #         }
-    #     }    
-    #     trps
-    # }
-    ##############################################################################
-    
     detectorarray <- reactive(
         {
             simrv$current <- FALSE
@@ -2305,7 +2287,7 @@ server <- function(input, output, session) {
                     if (expectedndetector > input$maxdetectors*2) {
                         showNotification("expected N detectors exceeds limit",
                                          type = "error", id = "toomany",
-                                         duration = seconds)
+                                         duration = errorduration)
                         return(NULL)
                     }
                     #########################################################
@@ -2431,7 +2413,7 @@ server <- function(input, output, session) {
             }
             if (density() * maskarea(mask()) > 10000) {
                 showNotification("population exceeds 10000; try again",
-                                 type = "error", id = "bigpop", duration = seconds)
+                                 type = "error", id = "bigpop", duration = errorduration)
                 return(NULL)
             }
             else removeNotification("bigpop")
@@ -2444,7 +2426,7 @@ server <- function(input, output, session) {
             if (input$onlymaskbox) {
                 if (nrow(mask())==0) {
                     showNotification("incompatible mask",
-                                     type = "error", id = "badmask", duration = seconds)
+                                     type = "error", id = "badmask", duration = errorduration)
                     pop <- NULL
                 }
                 else {
@@ -2603,17 +2585,18 @@ server <- function(input, output, session) {
         filename <- input$trapfilename[1,"datapath"]
         if (is.null(filename))
             stop("provide valid filename")
+        
         trapargs <- input$trapargs
         if (trapargs != "")
             trapargs <- paste0(", ", trapargs)
         readtrapcall <-  paste0("read.traps (filename, detector = input$detector", trapargs, ")")
-        traprv$data <- try(eval(parse(text = readtrapcall)))
-        if (!inherits(traprv$data, "traps")) {
+        OK <- try(eval(parse(text = readtrapcall)))
+        if (!inherits(OK, "traps")) {
             showNotification("invalid trap file or arguments; try again",
                              type = "error", id = "badtrap", duration = seconds)
-            traprv$data <- NULL
         }
         else {
+            traprv$data <- OK
             if (traprv$scale != 1.0) {
                 meanxy <- apply(traprv$data,2,mean)
                 traprv$data[,1] <- (traprv$data[,1]- meanxy[1]) * traprv$scale + meanxy[1]
@@ -2621,6 +2604,29 @@ server <- function(input, output, session) {
             }
             
         }    
+    })
+    ##############################################################################
+    output$traptext <- renderText({
+        fileText <- NULL
+        if (!is.null(input$trapfilename)) {
+            filePath <- input$trapfilename$datapath
+            if (file.exists(filePath)) {
+                fileText <- paste(readLines(filePath), collapse = "\n")
+            }
+        }
+        fileText
+    })
+    ##############################################################################
+    
+    output$masktext <- renderText({
+        fileText <- NULL
+        if (!is.null(input$maskfilename)) {
+            filePath <- input$maskfilename$datapath
+            if (file.exists(filePath)) {
+                fileText <- paste(readLines(filePath), collapse = "\n")
+            }
+        }
+        fileText
     })
     ##############################################################################
     
@@ -2659,8 +2665,20 @@ server <- function(input, output, session) {
         req(!maskrv$clear)
         maskrv$data <- NULL
         if (input$masktype == 'File') {
-            if (!is.null(input$maskfilename))
-            maskrv$data <- read.mask(input$maskfilename[1,4], header = TRUE) 
+            if (!is.null(input$maskfilename)) {
+                maskargs <- input$maskargs
+                if (maskargs != "") maskargs <- paste0(", ", maskargs)
+                
+                readmaskcall <-  paste0("read.mask (input$maskfilename[1,4]", maskargs, ")")
+                OK <- try(eval(parse(text = readmaskcall)))
+                if (!inherits(OK, 'mask')) {
+                    showNotification("invalid mask file or arguments; try again",
+                             type = "error", id = "badmask", duration = seconds)
+                }
+                else {
+                    maskrv$data <- OK
+                }
+            }
             covar <- covariates(maskrv$data)
             if (!is.null(covar)) {
                 updateNumericInput(session, "maskcov", max = ncol(covar))
@@ -2784,7 +2802,7 @@ server <- function(input, output, session) {
         ## E[n] == E[r]
         if (!input$autorefresh) {
             showNotification("enable auto refresh",
-                             type = "error", id = "nosuggest", duration = seconds)
+                             type = "error", id = "nosuggest", duration = errorduration)
         }
         else {
             optimalspacing <- n.eq.r()
@@ -2801,7 +2819,7 @@ server <- function(input, output, session) {
         ## E[n] == E[r]
         if (!input$autorefresh) {
             showNotification("enable auto refresh",
-                             type = "error", id = "nosuggestline", duration = seconds)
+                             type = "error", id = "nosuggestline", duration = errorduration)
         }
         else {
             optimalspacing <- n.eq.r()
@@ -2862,8 +2880,8 @@ server <- function(input, output, session) {
         updateNumericInput(session, "seedpgrid", value = 0)
 
         ## file
-        updateTextInput(session, "args", 
-                        value = "", placeholder = "e.g., skip = 1, sep = ','")
+        updateTextInput(session, "trapargs", value = "", 
+                        placeholder = "e.g., skip = 1, sep = ','")
         # updateNumericInput(session, "scalefactor", value = 1.0)
 
         ## parameters
@@ -2943,6 +2961,9 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "polygonbox", value = TRUE)
         updateCheckboxInput(session, "exclusionbox", value = TRUE)
         updateRadioButtons(session, "includeexcludebtn", selected = "Include")
+        
+        updateTextInput(session, "maskargs", value = "header = TRUE", placeholder = "e.g., sep = ','")
+
         updateCheckboxInput(session, "scaleD", value = FALSE)
         updateNumericInput(session, "maskcov", value = 0)
         
@@ -3035,7 +3056,7 @@ server <- function(input, output, session) {
     observeEvent(input$chequerboard, {
         if (input$chequerboard && compareVersion(as.character(secrversion), '3.2.0') < 0) {
             showNotification("chequerboard requires secr version >= 3.2.0",
-                             type = "error", id = "oldsecr", duration = seconds)
+                             type = "error", id = "oldsecr", duration = errorduration)
             updateCheckboxInput(session, "chequerboard", value = FALSE)
         }
     })
@@ -3303,6 +3324,10 @@ server <- function(input, output, session) {
         return(!is.null(detectorarray()))
     })
     
+    output$maskUploaded <- reactive({
+        return(!is.null(mask()))
+    })
+    
     # observeEvent(input$summarybtn, {
     #     ap <- isolate(input$appendbox)
     #     filename <- isolate(input$savefilename)
@@ -3531,13 +3556,15 @@ server <- function(input, output, session) {
                    " (SE ",  round(simrv$output$RSEse, 2), "%)")
             
         if (attr(detectorarray(), "arrayspan") < (5 * input$sigma)) {
-            ## removeNotification("lownr")
             showNotification("Pathological design - array span < 5.sigma",
                              type = "warning", id = "zeronm", duration = NULL)
         }
         if (k<0.2 || k>1.5) {
                 showNotification(paste0("Unlikely combination of D and sigma  (k = ", round(k,2), ")"),
                                  type = "warning", id = "unlikelyk", duration = NULL)
+        }
+        else {
+            removeNotification("unlikelyk")
         }
             
         if (!any(is.na(c(nrmval$En, nrmval$Er, nrmval$Em)))) {
@@ -3548,13 +3575,6 @@ server <- function(input, output, session) {
             }
             else {
                 removeNotification("zeronm")
-                # if (nrmval$En<20 | nrmval$Er<20) {
-                #     showNotification("Low E(n) or E(r) - simulate to check RSE",
-                #                      type = "warning", id = "lownr", duration = NULL)
-                # }
-                # else {
-                #     removeNotification("lownr")
-                # }
             }
         }
         paste0(
@@ -3582,7 +3602,7 @@ server <- function(input, output, session) {
             costs <- nrm()
             if (is.null(costs)) {
                 showNotification("costing failed; check parameters",
-                                 type = "error", id = "nocost", duration = seconds)
+                                 type = "error", id = "nocost", duration = errorduration)
                 return("")
             }
             else {
@@ -4091,6 +4111,7 @@ server <- function(input, output, session) {
    
     outputOptions(output, "validspacing", suspendWhenHidden = FALSE)
     outputOptions(output, "trapsUploaded", suspendWhenHidden = FALSE)
+    outputOptions(output, "maskUploaded", suspendWhenHidden = FALSE)
 
     ##############################################################################
     # tidy end of session - app closes in R
