@@ -1632,6 +1632,10 @@ server <- function(input, output, session) {
             sigma = input$sigma,
             detectfn = input$detectfn,
             recapfactor = 1)
+        
+        ## 2019-07-05
+        ## vulnerable to 'zero clusters' in sim.popn
+        
         sims <- try(run.scenarios (
             nrepl = input$nrepl,
             scenarios = scen,
@@ -1641,7 +1645,6 @@ server <- function(input, output, session) {
             fit.function = if(fit) input$packagebtn else NULL,
             extractfn = summary,
             pop.args = list(Ndist = Ndist, model2D = model2D, details = detail),
-            #pop.args = list(Ndist = Ndist),
             fit.args = if (fit) fitargs else NULL,
             ncores = input$ncores,
             byscenario = FALSE,
