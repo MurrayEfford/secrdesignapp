@@ -703,7 +703,7 @@ ui <- function(request) {
                                              tabPanel("RSE",
                                                       fluidRow(
                                                           column(6,
-                                                                 # Show a plot of the rule-of-thumb RSE
+                                                                 # Show a plot of the approximate RSE
                                                                  plotOutput("RSEPlot", width = "520px", height = "400px", 
                                                                             hover="spacingTrafficClick")
                                                           )
@@ -3562,7 +3562,7 @@ server <- function(input, output, session) {
         else
             paste0( "\nTotal cost = ", input$currency, sprintf("%.2f", nrmval$totalcost), star)
         
-        rotstr <- paste0("Rule-of-thumb RSE = ",
+        rotstr <- paste0("Approximate RSE   = ",
             round(nrmval$rotRSE * input$CFslider * 100, 1), "%", star, 
             " (correction factor ", round(input$CFslider,3), ")")
             
@@ -3652,7 +3652,7 @@ server <- function(input, output, session) {
                    round(temp$rotRSE$optimum.R,2), '\n',
                    "Optimal spacing (absolute) = ",
                    round(temp$rotRSE$optimum.spacing, 1), " m", '\n',
-                   "Minimum rule-of-thumb RSE = ",
+                   "Minimum approximate RSE = ",
                    round(temp$rotRSE$minimum.RSE*input$CFslider*100, 1), " %  (correction factor ", 
                    round(input$CFslider,3), ")")
         }
