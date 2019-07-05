@@ -125,7 +125,7 @@ ui <- function(request) {
                                                                 textInput("trapargs", "Optional arguments for read.traps()",
                                                                           value = "", placeholder = "e.g., skip = 1, sep = ','"),
                                                                 verbatimTextOutput("traptext"),
-                                                                tags$head(tags$style("#traptext{overflow-y:scroll; max-height: 100px; 
+                                                                tags$head(tags$style("#traptext{overflow-y:scroll; max-height: 107px; 
                                                                                      background: ghostwhite;}"))
                                                        ),
                                                        tabPanel("Region",
@@ -474,7 +474,7 @@ ui <- function(request) {
                                                                 textInput("maskargs", "Optional arguments for read.mask()",
                                                                           value = "header = TRUE", placeholder = "e.g., sep = ','"),
                                                                 verbatimTextOutput("masktext"),
-                                                                tags$head(tags$style("#masktext{overflow-y:scroll; max-height: 125px; 
+                                                                tags$head(tags$style("#masktext{overflow-y:scroll; max-height: 127px; 
                                                                                      background: ghostwhite;}")),
                                                                 br(),
                                                                 fluidRow(
@@ -2121,6 +2121,7 @@ server <- function(input, output, session) {
     ##############################################################################
     
     maskOK <- function () {
+        if (is.null(detectorarray())) return (TRUE)
         if (input$masktype == 'Build' && !is.null(habpolyrv$data)) {
             sum(pointsInPolygon(detectorarray(), habpolyrv$data)) > 0
         }
