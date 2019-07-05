@@ -2222,6 +2222,8 @@ server <- function(input, output, session) {
             simnx = input$habnx,
             simxsigma = input$habxsigma,
             method = input$method,
+            model2D = input$model2D,
+            details = input$details,
             fit = input$packagebtn %in% c('openCR.fit', 'secr.fit'))}
     )
     
@@ -2428,8 +2430,12 @@ server <- function(input, output, session) {
             else removeNotification("bigpop")
             Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
             model2D <- input$model2D
-            if (model2D %in% c("cluster"))
+            if (model2D %in% c("cluster", "even")) {
+                updateCheckboxInput(session, "onlymaskbox", value = FALSE)
+            }
+            if (model2D %in% c("cluster")) {
                 detail <- eval(parse(text = paste0("list(", input$details, ")")))
+            }
             else 
                 detail <- NULL
             if (input$onlymaskbox) {
