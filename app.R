@@ -3562,7 +3562,7 @@ server <- function(input, output, session) {
         else
             paste0( "\nTotal cost = ", input$currency, sprintf("%.2f", nrmval$totalcost), star)
         
-        rotstr <- paste0("Approximate RSE   = ",
+        rotstr <- paste0("Approximate RSE = ",
             round(nrmval$rotRSE * input$CFslider * 100, 1), "%", star, 
             " (correction factor ", round(input$CFslider,3), ")")
             
