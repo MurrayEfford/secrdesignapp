@@ -15,6 +15,7 @@ openCRversion <- packageVersion('openCR')
 # requires package sp for bbox and plot method for SpatialPolygons
 # requires package parallel for max cores in simulate options (distributed with base R)
 # requires package tools for file path when reading shapefiles (distributed with base R)
+# requires package spsurvey for GRTS
 
 # interrupt is hard -
 # see http://htmlpreview.github.io/?https://github.com/fellstat/ipc/blob/master/inst/doc/shinymp.html
@@ -599,9 +600,6 @@ ui <- function(request) {
                                                               radioButtons("packagebtn", label = "Function to fit SECR model", 
                                                                            choices = c("openCR.fit", "secr.fit", "no fit"), 
                                                                            selected = "openCR.fit", inline = TRUE),
-                                                              # selectInput("method", "Maximization method",
-                                                              #             choices = c("Newton-Raphson", "Nelder-Mead", "none"),
-                                                              #             selected = "none", width=160),
                                                               radioButtons("method", label = "Maximization method",
                                                                           choices = c("Newton-Raphson", "Nelder-Mead", "none"),
                                                                           selected = "none", inline = TRUE),
@@ -611,7 +609,9 @@ ui <- function(request) {
                                                                                         choices = c("poisson","cluster", "even"),
                                                                                         selected = "poisson", width=160)),
                                                                   column(7, textInput("details", "other details", value = "",
-                                                                                      placeholder = "sim.popn argument")))
+                                                                                      placeholder = "sim.popn argument"))
+                                                                  ),
+                                                              uiOutput('model2Dhelp')
                                                     )
                                              ),
                                              column(5,
@@ -1106,7 +1106,15 @@ server <- function(input, output, session) {
         helpText(HTML(helptext))
     })
     ##############################################################################
-    
+     
+    output$model2Dhelp <- renderUI({
+        helptext <- ""
+        if (input$model2D == 'cluster')
+            helptext <- "mu (mean no. per cluster)  &  hsigma (cluster spread, SD)"
+        helpText(HTML(helptext))
+    })
+    ##############################################################################
+
     output$clusterhelp <- renderUI({
         helptext <- "One array"
         if (input$arrayinput!='Region' & input$nrepeats>1)
@@ -3420,7 +3428,7 @@ server <- function(input, output, session) {
             D  <- density() * nrepeats()
             Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
             model2D <- input$model2D
-            detail <- if (model2D == 'cluster') paste0("details = list(", input$details, ")") else "details = NULL"
+            detail <- if (model2D == 'cluster') paste0(",\n        details = list(", input$details, ")") else ""
             distncode <- if (input$packagebtn == "secr.fit")
                 paste0("details = list(distribution = '", tolower(input$distributionbtn), "')")
             else
@@ -3470,8 +3478,7 @@ server <- function(input, output, session) {
                 "nrepl = ", input$nrepl, ", ",
                 "scenarios = scen, \n",
                 "    trapset = array, maskset = mask, \n",
-                "    pop.args = list(Ndist = '", Ndist, "', model2D = '", model2D, "', ", detail, "),\n",
-                #"    pop.args = list(Ndist = '", Ndist, "'),\n",
+                "    pop.args = list(Ndist = '", Ndist, "', model2D = '", model2D, "'", detail, "),\n",
                 "    fit = ", fit, 
                 ", extractfn = summary, ",
                 if (fit) paste0("fit.function = '", input$packagebtn, "', \n",
