@@ -1,7 +1,7 @@
 ---
 title: "secrdesign app 1.3"
 author: "Murray Efford"
-date: '2019-07-01'
+date: '2019-07-05'
 output:
   pdf_document:
     toc: yes
@@ -13,7 +13,7 @@ output:
 
 # An interactive app for designing spatially explicit capture--recapture studies
 
-## Murray Efford 2019-07-01
+## Murray Efford 2019-07-05
 
 # Contents
   [Introduction](#introduction)  
@@ -309,7 +309,7 @@ Detection function on the hazard scale
 
 ### Popn
 
-One simulated realisation of a uniformly distributed population.
+One simulated realisation of a uniformly distributed population. The 'Restrict to mask' option is available only when 2-D distribution is Poisson.
 
 ### Pxy
 
@@ -498,7 +498,7 @@ The 2-D (spatial) distribution of simulated activity centres is controlled in `s
   </tr>
   <tr>
     <td>even<sup>2</sup></td>
-    <td> systematic grid of points, each jittered uniformly within its 'cell' </td>
+    <td> systematic grid, each point jittered uniformly within its 'cell' </td>
   </tr>
 </table> 
 <br>

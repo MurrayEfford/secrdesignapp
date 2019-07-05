@@ -7,6 +7,7 @@ The main new feature in version 1.1 was support for systematic and random design
 * user control of traffic light thresholds
 * user-specified 2-D distribution models for *simulated* activity centres ('cluster' and 'even' as alternatives to Poisson)
 * optional file input of habitat mask
+* display raw text file input for detectors, mask
 
 along with other minor improvements.
 
