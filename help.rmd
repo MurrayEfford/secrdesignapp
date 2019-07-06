@@ -529,18 +529,26 @@ The 2-D (spatial) distribution of simulated activity centres is controlled in `s
     <td>mean and SE over replicates</td>
   </tr>
   <tr>
-    <td> Simulated RSE </td>
+    <td> Simulated \(\small \widehat{\mbox{RSE}}\) </td>
     <td>mean and SE over replicates</td>
   </tr>
   <tr>
-    <td> Simulated RB<sup>2</sup> </td>
+    <td> Empirical RSE<sup>2</sup> </td>
+    <td>Allows for clustered or even 2-D distribution</td>
+  </tr>
+  <tr>
+    <td> Simulated RB<sup>3</sup> </td>
     <td>mean and SE over replicates</td>
   </tr>
 </table> 
 <br>
 1\. The number of moves is reported consistently with E(m) only for trap (multi) detectors.
 
-2\. Relative bias \( \small \mbox{RB}(\hat D) = (\hat D - D) / D \).
+2\. Estimate of true RSE from variation in \(\small \hat D\) over replicates \( \small \mbox{SD}(\hat D / D) \).
+
+3\. Relative bias \( \small \mbox{RB}(\hat D) = (\hat D - D) / D \).
+
+NOTE: If the 2-D distribution is not Poisson then the 'Simulated RSE' will be misleading because it is the average of the biased estimates of RSE reported when the model is fitted assuming a Poisson distribution. For non-Poisson 2-D distribution, rely on the 'Empirical RSE', noting that this requires many replicates and maximization of the likelihood.
 
 <br>
 

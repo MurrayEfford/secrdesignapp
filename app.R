@@ -781,10 +781,10 @@ ui <- function(request) {
                                                                      checkboxGroupInput("fields2", "",
                                                                                         choices = c("detperHR", "k", "En", "Er", "Em",
                                                                                                     "rotRSE", "CF", "route", "cost", "simfn",  "model2D", "details", 
-                                                                                                    "nrepl", "simtime", "simRSE", "simRSEse", "simRB", "simRBse"),
+                                                                                                    "nrepl", "simtime", "simRSE", "simRSEse", "simRB", "simRBse", "empiricalRSE"),
                                                                                         selected = c("detperHR", "k", "En", "Er", "Em",
                                                                                                      "rotRSE", "CF", "route", "cost", "simfn",  "model2D", "details", 
-                                                                                                     "nrepl", "simtime", "simRSE", "simRSEse", "simRB", "simRBse")
+                                                                                                     "nrepl", "simtime", "simRSE", "simRSEse", "simRB", "simRBse", "empiricalRSE")
                                                                      )
                                                     )                                                  
                                              )
@@ -1058,10 +1058,10 @@ server <- function(input, output, session) {
                        "ndetectors", "noccasions", "nrepeats", "distribution", "detectfn", 
                        "D", "lambda0", "sigma", "detperHR", "k", "En", "Er", "Em",
                        "rotRSE", "CF", "route", "cost", "simfn", "model2D", "details", "nrepl", "simtime", 
-                       "simRSE", "simRSEse", "simRB", "simRBse")
+                       "simRSE", "simRSEse", "simRB", "simRBse", "empiricalRSE")
     fieldgroup1 <- 1:17
-    fieldgroup2 <- 18:35
-    simfields <- summaryfields[27:35]
+    fieldgroup2 <- 18:36
+    simfields <- summaryfields[27:36]
     
     showNotification(paste("secrdesign", desc$Version, desc$Date),
                      closeButton = FALSE, type = "message", duration = seconds)
@@ -1687,10 +1687,11 @@ server <- function(input, output, session) {
             nmov = counts['Moves', 'mean'],
             nmov.se = counts['Moves', 'se'])
         if (fit && !inherits(sims, 'try-error')) {
-            predicted <- summary(predict(sims))$OUTPUT[[1]]
+            predicted <- summary(predict(sims), fields=c('n','mean','se','sd'))$OUTPUT[[1]]
             if (input$method=='none') {
                     simrv$output$RB <- NA   
                     simrv$output$RBse <- NA   
+                    simrv$output$empRSE <- NA
             }
             else {    
                 if (input$packagebtn == 'openCR.fit') {
@@ -1699,10 +1700,12 @@ server <- function(input, output, session) {
                     RB <- (D - density()) / density() * 100
                     simrv$output$RB <- mean(RB, na.rm = TRUE) 
                     simrv$output$RBse <- sd(RB, na.rm=TRUE) / sqrt(sum(!is.na(RB))) 
+                    simrv$output$empRSE <- sd(RB, na.rm=TRUE)
                 }
                 else {
                     simrv$output$RB <- predicted['RB','mean'] * 100
                     simrv$output$RBse <- predicted['RB','se'] * 100
+                    simrv$output$empRSE <- predicted['RB', 'sd'] * 100
                 }
             }
             simrv$output$RSE <- predicted['RSE','mean'] * 100
@@ -1834,7 +1837,8 @@ server <- function(input, output, session) {
             simRSE = NA, 
             simRSEse = NA,
             simRB = NA,
-            simRBse = NA)
+            simRBse = NA,
+            empiricalRSE = NA)
         
         if (simrv$current && !is.null(simrv$output$fit)) {
             simdf$simfn <- input$packagebtn
@@ -1847,6 +1851,7 @@ server <- function(input, output, session) {
                 simdf$simRSEse <- simrv$output$RSEse
                 simdf$simRB <- simrv$output$RB
                 simdf$simRBse <- simrv$output$RBse
+                simdf$empiricalRSE <- simrv$output$empRSE
             }
             newfields <- unique(c(isolate(input$fields2), c("simfn", "model2D", "nrepl", "simtime") ))
         }
@@ -3460,11 +3465,12 @@ server <- function(input, output, session) {
                     "t(apply(sims$output[[1]], 2, sumc))\n")
             
             fitcode <- if (fit)
-                paste0("output <- summary(predict(sims))$OUTPUT[[1]]\n",
+                paste0("output <- summary(predict(sims), fields = c('n', 'mean','se','sd'))$OUTPUT[[1]]\n",
                        "c(sims$proctime,\n",
                        ## RBcode,  suppress until nrepeat bug fixed 2019-02-15
                        "  RSE = output['RSE','mean'] * 100,\n",
-                       "  RSEse = output['RSE','se'] * 100\n)")
+                       "  RSEse = output['RSE','se'] * 100,\n",
+                       "  empiricalRSE = output['RB','sd'] * 100\n",")")
             else ""
 
             paste0(
@@ -3572,6 +3578,12 @@ server <- function(input, output, session) {
             paste0("\nSimulated RSE = ", round(simrv$output$RSE, 1), "%", star,
                    " (SE ",  round(simrv$output$RSEse, 2), "%)")
             
+        empstr <- if (is.null(simrv$output) || !simrv$current || 
+                      input$method == "none" || input$model2D == 'poisson')
+            ""
+        else
+            paste0("\nEmpirical RSE = ", round(simrv$output$empRSE, 1), "%", star)
+            
         if (attr(detectorarray(), "arrayspan") < (5 * input$sigma)) {
             showNotification("Pathological design - array span < 5.sigma",
                              type = "warning", id = "zeronm", duration = NULL)
@@ -3608,6 +3620,7 @@ server <- function(input, output, session) {
             esastr,
             rotstr, 
             simstr, 
+            empstr,
             coststr, 
             nrepeatstr
         )
@@ -3704,6 +3717,9 @@ server <- function(input, output, session) {
                               round(sims$RSE, 2), "%", " (SE ",  round(sims$RSEse, 2), "%)", "\n")
                 
                 if (sims$method != "none") {
+                    out <- paste0(out,
+                                  "Empirical RSE = ",
+                                  round(sims$empRSE, 2), "%\n")
                     out <- paste0(out,
                                   "Simulated RB = ",
                                   preplus(round(sims$RB, 2)), "%", " (SE ",  round(sims$RBse, 2), "%)")
