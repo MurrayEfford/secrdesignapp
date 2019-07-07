@@ -122,7 +122,7 @@ A region is a study area within which detectors will be placed either systematic
 * a binary file saved from R (.RDS) in which the sole object is a 2-column matrix or inherits from **sp** class SpatialPolygons, or 
 * an ESRI polygon shapefile with at least three component files (.shp, .dbf and .shx) selected together. 
 
-See Options | Detector array to control the clipping of clusters that cross the boundary of the region.
+See Options | Detector array to control the clipping of detector clusters that cross the boundary of the region.
 
 #### Systematic
 
@@ -134,7 +134,7 @@ Two algorithms are offered for random placement - a simple random sample of poin
 
 #### Rotation
 
-Clusters are rotated by the specified number of degrees (there's not much to gain from this).
+Detector clusters are rotated by the specified number of degrees (there's not much to gain from this).
 
 #### Random seed
 Choosing a random origin or random array results in a set of locations that changes whenever one of the detector options changes. For repeatable randomisation set the random seed to an integer greater than zero.
@@ -189,8 +189,8 @@ See the [Detectfn](#detectfnplot) plot for the effect of given lambda0 and sigma
 
 A study may be extended by sampling on more occasions. The number of recaptures $r$ increases indefinitely, but the number of distinct individuals $n$ levels off.
 
-Setting Arrays > 1 is a useful way to predict the outcome from multiple clusters when no region has been specified.
-Replicating the sampling effort at many independent locations within the same population increases both $r$ and $n$. Using multiple clusters (repeated arrays) is also a way to sample a large region. We assume clusters are far enough apart that no animal is detected on more than one cluster (array).
+Setting Arrays > 1 is a useful way to predict the outcome from multiple detector clusters when no region has been specified.
+Replicating the sampling effort at many independent locations within the same population increases both $r$ and $n$. Using multiple clusters (repeated arrays) is also a way to sample a large region. We assume detector clusters are far enough apart that no animal is detected on more than one cluster (array).
     
 <a name="distribution"></a>
 
@@ -309,7 +309,7 @@ Detection function on the hazard scale
 
 ### Popn
 
-One simulated realisation of a uniformly distributed population. The 'Restrict to mask' option is available only when 2-D distribution is Poisson.
+One simulated realisation of a population with the 2-D distribution specified on the Simulation page. The 'Restrict to mask' option is available only when a Poisson 2-D distribution is specified.
 
 ### Pxy
 
@@ -424,7 +424,7 @@ A very approximate algorithm is used to predict the execution time from the prod
 * number of detectors
 * number of sampling occasions
 * expected number of detected animals, E(n)
-* number of clusters
+* number of detector clusters
 * number of replicates
 
 with adjustments for the maximisation method (default "none"), detector type (default "proximity") and fitting function (default `openCR.fit`). If the predicted time exceeds 0.2 minutes a dialogue box allows the user to cancel simulations before they start. 
@@ -505,6 +505,8 @@ The 2-D (spatial) distribution of simulated activity centres is controlled in `s
 1\. The defaults mu=1 and hsigma=0 result in no clustering; vary these for a clustered distribution. The effect is shown in the Popn viewer on the Design page when 'Restrict to mask' is not selected. <br>
 2\. Distribution of N (Ndist) coerced to 'fixed' in `sim.popn`<br>
 
+The Popn plot on the Design page displays realisations of the 2-D distribution specified on the Simulation page. The effect of varying the 2-D distribution on simulation results will only be apparent if a maximization method is specified (Newton-Raphson or Nelder-Mead).
+
 ## Results
 
 <table style="width:40%">
@@ -548,7 +550,7 @@ The 2-D (spatial) distribution of simulated activity centres is controlled in `s
 
 3\. Relative bias \( \small \mbox{RB}(\hat D) = (\hat D - D) / D \).
 
-NOTE: If the 2-D distribution is not Poisson then the 'Simulated RSE' will be misleading because it is the average of the biased estimates of RSE reported when the model is fitted assuming a Poisson distribution. For non-Poisson 2-D distribution, rely on the 'Empirical RSE', noting that this requires many replicates and maximization of the likelihood.
+NOTE: If the 2-D distribution is not Poisson then the 'Simulated RSE' will be misleading because it is the average of the biased estimates of RSE reported when the model is fitted assuming a Poisson distribution. For a non-Poisson 2-D distribution, rely on the 'Empirical RSE', noting that this requires maximization of the likelihood as noted above. Empirical RSE will be highly variable between runs unless there are many replicates (a minimum of 20 is suggested).
 
 <br>
 
@@ -558,7 +560,7 @@ NOTE: If the 2-D distribution is not Poisson then the 'Simulated RSE' will be mi
 
 This page evaluates the effect of detector spacing on precision and total cost. The array geometry is fixed on the [Design](#designspecs) page. A numerical search is performed for the array spacing that minimises the rule-of-thumb \(\small \mbox{RSE}(\hat D) \).
 
-The Spacing tab is hidden when the detector array is of the File or Region types. The effect of using multiple clusters with a particular geometry may be emulated by setting the Array number.
+The Spacing tab is hidden when the detector array is of the File or Region types. The effect of using multiple detector clusters with a particular geometry may be emulated by setting the Array number.
 
 ## Standalone R code
 
