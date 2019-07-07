@@ -11,11 +11,11 @@ The main new feature in version 1.1 was support for systematic and random design
 
 along with other minor improvements.
 
-Click this link to run secrdesignapp 1.2 in your web browser from a University of Otago server:
+Click this link to run secrdesignapp in your web browser from a University of Otago server:
 
 [secrdesignapp](https://www.stats.otago.ac.nz/secrdesignapp)
 
-Simulations may run faster on your own machine, and the GitHub version is always the latest (now secrdesignapp 1.3). There is also a limit to the number of concurrent users on the server. To run in a local R session directly from GitHub, first install R packages 'shiny' and 'shinyjs'; then paste and run this code at the R command prompt:
+Simulations may run faster on your own machine, and the GitHub version is always the latest. There is also a limit to the number of concurrent users on the server. To run in a local R session directly from GitHub, first install R packages 'shiny' and 'shinyjs'; then paste and run this code at the R command prompt:
 
 ```r
 library(shiny)
