@@ -178,7 +178,21 @@ ui <- function(request) {
                                                                                                                  step = 10)),
                                                                                            column(6, 
                                                                                                   checkboxInput("randomorigin", "Random origin", FALSE),
-                                                                                                  checkboxInput("chequerboard", "Chequerboard", FALSE))
+                                                                                                  checkboxInput("chequerboard", "Chequerboard", FALSE)
+
+                                                                                           )
+                                                                                           
+                                                                                       ),
+                                                                                       fluidRow(
+                                                                                           column(6,numericInput("splace",
+                                                                                                                 "spacing (m)",
+                                                                                                                 value = 20,
+                                                                                                                 min = 0,
+                                                                                                                 max = 200000,
+                                                                                                                 step = 5)),
+                                                                                           column(6, 
+                                                                                                  checkboxInput("lace", "Lace", FALSE)
+                                                                                           )
                                                                                            
                                                                                        ),
                                                                                        uiOutput('clusteroverlap'))
@@ -2029,16 +2043,37 @@ server <- function(input, output, session) {
                 }
                 
                 if (input$regiontype == "Systematic") {
-                    code <- paste0( 
-                        regioncode,
-                        excludedcode,
-                        clustercode,
-                        rotatecode,
-                        seedcode,
-                        "array <- make.systematic(spacing = ", input$sppgrid, ", ",
-                        "region = region, \n", 
-                        "    cluster = cluster, origin = ", origincode, chequercode, edgemethodcode, 
-                        exclusioncode, ")\n")
+                    
+                    if (input$lace && input$clustertype == "Single detector") {
+                        
+                        gridxcode <- paste0("gridx <- make.systematic(region = region, ",
+                                            "spacing = c(", input$sppgrid, ",", input$splace, "), \n    ",
+                                            origincode, edgemethodcode, exclusioncode, ")\n")
+                        origincodey <- paste0("origin = attr(gridx, 'origin') - c(", input$sppgrid, ", 0)")
+                        gridycode <- paste0("gridy <- make.systematic(region = region, ",
+                                            "spacing = c(", input$splace, ",", input$sppgrid, "),\n    ", 
+                                            origincodey, edgemethodcode, exclusioncode, ")\n")
+                        code <- paste0( 
+                            regioncode,
+                            excludedcode,
+                            seedcode,
+                            gridxcode,
+                            gridycode,
+                            "array <- rbind(gridx, gridy)\n",
+                            "array <- subset(array, !duplicated(array))\n")
+                    }
+                    else {
+                        code <- paste0( 
+                            regioncode,
+                            excludedcode,
+                            clustercode,
+                            rotatecode,
+                            seedcode,
+                            "array <- make.systematic(spacing = ", input$sppgrid, ", ",
+                            "region = region, \n", 
+                            "    cluster = cluster, origin = ", origincode, chequercode, edgemethodcode, 
+                            exclusioncode, ")\n")
+                    }
                 }
                 else if (input$regiontype == "Random") {
                     if (input$clustertype %in% c("Grid", "Line", "File"))
@@ -2331,21 +2366,51 @@ server <- function(input, output, session) {
                                                                      "clip"))
                     }
                     else {
-                        args <- list(spacing = input$sppgrid, 
-                                     cluster = cluster, 
-                                     region = regionrv$data,
-                                     origin = origin,
-                                     edgemethod = input$edgemethod,
-                                     exclude = exclusionrv$data,
-                                     exclmethod = switch(input$edgemethod, 
-                                                         allinside = "alloutside", 
-                                                         anyinside = "anyoutside", 
-                                                         "clip"))
-                        
-                        if (input$chequerboard)
-                            args$chequerboard <- "white"
-                        
-                        trps <- do.call(make.systematic, args)
+                        if (input$lace) {
+                            if (input$clustertype == "Single detector") {
+                                
+                                gridx <- make.systematic(region = regionrv$data, 
+                                                         spacing = c(input$sppgrid, input$splace),
+                                                         edgemethod = input$edgemethod,
+                                                         exclude = exclusionrv$data,
+                                                         exclmethod = switch(input$edgemethod, 
+                                                                             allinside = "alloutside", 
+                                                                             anyinside = "anyoutside", 
+                                                                             "clip"))
+                                
+                                gridy <- make.systematic(region = regionrv$data, spacing=c(input$splace,input$sppgrid), 
+                                                         origin = attr(gridx, "origin")-c(input$sppgrid,0),
+                                                         edgemethod = input$edgemethod,
+                                                         exclude = exclusionrv$data,
+                                                         exclmethod = switch(input$edgemethod, 
+                                                                             allinside = "alloutside", 
+                                                                             anyinside = "anyoutside", 
+                                                                             "clip"))
+                                trps <- rbind(gridx, gridy)
+                                trps <- subset(trps, !duplicated(trps))
+                            }
+                            else {
+                                setNotification("Lace uses single detectors, not clusters")
+                            }
+                            
+                        }
+                        else {
+                            args <- list(spacing = input$sppgrid, 
+                                         cluster = cluster, 
+                                         region = regionrv$data,
+                                         origin = origin,
+                                         edgemethod = input$edgemethod,
+                                         exclude = exclusionrv$data,
+                                         exclmethod = switch(input$edgemethod, 
+                                                             allinside = "alloutside", 
+                                                             anyinside = "anyoutside", 
+                                                             "clip"))
+                            
+                            if (input$chequerboard)
+                                args$chequerboard <- "white"
+                            
+                            trps <- do.call(make.systematic, args)
+                        }
                     }
                 }
                 
@@ -2894,7 +2959,8 @@ server <- function(input, output, session) {
 
         ## region
         updateTabsetPanel(session, inputId = "regiontype", selected = "Random")
-        updateCheckboxInput(session, "sppgrid", value = 200 )
+        updateNumericInput(session, "sppgrid", value = 200 )
+        updateNumericInput(session, "splace", value = 20 )
         updateCheckboxInput(session, "clustertype", value = "Single detector" )
         updateNumericInput(session, "rotation", value = 0)
         updateCheckboxInput(session, "randomorigin", value = FALSE )

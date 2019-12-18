@@ -128,6 +128,8 @@ See Options | Detector array to control the clipping of detector clusters that c
 
 A systematic array is specified by the cluster design, the spacing between cluster centres and the origin. By default the origin is fixed at (+sp/2, +sp/2) relative to the lower left corner of the bounding box of the region, where sp is the array spacing. Alternately the origin may be chosen at random within a square of side sp. 
 
+The 'Lace' option places detectors along the lines of a square grid. 
+
 #### Random
 
 Two algorithms are offered for random placement - a simple random sample of points (SRS) or a balanced spatial sample as described by Stevens and Olsen (2004) and implemented in package **spsurvey** (Kincaid and Olsen 2018).
