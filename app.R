@@ -175,24 +175,37 @@ ui <- function(request) {
                                                                                                                  value = 200,
                                                                                                                  min = 0,
                                                                                                                  max = 200000,
-                                                                                                                 step = 10)),
+                                                                                                                 step = 10),
+                                                                                                  conditionalPanel("input.lacework",
+                                                                                                                   numericInput("splace",
+                                                                                                                                "Lace spacing (m)",
+                                                                                                                                value = 20,
+                                                                                                                                min = 0,
+                                                                                                                                max = 200000,
+                                                                                                                                step = 5))
+                                                                                                  ),
                                                                                            column(6, 
                                                                                                   checkboxInput("randomorigin", "Random origin", FALSE),
-                                                                                                  checkboxInput("chequerboard", "Chequerboard", FALSE)
+                                                                                                  checkboxInput("chequerboard", "Chequerboard", FALSE),
+                                                                                                  checkboxInput("lacework", "Lacework", FALSE)
 
                                                                                            )
                                                                                            
-                                                                                       ),
-                                                                                       fluidRow(
-                                                                                           column(6,numericInput("splace",
-                                                                                                                 "spacing (m)",
-                                                                                                                 value = 20,
-                                                                                                                 min = 0,
-                                                                                                                 max = 200000,
-                                                                                                                 step = 5)),
-                                                                                           column(6, 
-                                                                                                  checkboxInput("lace", "Lace", FALSE)
-                                                                                           )
+                                                                                       
+                                                                                       # ,
+                                                                                       # fluidRow(
+                                                                                       #     column(6,
+                                                                                       #            conditionalPanel("input.lacework",
+                                                                                       #            numericInput("splace",
+                                                                                       #                           "Lace spacing (m)",
+                                                                                       #                           value = 20,
+                                                                                       #                           min = 0,
+                                                                                       #                           max = 200000,
+                                                                                       #                           step = 5))
+                                                                                       #     ),
+                                                                                       #     column(6, 
+                                                                                       #            checkboxInput("lacework", "Lacework", FALSE)
+                                                                                       #     )
                                                                                            
                                                                                        ),
                                                                                        uiOutput('clusteroverlap'))
@@ -2044,23 +2057,34 @@ server <- function(input, output, session) {
                 
                 if (input$regiontype == "Systematic") {
                     
-                    if (input$lace && input$clustertype == "Single detector") {
+                    if (input$lacework && input$clustertype == "Single detector") {
+                        rregioncode <- if (input$rotation == 0) ""
+                        else paste0(
+                            "centrexy <- apply(sp::bbox(region),1,mean)\n",
+                            "rregion <- maptools::elide(region, rotate = -", 
+                            input$rotation, ",\n     center = centrexy)\n")
+                    
+                        derotatecode <- if (input$rotation == 0) ""
+                        else paste0("array <- rotate(array, ", input$rotation, ", centrexy = centrexy)\n")
                         
-                        gridxcode <- paste0("gridx <- make.systematic(region = region, ",
+                        gridxcode <- paste0("gridx <- make.systematic(region = rregion, ",
                                             "spacing = c(", input$sppgrid, ",", input$splace, "), \n    ",
-                                            origincode, edgemethodcode, exclusioncode, ")\n")
-                        origincodey <- paste0("origin = attr(gridx, 'origin') - c(", input$sppgrid, ", 0)")
-                        gridycode <- paste0("gridy <- make.systematic(region = region, ",
+                                            "origin = sp::bbox(rregion)[,1]", 
+                                            edgemethodcode, exclusioncode, ")\n")
+                        gridycode <- paste0("gridy <- make.systematic(region = rregion, ",
                                             "spacing = c(", input$splace, ",", input$sppgrid, "),\n    ", 
-                                            origincodey, edgemethodcode, exclusioncode, ")\n")
+                                            "origin = attr(gridx, 'origin')", 
+                                            edgemethodcode, exclusioncode, ")\n")
                         code <- paste0( 
                             regioncode,
                             excludedcode,
                             seedcode,
+                            rregioncode,
                             gridxcode,
                             gridycode,
                             "array <- rbind(gridx, gridy)\n",
-                            "array <- subset(array, !duplicated(array))\n")
+                            "array <- subset(array, !duplicated(array))\n",
+                            derotatecode)
                     }
                     else {
                         code <- paste0( 
@@ -2366,11 +2390,30 @@ server <- function(input, output, session) {
                                                                      "clip"))
                     }
                     else {
-                        if (input$lace) {
+                        if (input$lacework) {
                             if (input$clustertype == "Single detector") {
+                                if (input$randomorigin) {
+                                    originoffset <- -runif(2) * input$sppgrid
+                                }
+                                else {
+                                    originoffset <- c(0,0)
+                                }
                                 
-                                gridx <- make.systematic(region = regionrv$data, 
+                                rotateSP <- function (region, degrees, centrexy) {
+                                    if (requireNamespace('maptools')) {
+                                        maptools::elide(region, rotate = degrees, center = centrexy)
+                                    }
+                                    else {
+                                        warning("rotateSP requires package maptools")
+                                        region
+                                    }
+                                }
+                                
+                                centrexy <- apply(bbox(regionrv$data),1,mean)
+                                rregion <- rotateSP(regionrv$data, -input$rotation, centrexy)
+                                gridx <- make.systematic(region = rregion, 
                                                          spacing = c(input$sppgrid, input$splace),
+                                                         origin = sp::bbox(rregion)[,'min'] + originoffset,
                                                          edgemethod = input$edgemethod,
                                                          exclude = exclusionrv$data,
                                                          exclmethod = switch(input$edgemethod, 
@@ -2378,8 +2421,9 @@ server <- function(input, output, session) {
                                                                              anyinside = "anyoutside", 
                                                                              "clip"))
                                 
-                                gridy <- make.systematic(region = regionrv$data, spacing=c(input$splace,input$sppgrid), 
-                                                         origin = attr(gridx, "origin")-c(input$sppgrid,0),
+                                gridy <- make.systematic(region = rregion, 
+                                                         spacing=c(input$splace,input$sppgrid), 
+                                                         origin = attr(gridx, "origin"),
                                                          edgemethod = input$edgemethod,
                                                          exclude = exclusionrv$data,
                                                          exclmethod = switch(input$edgemethod, 
@@ -2388,9 +2432,11 @@ server <- function(input, output, session) {
                                                                              "clip"))
                                 trps <- rbind(gridx, gridy)
                                 trps <- subset(trps, !duplicated(trps))
+                                if (input$rotation !=0)
+                                    trps <- rotate(trps, input$rotation, centrexy = centrexy)
                             }
                             else {
-                                setNotification("Lace uses single detectors, not clusters")
+                                showNotification("Lacework uses single detectors, not clusters")
                             }
                             
                         }
@@ -2963,6 +3009,8 @@ server <- function(input, output, session) {
         updateNumericInput(session, "splace", value = 20 )
         updateCheckboxInput(session, "clustertype", value = "Single detector" )
         updateNumericInput(session, "rotation", value = 0)
+        updateCheckboxInput(session, "lacework", value = FALSE )
+        updateCheckboxInput(session, "chequerboard", value = FALSE )
         updateCheckboxInput(session, "randomorigin", value = FALSE )
         updateRadioButtons(session, "randomtype", selected = "SRS")
         updateNumericInput(session, "numpgrid", value = 20)
