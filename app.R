@@ -9,7 +9,6 @@ secrdesignversion <- packageVersion('secrdesign')
 if (compareVersion(as.character(secrdesignversion), '2.5.7') < 0)
     stop("secrdesignapp 1.3 requires secrdesign version 2.5.7 or later",
          call. = FALSE)
-openCRversion <- packageVersion('openCR')
 
 # requires package rgdal to read shapefiles
 # requires package sp for bbox and plot method for SpatialPolygons
@@ -624,9 +623,9 @@ ui <- function(request) {
                                          fluidRow(
                                              column(7, 
                                                     wellPanel(class = "mypanel", 
-                                                              radioButtons("packagebtn", label = "Function to fit SECR model", 
-                                                                           choices = c("openCR.fit", "secr.fit", "no fit"), 
-                                                                           selected = "openCR.fit", inline = TRUE),
+                                                              radioButtons("packagebtn", label = "Fit SECR model", 
+                                                                           choices = c("secr.fit", "no fit"), 
+                                                                           selected = "secr.fit", inline = TRUE),
                                                               radioButtons("method", label = "Maximization method",
                                                                           choices = c("Newton-Raphson", "Nelder-Mead", "none"),
                                                                           selected = "none", inline = TRUE),
@@ -1645,12 +1644,10 @@ server <- function(input, output, session) {
             eval(parse(text = paste0("list(", input$details, ")")))
         else NULL
             
-        fit <- input$packagebtn %in% c('openCR.fit', 'secr.fit')
+        fit <- input$packagebtn %in% c('secr.fit')
         fitargs = list(detectfn = input$detectfn, 
                        method = input$method, 
                        details = list(distribution= tolower(input$distributionbtn)))
-        if (input$packagebtn == "openCR.fit")
-            fitargs$distribution <- tolower(input$distributionbtn)
         scen <- make.scenarios(
             noccasions = input$noccasions,
             nrepeats = nrepeats(),
@@ -1684,10 +1681,6 @@ server <- function(input, output, session) {
                                                      c('n','mean','se'))))
         if (fit) {
             if (!inherits(sims, 'try-error')) {
-                if ((input$packagebtn == "openCR.fit") && compareVersion(as.character(openCRversion), '1.3.3') < 0) {
-                    showNotification("Moves NA with fit, openCR < 1.3.3",
-                                     type = "warning", id = "movesNA", duration = seconds)
-                }
                 fitsum <- summary(count(sims))
                 if (is.list(fitsum))
                     counts <- fitsum$OUTPUT[[1]]
@@ -1721,19 +1714,9 @@ server <- function(input, output, session) {
                     simrv$output$empRSE <- NA
             }
             else {    
-                if (input$packagebtn == 'openCR.fit') {
-                    D <- sapply(predict(sims)$output[[1]],'[', 'D','estimate') / input$nrepeats
-                    seD <- sapply(predict(sims)$output[[1]],'[', 'D','SE.estimate') / input$nrepeats
-                    RB <- (D - density()) / density() * 100
-                    simrv$output$RB <- mean(RB, na.rm = TRUE) 
-                    simrv$output$RBse <- sd(RB, na.rm=TRUE) / sqrt(sum(!is.na(RB))) 
-                    simrv$output$empRSE <- sd(RB, na.rm=TRUE)
-                }
-                else {
-                    simrv$output$RB <- predicted['RB','mean'] * 100
-                    simrv$output$RBse <- predicted['RB','se'] * 100
-                    simrv$output$empRSE <- predicted['RB', 'sd'] * 100
-                }
+                simrv$output$RB <- predicted['RB','mean'] * 100
+                simrv$output$RBse <- predicted['RB','se'] * 100
+                simrv$output$empRSE <- predicted['RB', 'sd'] * 100
             }
             simrv$output$RSE <- predicted['RSE','mean'] * 100
             simrv$output$RSEse <- predicted['RSE','se'] * 100
@@ -1782,13 +1765,6 @@ server <- function(input, output, session) {
                 method = input$method
             )
             
-            if ((compareVersion(as.character(secrdesignversion), '2.5.8') < 0) &
-                (input$packagebtn == "openCR.fit")) {
-                ## bug fixed in 2.5.8
-                rotrv$output$RB <- (rotrv$output$RB+1) / input$nrepeats - 1
-                rotrv$output$RBse <- rep(NA, nrow(rotrv$output))
-            }
-
         }
         else {
             progress$set(message = 'Approximating RSE for each spacing...')
@@ -2058,33 +2034,12 @@ server <- function(input, output, session) {
                 if (input$regiontype == "Systematic") {
                     
                     if (input$lacework && input$clustertype == "Single detector") {
-                        rregioncode <- if (input$rotation == 0) ""
-                        else paste0(
-                            "centrexy <- apply(sp::bbox(region),1,mean)\n",
-                            "rregion <- maptools::elide(region, rotate = -", 
-                            input$rotation, ",\n     center = centrexy)\n")
-                    
-                        derotatecode <- if (input$rotation == 0) ""
-                        else paste0("array <- rotate(array, ", input$rotation, ", centrexy = centrexy)\n")
-                        
-                        gridxcode <- paste0("gridx <- make.systematic(region = rregion, ",
-                                            "spacing = c(", input$sppgrid, ",", input$splace, "), \n    ",
-                                            "origin = sp::bbox(rregion)[,1]", 
-                                            edgemethodcode, exclusioncode, ")\n")
-                        gridycode <- paste0("gridy <- make.systematic(region = rregion, ",
-                                            "spacing = c(", input$splace, ",", input$sppgrid, "),\n    ", 
-                                            "origin = attr(gridx, 'origin')", 
-                                            edgemethodcode, exclusioncode, ")\n")
                         code <- paste0( 
                             regioncode,
                             excludedcode,
                             seedcode,
-                            rregioncode,
-                            gridxcode,
-                            gridycode,
-                            "array <- rbind(gridx, gridy)\n",
-                            "array <- subset(array, !duplicated(array))\n",
-                            derotatecode)
+                            "array <- make.lacework(region, spacing = c(", input$sppgrid, ", ", input$splace,
+                            "), rotate = ", input$rotation, ")\n")
                     }
                     else {
                         code <- paste0( 
@@ -2291,7 +2246,7 @@ server <- function(input, output, session) {
             method = input$method,
             model2D = input$model2D,
             details = input$details,
-            fit = input$packagebtn %in% c('openCR.fit', 'secr.fit'))}
+            fit = input$packagebtn %in% c('secr.fit'))}
     )
     
     ##############################################################################
@@ -2392,48 +2347,15 @@ server <- function(input, output, session) {
                     else {
                         if (input$lacework) {
                             if (input$clustertype == "Single detector") {
+                                
                                 if (input$randomorigin) {
-                                    originoffset <- -runif(2) * input$sppgrid
+                                    origin <- NULL
                                 }
                                 else {
-                                    originoffset <- c(0,0)
+                                    origin <- sp::bbox(regionrv$data)[,1] + input$sppgrid/2
                                 }
-                                
-                                rotateSP <- function (region, degrees, centrexy) {
-                                    if (requireNamespace('maptools')) {
-                                        maptools::elide(region, rotate = degrees, center = centrexy)
-                                    }
-                                    else {
-                                        warning("rotateSP requires package maptools")
-                                        region
-                                    }
-                                }
-                                
-                                centrexy <- apply(bbox(regionrv$data),1,mean)
-                                rregion <- rotateSP(regionrv$data, -input$rotation, centrexy)
-                                gridx <- make.systematic(region = rregion, 
-                                                         spacing = c(input$sppgrid, input$splace),
-                                                         origin = sp::bbox(rregion)[,'min'] + originoffset,
-                                                         edgemethod = input$edgemethod,
-                                                         exclude = exclusionrv$data,
-                                                         exclmethod = switch(input$edgemethod, 
-                                                                             allinside = "alloutside", 
-                                                                             anyinside = "anyoutside", 
-                                                                             "clip"))
-                                
-                                gridy <- make.systematic(region = rregion, 
-                                                         spacing=c(input$splace,input$sppgrid), 
-                                                         origin = attr(gridx, "origin"),
-                                                         edgemethod = input$edgemethod,
-                                                         exclude = exclusionrv$data,
-                                                         exclmethod = switch(input$edgemethod, 
-                                                                             allinside = "alloutside", 
-                                                                             anyinside = "anyoutside", 
-                                                                             "clip"))
-                                trps <- rbind(gridx, gridy)
-                                trps <- subset(trps, !duplicated(trps))
-                                if (input$rotation !=0)
-                                    trps <- rotate(trps, input$rotation, centrexy = centrexy)
+                                trps <- make.lacework(regionrv$data, spacing = c(input$sppgrid, input$splace),
+                                                      origin = origin, rotate = input$rotation)
                             }
                             else {
                                 showNotification("Lacework uses single detectors, not clusters")
@@ -3072,7 +2994,7 @@ server <- function(input, output, session) {
         
         # updateSelectInput(session, "method", selected = "none")
         updateRadioButtons(session, "method", selected = "none")
-        updateRadioButtons(session, "packagebtn", selected = "openCR.fit")
+        updateRadioButtons(session, "packagebtn", selected = "secr.fit")
         updateCheckboxInput(session, "simappendbox", value = TRUE)
 
         updateCheckboxGroupInput(session, "fields1", selected = summaryfields[fieldgroup1])
@@ -3203,7 +3125,7 @@ server <- function(input, output, session) {
         
             ## time check 2018-12-05
             methodfactor <- 1 + ((input$method != "none") * 4)
-            functionfactor <- 1 + ((input$packagebtn != "openCR.fit") * 3)
+            functionfactor <- 4
             detectorfactor <- switch(input$detector, proximity = 1, multi = 0.6, count = 4)
             time <- nrow(mask()) * nrow(detectorarray()) / 1e9 * ## blocked 2019-01-14 nrepeats() * 
                 nrm()$En * input$noccasions * input$nrepl * 
@@ -3242,7 +3164,7 @@ server <- function(input, output, session) {
         if (!is.null(detectorarray())) {
             ## removeNotification("lownr")
             methodfactor <- 1 + ((input$method != "none") * 4)
-            functionfactor <- switch(input$packagebtn, secr.fit = 4, openCR.fit = 1, 0.1)
+            functionfactor <- switch(input$packagebtn, secr.fit = 4, 0.1)
             detectorfactor <- switch(input$detector, proximity = 1, single = 0.6, multi = 0.6, count = 4)
             En <- nrm()$En
             if (is.na(En)) En <- 100  ## surrogate for 'single' detectors
@@ -3567,7 +3489,7 @@ server <- function(input, output, session) {
                     "  RB = output['RB','mean'] * 100,\n",
                     "  RBse = output['RB','se'] * 100,\n"
                 )
-            fit <- input$packagebtn %in% c("openCR.fit", "secr.fit")
+            fit <- input$packagebtn %in% c("secr.fit")
             countcode <- if (fit) {
                     if (compareVersion(as.character(secrdesignversion), '2.5.7') < 0) "" else "summary(count(sims))$OUTPUT[[1]]\n" 
                 } else
