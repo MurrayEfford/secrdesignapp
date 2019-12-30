@@ -144,24 +144,17 @@ ui <- function(request) {
                                                                               
                                                                               tabPanel("Random",
                                                                                        fluidRow(
-                                                                                           column(9, radioButtons("randomtype", label = "",
-                                                                                                        choices = c("SRS", "GRTS"), selected = "SRS", inline = TRUE))
-                                                                                       ),
-                                                                                       
-                                                                                       fluidRow(
-                                                                                           column(12, uiOutput('randomtext'))
-                                                                                       ),
-
-                                                                                       fluidRow(
-                                                                                           
-                                                                                           column(6, numericInput("numpgrid",
-                                                                                                                        "number",
-                                                                                                                        value = 20,
-                                                                                                                        min = 0,
-                                                                                                                        max = 20000,
-                                                                                                                  step = 5)),
-                                                                                           column(6, br(), actionButton("randomarraybtn", "Randomize",
-                                                                                                                        title = "Select another realisation"))
+                                                                                           column(6, radioButtons("randomtype", label = "",
+                                                                                                                  choices = c("SRS", "GRTS"), 
+                                                                                                                  selected = "SRS", inline = TRUE),
+                                                                                                  uiOutput('randomtext')
+                                                                                                  ),
+                                                                                           column(6, br(), numericInput("numpgrid",
+                                                                                                                  "Number",
+                                                                                                                  value = 20,
+                                                                                                                  min = 0,
+                                                                                                                  max = 20000,
+                                                                                                                  step = 5))
                                                                                        )
                                                                                        
                                                                               ),
@@ -170,7 +163,7 @@ ui <- function(request) {
                                                                                        br(),
                                                                                        fluidRow(
                                                                                            column(6,numericInput("sppgrid",
-                                                                                                                 "spacing (m)",
+                                                                                                                 "Spacing (m)",
                                                                                                                  value = 200,
                                                                                                                  min = 0,
                                                                                                                  max = 200000,
@@ -211,13 +204,15 @@ ui <- function(request) {
                                                                               
                                                                               
                                                                           )),
-                                                                wellPanel(class = "mypanel",
-                                                                          fluidRow(column(7, 
+                                                                          fluidRow(column(6, 
+                                                                                          wellPanel(class = "mypanel",
                                                                                           radioButtons("clustertype", label = "Cluster type",
                                                                                                        choices = c("Single detector", "Grid", "Line", "File"), 
-                                                                                                       selected = "Single detector")),
-                                                                                   column(5, 
-                                                                                          numericInput(
+                                                                                                       selected = "Single detector"))
+                                                                                          ),
+                                                                                   column(6, 
+                                                                                          wellPanel(class = "mypanel",
+                                                                                              numericInput(
                                                                                               "rotation",
                                                                                               "Rotation",
                                                                                               value = 0,
@@ -230,8 +225,12 @@ ui <- function(request) {
                                                                                               value = 0,
                                                                                               min = 0, 
                                                                                               max = 1000000000,
-                                                                                              step = 1)
-                                                                                   )))
+                                                                                              step = 1),
+                                                                                          
+                                                                                          actionButton("randomarraybtn", "Randomize",
+                                                                                                       title = "Select another realisation"))
+                                                                                   )
+                                                                          )
                                                                 
                                                        )
                                                    )
