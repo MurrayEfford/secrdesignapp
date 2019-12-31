@@ -2909,6 +2909,9 @@ server <- function(input, output, session) {
 
         current$unit <- "ha"
         
+        shinyjs::enable("chequerboard")
+        
+        
         ## array
 
         ## grid
@@ -2928,7 +2931,7 @@ server <- function(input, output, session) {
         updateTabsetPanel(session, inputId = "regiontype", selected = "Random")
         updateNumericInput(session, "sppgrid", value = 200 )
         updateNumericInput(session, "splace", value = 20 )
-        updateCheckboxInput(session, "clustertype", value = "Single detector" )
+        updateRadioButtons(session, "clustertype", value = "Single detector" )
         updateNumericInput(session, "rotation", value = 0)
         updateCheckboxInput(session, "lacework", value = FALSE )
         updateCheckboxInput(session, "chequerboard", value = FALSE )
@@ -3265,10 +3268,25 @@ server <- function(input, output, session) {
     
     ##############################################################################
     
+    observeEvent(input$lacework, ignoreInit = TRUE, {
+        if (input$lacework) {
+            updateRadioButtons(session, "clustertype", choices = 
+                                   c("Single detector"), selected = "Single detector")
+            updateCheckboxInput(session, "randomorigin", "Random origin", TRUE)
+            shinyjs::disable("chequerboard")
+        }
+        else {
+            updateRadioButtons(session, "clustertype", choices = 
+                                   c("Single detector", "Grid", "Line", "File"), 
+                               selected = "Single detector")
+            shinyjs::enable("chequerboard")
+        }
+    })
+    
     observeEvent(input$selectfieldsbtn, {
         selecting$v <- ! selecting$v
         output$selectingfields <- renderText(selecting$v)
-            
+        
     }   )
     
     observeEvent(input$selectallbtn, {
