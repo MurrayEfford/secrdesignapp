@@ -2038,7 +2038,9 @@ server <- function(input, output, session) {
                             regioncode,
                             excludedcode,
                             seedcode,
-                            "array <- make.lacework(region, spacing = c(", input$sppgrid, ", ", input$splace,
+                            "array <- make.lacework(region = region, ",
+                            "detector = '", input$detector, "', \n    ", 
+                            "spacing = c(", input$sppgrid, ", ", input$splace,
                             "), rotate = ", input$rotation, ")\n")
                     }
                     else {
@@ -2049,8 +2051,8 @@ server <- function(input, output, session) {
                             rotatecode,
                             seedcode,
                             "array <- make.systematic(spacing = ", input$sppgrid, ", ",
-                            "region = region, \n", 
-                            "    cluster = cluster, origin = ", origincode, chequercode, edgemethodcode, 
+                            "region = region, \n    ", 
+                            "cluster = cluster, origin = ", origincode, chequercode, edgemethodcode, 
                             exclusioncode, ")\n")
                     }
                 }
@@ -2354,7 +2356,8 @@ server <- function(input, output, session) {
                                 else {
                                     origin <- sp::bbox(regionrv$data)[,1] + input$sppgrid/2
                                 }
-                                trps <- make.lacework(regionrv$data, spacing = c(input$sppgrid, input$splace),
+                                trps <- make.lacework(regionrv$data, detector = input$detector,
+                                                      spacing = c(input$sppgrid, input$splace),
                                                       origin = origin, rotate = input$rotation)
                             }
                             else {
