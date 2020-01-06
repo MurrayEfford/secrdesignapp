@@ -1,5 +1,6 @@
 ## 2019-02-17 suppressed scaling factor for detectors from file
 ## 2019-02-17 suppress 'lownr' notification - rely on traffic lights
+## 2020-01-07 version 1.4 drops openCR; optional lacework
 
 library(secrdesign)
 library(shinyjs)
@@ -7,7 +8,7 @@ library(shinyjs)
 secrversion <- packageVersion('secr')
 secrdesignversion <- packageVersion('secrdesign')
 if (compareVersion(as.character(secrdesignversion), '2.5.7') < 0)
-    stop("secrdesignapp 1.3 requires secrdesign version 2.5.7 or later",
+    stop("secrdesignapp 1.4 requires secrdesign version 2.5.7 or later",
          call. = FALSE)
 
 # requires package rgdal to read shapefiles
@@ -28,7 +29,7 @@ trafficcols <- c("chartreuse1", "yellow1", "red")
 ui <- function(request) {
 
     fluidPage(
-        title = "secrdesignapp 1.3",
+        title = "secrdesignapp 1.4",
         includeCSS("secrdesignstyle.css"),
         withMathJax(),
         useShinyjs(),
@@ -36,7 +37,7 @@ ui <- function(request) {
         br(),
         navlistPanel(id = "navlist", widths = c(2,10), well=TRUE,
                      
-                     "secrdesign app 1.3",
+                     "secrdesign app 1.4",
                      
                      tabPanel("Design",
                               fluidRow(
@@ -1051,7 +1052,7 @@ ui <- function(request) {
                               withMathJax(includeMarkdown("help.rmd"))
                      ),
                      tabPanel("About",
-                              h2("secrdesign app 1.3"), br(),
+                              h2("secrdesign app 1.4"), br(),
                               
                               h5(paste("This Shiny application provides an interface to the R package 'secrdesign', version", 
                                        packageDescription("secrdesign")$Version), "."),
