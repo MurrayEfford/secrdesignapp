@@ -1,7 +1,7 @@
 ---
 title: "secrdesign app 1.3"
 author: "Murray Efford"
-date: '2019-07-05'
+date: '2020-01-07'
 output:
   pdf_document:
     toc: yes
@@ -13,7 +13,7 @@ output:
 
 # An interactive app for designing spatially explicit capture--recapture studies
 
-## Murray Efford 2019-07-05
+## Murray Efford 2020-01-07
 
 # Contents
   [Introduction](#introduction)  
