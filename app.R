@@ -2909,8 +2909,8 @@ server <- function(input, output, session) {
 
         current$unit <- "ha"
         
+        shinyjs::enable("randomorigin")
         shinyjs::enable("chequerboard")
-        
         
         ## array
 
@@ -3270,16 +3270,25 @@ server <- function(input, output, session) {
     
     observeEvent(input$lacework, ignoreInit = TRUE, {
         if (input$lacework) {
-            updateRadioButtons(session, "clustertype", choices = 
-                                   c("Single detector"), selected = "Single detector")
-            updateCheckboxInput(session, "randomorigin", "Random origin", TRUE)
-            shinyjs::disable("chequerboard")
+            if (compareVersion(as.character(secrversion), '4.1.1') < 0) {
+                updateCheckboxInput(session, "lacework", value = FALSE)
+                showNotification("Lacework requires secr > 4.1.0",
+                                  type = "warning", id = "nolacework", duration = NULL)
+            }
+            else {
+                updateRadioButtons(session, "clustertype", choices = 
+                                       c("Single detector"), selected = "Single detector")
+                updateCheckboxInput(session, "randomorigin", "Random origin", TRUE)
+                shinyjs::disable("chequerboard")
+                shinyjs::disable("randomorigin")
+            }
         }
         else {
             updateRadioButtons(session, "clustertype", choices = 
                                    c("Single detector", "Grid", "Line", "File"), 
                                selected = "Single detector")
             shinyjs::enable("chequerboard")
+            shinyjs::enable("randomorigin")
         }
     })
     
