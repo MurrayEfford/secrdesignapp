@@ -128,7 +128,7 @@ See Options | Detector array to control the clipping of detector clusters that c
 
 A systematic array is specified by the cluster design, the spacing between cluster centres and the origin. By default the origin is fixed at (+sp/2, +sp/2) relative to the lower left corner of the bounding box of the region, where sp is the array spacing. Alternately the origin may be chosen at random within a square of side sp. 
 
-The 'Lacework' option (**secr** $\ge$ 4.1.1) places detectors along the lines of a square grid. It is best for the spacing along the lines to be a submultiple of the spacing of the systematic grid. Lacework assumes single detectors.
+The 'Lacework' option (**secr** $\ge$ 4.1.1) places detectors along the lines of a square grid. The expected number of detectors is shown in teal. It is best for the spacing along the lines to be a submultiple of the spacing of the systematic grid (a duplicated detector is deleted from each intersection). The spacing at intersections is otherwise less than specified (this is indicated by an asterisk). Lacework assumes single detectors.
 
 #### Random
 

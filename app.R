@@ -180,7 +180,8 @@ ui <- function(request) {
                                                                                            column(6, 
                                                                                                   checkboxInput("randomorigin", "Random origin", FALSE),
                                                                                                   checkboxInput("chequerboard", "Chequerboard", FALSE),
-                                                                                                  checkboxInput("lacework", "Lacework", FALSE)
+                                                                                                  checkboxInput("lacework", "Lacework", FALSE),
+                                                                                                  uiOutput('laceworkK')
 
                                                                                            )
                                                                                            
@@ -1119,19 +1120,43 @@ server <- function(input, output, session) {
     
     ##############################################################################
     
-    output$detectorhelp <- renderUI({
-        helptext <- ""
-        if (input$detector == 'proximity')
-            helptext <- "binary proximity detector; max. one detection per animal per detector per occasion"
-        else if (input$detector == 'multi')
-            helptext <- "multi-catch trap; max. one detection per animal per occasion"
-        else if (input$detector == 'count')
-            helptext <- "count proximity detector; integer # detections per animal per occasion"
-        else if (input$detector == 'single')
-            helptext <- "single-catch trap; max. one detection per animal & one per trap on any occasion"
-        helpText(HTML(helptext))
-    })
-    ##############################################################################
+     output$laceworkK <- renderUI({
+         helptext <- ""
+         if (input$lacework) {
+             Kmsg <- function (A, spacing, radius = NULL) {
+                 deleteintersect <- abs(spacing[1]/spacing[2] - spacing[1]%/%spacing[2]) < 1e-4
+                 if (deleteintersect)
+                     intersect <- spacing[2]
+                 else
+                     intersect <- 0
+                 k <- A * (2 * spacing[1] - intersect) / (spacing[1]^2 * spacing[2])
+                 if (!is.null(radius)) {
+                     radius <- min(radius, spacing[1]/2)
+                     ## approximate only
+                     k <- k * (4 * trunc(radius/spacing[2]) + 1) / 
+                         (4 * trunc(spacing[1]/2/spacing[2]) + 1)
+                 }
+                 star <- if (deleteintersect) "" else "*"
+                 paste0(round(k, 1), " detectors", " ", star)
+             }
+             A <- polyarea(regionrv$data, ha = FALSE) # m^2
+             helpText(HTML(Kmsg(A, c(input$sppgrid, input$splace))))
+         }
+     })
+     
+     output$detectorhelp <- renderUI({
+         helptext <- ""
+         if (input$detector == 'proximity')
+             helptext <- "binary proximity detector; max. one detection per animal per detector per occasion"
+         else if (input$detector == 'multi')
+             helptext <- "multi-catch trap; max. one detection per animal per occasion"
+         else if (input$detector == 'count')
+             helptext <- "count proximity detector; integer # detections per animal per occasion"
+         else if (input$detector == 'single')
+             helptext <- "single-catch trap; max. one detection per animal & one per trap on any occasion"
+         helpText(HTML(helptext))
+     })
+     ##############################################################################
      
     output$model2Dhelp <- renderUI({
         helptext <- ""
