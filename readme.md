@@ -1,4 +1,4 @@
-# secrdesignapp 1.4
+# secrdesignapp 1.5
 
 secrdesignapp is a partial interactive interface to the R package [secrdesign](https://CRAN.R-project.org/package=secrdesign). See the Help tab for details.
 
@@ -15,6 +15,8 @@ along with other minor improvements.
 
 Version 1.4 (January 2020) supports lacework designs (to be introduced in the next release of **secr**) and no longer offers `openCR.fit` as a model-fitting option (**secr** 4.0 onwards has fast `secr.fit`).
 
+Version 1.5 (January 2022) has minor updates in the Help file.
+
 Click this link to run secrdesignapp in your web browser from a University of Otago server:
 
 [secrdesignapp](https://www.stats.otago.ac.nz/secrdesignapp)
@@ -25,7 +27,7 @@ Simulations may run faster on your own machine, and the GitHub version is always
 library(shiny)
 runGitHub("secrdesignapp", "MurrayEfford")
 ```
-Version 1.4 requires secr >= 3.2.0 and secrdesign >= 2.5.7. Various other R packages may be needed for specific operations.
+Version 1.5 requires secr >= 4.2.0 and secrdesign >= 2.6.0. Various other R packages may be needed for specific operations.
 
 If you intend to use bookmarking on your local machine to store the state of `secrdesignapp` then specify the 'port' and 'destdir' arguments, e.g.,
 

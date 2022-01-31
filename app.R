@@ -1,14 +1,15 @@
 ## 2019-02-17 suppressed scaling factor for detectors from file
 ## 2019-02-17 suppress 'lownr' notification - rely on traffic lights
 ## 2020-01-07 version 1.4 drops openCR; optional lacework
+## 2022-01-31 version 1.5 update documentation
 
 library(secrdesign)
 library(shinyjs)
 
 secrversion <- packageVersion('secr')
 secrdesignversion <- packageVersion('secrdesign')
-if (compareVersion(as.character(secrdesignversion), '2.5.7') < 0)
-    stop("secrdesignapp 1.4 requires secrdesign version 2.5.7 or later",
+if (compareVersion(as.character(secrdesignversion), '2.6.0') < 0)
+    stop("secrdesignapp 1.5 requires secrdesign version 2.6.0 or later",
          call. = FALSE)
 
 # requires package rgdal to read shapefiles
@@ -29,7 +30,7 @@ trafficcols <- c("chartreuse1", "yellow1", "red")
 ui <- function(request) {
 
     fluidPage(
-        title = "secrdesignapp 1.4",
+        title = "secrdesignapp 1.5",
         includeCSS("secrdesignstyle.css"),
         withMathJax(),
         useShinyjs(),
@@ -37,7 +38,7 @@ ui <- function(request) {
         br(),
         navlistPanel(id = "navlist", widths = c(2,10), well=TRUE,
                      
-                     "secrdesign app 1.4",
+                     "secrdesign app 1.5",
                      
                      tabPanel("Design",
                               fluidRow(
@@ -1053,12 +1054,12 @@ ui <- function(request) {
                               withMathJax(includeMarkdown("help.rmd"))
                      ),
                      tabPanel("About",
-                              h2("secrdesign app 1.4"), br(),
+                              h2("secrdesign app 1.5"), br(),
                               
                               h5(paste("This Shiny application provides an interface to the R package 'secrdesign', version", 
                                        packageDescription("secrdesign")$Version), "."),
                               br(),
-                              h5("Copyright 2019 Murray Efford"),
+                              h5("Copyright 2019, 2022 Murray Efford"),
                               h5("The application is released under the"),
                               a("GNU General Public License Version 3.0", href="https://www.gnu.org/licenses/gpl-3.0.txt", target="_blank"), br(),
                               br(),
@@ -2557,19 +2558,21 @@ server <- function(input, output, session) {
             scen <- make.scenarios(trapsindex = 1, noccasions = input$noccasions, 
                                    nrepeats = nrepeats(), D = density(), sigma = input$sigma, 
                                    lambda0 = input$lambda0, detectfn = input$detectfn)
-            scensum <- scenarioSummary(scen,
-                                       trapset = trps,
-                                       mask = msk,
-                                       ## CF = input$CFslider,  
-                                       CF = 1,  
-                                       routelength = pathl / 1000,
-                                       costing = TRUE,
-                                       setupoccasion = input$setupoccasion,
-                                       unitcost = list(perkm = input$perkm,
-                                                       perarray = input$perarray,
-                                                       perdetector = input$perdetector,
-                                                       pervisit = input$pervisit,
-                                                       perdetection = input$perdetection))
+            scensum <- scenarioSummary(
+                scen,
+                trapset = trps,
+                mask = msk,
+                ## CF = input$CFslider,  
+                CF = 1,  
+                routelength = pathl / 1000,
+                costing = TRUE,
+                setupoccasion = input$setupoccasion,
+                unitcost = list(perkm = input$perkm,
+                    perarray = input$perarray,
+                    perdetector = input$perdetector,
+                    pervisit = input$pervisit,
+                    perdetection = input$perdetection),
+                ncores = 1)
             scensum$maskarea <- maskarea(msk)
             if (input$distributionbtn == "Binomial") {
                 scensum$rotRSE <- scensum$rotRSEB     
@@ -3546,7 +3549,7 @@ server <- function(input, output, session) {
                 )
             fit <- input$packagebtn %in% c("secr.fit")
             countcode <- if (fit) {
-                    if (compareVersion(as.character(secrdesignversion), '2.5.7') < 0) "" else "summary(count(sims))$OUTPUT[[1]]\n" 
+                    if (compareVersion(as.character(secrdesignversion), '2.6.0') < 0) "" else "summary(count(sims))$OUTPUT[[1]]\n" 
                 } else
                 paste0(
                     "sumc <- function(x) {\n",
