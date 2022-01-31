@@ -1,7 +1,7 @@
 ---
-title: "secrdesign app 1.4"
+title: "secrdesign app 1.5"
 author: "Murray Efford"
-date: '2020-01-07'
+date: '2022-01-31'
 output:
   pdf_document:
     toc: yes
@@ -13,7 +13,7 @@ output:
 
 # An interactive app for designing spatially explicit capture--recapture studies
 
-## Murray Efford 2020-01-07
+## Murray Efford 2022-01-31
 
 # Contents
   [Introduction](#introduction)  
@@ -32,7 +32,7 @@ output:
 
 # Introduction  <a name="introduction"></a>
 
-This Shiny application is an interactive interface to parts of the R package **secrdesign** ([Efford 2019a](#references)). It focuses on the effect of detector layout and other design variables on the precision of density estimates, measured by the relative standard error (RSE, aka CV). Vary settings on the [Design](#designspecs) page to obtain an immediate "rule-of-thumb" approximation to RSE($\hat D$), based on the expected numbers of recaptures and distinct individuals ([Efford and Boulanger 2019]). The current source code is available from https://GitHub.com/MurrayEfford/secrdesignapp.
+This Shiny application is an interactive interface to parts of the R package **secrdesign** ([Efford 2022a](#references)). It focuses on the effect of detector layout and other design variables on the precision of density estimates, measured by the relative standard error (RSE, aka CV). Vary settings on the [Design](#designspecs) page to obtain an immediate "rule-of-thumb" approximation to RSE($\hat D$), based on the expected numbers of recaptures and distinct individuals ([Efford and Boulanger 2019]). The current source code is available from https://GitHub.com/MurrayEfford/secrdesignapp.
 
 The approximation is biased low for some layouts, especially when sample size is small. A correction factor may be applied to adjust the approximation. Refine the approximation by [simulating](#simspecs) data from the chosen design; this may take a long time. The correction factor is updated automatically from simulation results (see Options to suppress this). Use "Add to summary" to include the current scenario in a spreadsheet for export.
 
@@ -48,7 +48,7 @@ TIP: on small displays, running your browser in full-screen mode will avoid the 
 
 TIP: you can run the latest version of secrdesignapp on your own machine directly from GitHub - see the link above.
 
-IMPORTANT NOTE: Maximising precision is only one component of study design. Sampling must also be representative of the population in the region of interest. Linear arrays are unreliable when home ranges are elongated in a common direction ([Efford 2019c](#references)).
+IMPORTANT NOTE: Maximising precision is only one component of study design. Sampling must also be representative of the population in the region of interest. Linear arrays are unreliable when home ranges are elongated in a common direction ([Efford 2019](#references)).
 
 # Design  <a name="designspecs"></a>
 
@@ -63,7 +63,7 @@ IMPORTANT NOTE: Maximising precision is only one component of study design. Samp
   </tr>
 </table> 
 <br>
-Options for detector type follow **secr** ([Efford (2019b)](#references)): "multi" refers to a multi-catch trap; "proximity" to binary proximity detectors, and "count" to detectors that yield integer counts. Counts are assumed to be Poisson-distributed.
+Options for detector type follow **secr** ([Efford (2022)](#references)): "multi" refers to a multi-catch trap; "proximity" to binary proximity detectors, and "count" to detectors that yield integer counts. Counts are assumed to be Poisson-distributed.
 <br>
 
 The detector layout ('Array') may be specified as a rectangular grid or line (via `make.grid`), read from a file, or as a systematic or random array within a region. Code for generating an array according to the current settings is shown on the Simulation page.
@@ -429,7 +429,7 @@ A very approximate algorithm is used to predict the execution time from the prod
 * number of detector clusters
 * number of replicates
 
-with adjustments for the maximisation method (default "none"), detector type (default "proximity") and fitting function (default `openCR.fit`). If the predicted time exceeds 0.2 minutes a dialogue box allows the user to cancel simulations before they start. 
+with adjustments for the maximisation method (default "none") and detector type (default "proximity"). If the predicted time exceeds 0.2 minutes a dialogue box allows the user to cancel simulations before they start. 
 
 Unfortunately, there is no elegant way to interrupt simulations once they have started. Close your browser window and start again.
 
@@ -441,8 +441,6 @@ Code is provided for users who want to go further. Multiple scenarios may be eva
 
 ### Fit simulated data
 
-**secrdesign** >= 2.5.7 allows a choice between two functions for fitting closed-population SECR models: `secr.fit` in package **secr** and `openCR.fit` in package **openCR** ([Efford 2019d](#references)). The default is to use the faster multi-threaded code in `openCR.fit` (for this it is best to leave ncores = 1).
-
 `Maximization method = 'none'` by-passes likelihood maximization and evaluates the Hessian (and hence the variance-covariance matrix) at the true values of the parameters. This is a fast way to predict \(\small \mbox{RSE}(\hat D)\); it is apparently reliable and requires few replicates. Bias is not estimated.
 
 If the 'Add to summary' box is ticked then simulation results are added automatically to the [Summary](#summary) table.
@@ -451,7 +449,7 @@ If the 'Add to summary' box is ticked then simulation results are added automati
 <table style="width:40%">
   <tr>
     <td>Function to fit model </td>
-    <td> choose between openCR.fit (fast) and secr.fit(slow), or bypass fitting </td>
+    <td> choose secr.fit(slow), or bypass fitting </td>
   </tr>
   <tr>
     <td>Maximization method</td>
@@ -626,13 +624,9 @@ The table may be downloaded as a comma-separated text file or in the RDS format 
 
 Here are some known pitfalls
 
-## Slow simulations when ncores > 1
-
-This is a combined result of (i) when ncores = 1 all available cores are used for highly efficient multithreading by openCR.fit(), and (ii) parallel processing incurs substantial overheads of its own.
-
 ## Slow simulations, no obvious reason
 
-Run secrdesignapp from GitHub on your own machine for the best performance. See https://GitHub.com/MurrayEfford/secrdesignapp. You will need to install R packages secr, openCR, secrdesign, shiny and shinyjs. 
+Run secrdesignapp from GitHub on your own machine for the best performance. See https://GitHub.com/MurrayEfford/secrdesignapp. You will need to install R packages secr, secrdesign, shiny and shinyjs. 
 
 ## Components of a shapefile must be selected and uploaded together
 
@@ -675,15 +669,13 @@ Borchers, D. L. and Efford, M. G. (2008) Spatially explicit
    maximum likelihood methods for capture--recapture
    studies. *Biometrics* **64**, 377--385.
    
-Efford, M. G. (2019a) secrdesign: Sampling design for spatially explicit
-  capture--recapture. R package version 2.5.7.
+Efford, M. G. (2019) Non-circular home ranges and the estimation of population density. *Ecology* 100(2), e02580.
+
+Efford, M. G. (2022a) secrdesign: Sampling design for spatially explicit
+  capture--recapture. R package version 2.6.0.
   https://CRAN.R-project.org/package=secrdesign
 
-Efford, M. G. (2019b) secr: Spatially explicit capture--recapture models. R package version 3.2.1. https://CRAN.R-project.org/package=secr
-
-Efford, M. G. (2019c) Non-circular home ranges and the estimation of population density. *Ecology* 100(2), e02580.
-
-Efford, M. G. (2019d) openCR: Open population capture--recapture models. R package version 1.4.1. https://CRAN.R-project.org/package=openCR
+Efford, M. G. (2022b) secr: Spatially explicit capture--recapture models. R package version 4.5.1. https://CRAN.R-project.org/package=secr
 
 Efford, M. G. and Boulanger, J. (2019) Fast evaluation of study designs for spatially explicit 
   capture--recapture. *Methods in Ecology and Evolution* (in press)
