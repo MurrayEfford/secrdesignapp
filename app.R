@@ -2,6 +2,7 @@
 ## 2019-02-17 suppress 'lownr' notification - rely on traffic lights
 ## 2020-01-07 version 1.4 drops openCR; optional lacework
 ## 2022-01-31 version 1.5 update documentation
+## 2022-02-06 version 1.5 check compatible secr 4.5.2
 
 library(secrdesign)
 library(shinyjs)
