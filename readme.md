@@ -15,7 +15,7 @@ along with other minor improvements.
 
 Version 1.4 (January 2020) supports lacework designs (to be introduced in the next release of **secr**) and no longer offers `openCR.fit` as a model-fitting option (**secr** 4.0 onwards has fast `secr.fit`).
 
-Version 1.5 (January 2022) has minor updates in the Help file.
+Version 1.5 (January 2022) has minor updates in the Help file and suppresses GRTS random samples that are not available in recent releases of **secr**.
 
 Click this link to run secrdesignapp in your web browser from a University of Otago server:
 
