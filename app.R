@@ -17,7 +17,7 @@ if (compareVersion(as.character(secrdesignversion), '2.6.0') < 0)
 # requires package sp for bbox and plot method for SpatialPolygons
 # requires package parallel for max cores in simulate options (distributed with base R)
 # requires package tools for file path when reading shapefiles (distributed with base R)
-# requires package spsurvey for GRTS
+# [requires package spsurvey for GRTS not in secr 4.5.3]
 
 # interrupt is hard -
 # see http://htmlpreview.github.io/?https://github.com/fellstat/ipc/blob/master/inst/doc/shinymp.html
@@ -148,8 +148,9 @@ ui <- function(request) {
                                                                               tabPanel("Random",
                                                                                        fluidRow(
                                                                                            column(6, radioButtons("randomtype", label = "",
-                                                                                                                  choices = c("SRS", "GRTS"), 
-                                                                                                                  selected = "SRS", inline = TRUE),
+                                                                                               ## choices = c("SRS", "GRTS"), 
+                                                                                               choices = c("SRS"), 
+                                                                                               selected = "SRS", inline = TRUE),
                                                                                                   uiOutput('randomtext')
                                                                                                   ),
                                                                                            column(6, br(), numericInput("numpgrid",
