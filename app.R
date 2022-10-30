@@ -3,18 +3,20 @@
 ## 2020-01-07 version 1.4 drops openCR; optional lacework
 ## 2022-01-31 version 1.5 update documentation
 ## 2022-02-06 version 1.5 check compatible secr 4.5.2
+## 2022-10-26 version 1.6
 
 library(secrdesign)
+library(sf)
 library(shinyjs)
 
 secrversion <- packageVersion('secr')
 secrdesignversion <- packageVersion('secrdesign')
-if (compareVersion(as.character(secrdesignversion), '2.6.0') < 0)
-    stop("secrdesignapp 1.5 requires secrdesign version 2.6.0 or later",
-         call. = FALSE)
+if (compareVersion(as.character(secrdesignversion), '2.7.0') < 0)
+    stop("secrdesignapp 1.6 requires secrdesign version 2.7.0 or later",
+        call. = FALSE)
 
-# requires package rgdal to read shapefiles
-# requires package sp for bbox and plot method for SpatialPolygons
+# requires package sf to read shapefiles
+# requires package sp for plot method for SpatialPolygons
 # requires package parallel for max cores in simulate options (distributed with base R)
 # requires package tools for file path when reading shapefiles (distributed with base R)
 # requires package spsurvey >= 5.3.0 for GRTS 
@@ -29,1052 +31,1139 @@ trafficcols <- c("chartreuse1", "yellow1", "red")
 
 # Define UI 
 ui <- function(request) {
-
+    
     fluidPage(
-        title = "secrdesignapp 1.5",
+        title = "secrdesignapp 1.6",
         includeCSS("secrdesignstyle.css"),
         withMathJax(),
         useShinyjs(),
-        tags$head(tags$style(".mypanel{margin-top:5px; margin-bottom:10px; padding-bottom: 5px;}")),
+        # tags$head(tags$style(".mypanel{margin-top:5px; margin-bottom:10px; margin-left:5px;
+        #     padding-top:10px; padding-bottom: 5px; padding-left: 8px; padding-right: 10px; border: 5px solid black; border-width: thin; }")),
         br(),
         navlistPanel(id = "navlist", widths = c(2,10), well=TRUE,
-                     
-                     "secrdesign app 1.5",
-                     
-                     tabPanel("Design",
-                              fluidRow(
-                                  column(3, # offset = 0, style='padding:15px;',
-                                         h2("Detector array"),
-                                         wellPanel(class = "mypanel", 
-                                                   fluidRow(
-                                                       column(6, selectInput("detector", "Detector type",
-                                                                             # choices = c("multi","proximity","count", "single"),
-                                                                             choices = c("multi","proximity","count"),
-                                                                             selected = "proximity", width = 120)),
-                                                       column(6, uiOutput('detectorhelp'))
-                                                   ),
-                                                   br(),
-                                                   tabsetPanel(
-                                                       type = "pills", id = "arrayinput", selected = "Grid",
-                                                       
-                                                       tabPanel("Grid",
-                                                                br(),
-                                                                fluidRow(
-                                                                    column(5, numericInput("ny",
-                                                                                           "rows", # y dimension:",
-                                                                                           value = 8,
-                                                                                           min = 1,
-                                                                                           max = 40,
-                                                                                           step = 1,
-                                                                                           width = 80)),
-                                                                    column(6, numericInput("nx",
-                                                                                           "columns", # x dimension:",
-                                                                                           value = 8,
-                                                                                           min = 1,
-                                                                                           max = 40,
-                                                                                           step = 1,
-                                                                                           width = 80))
-                                                                ),
-                                                                fluidRow(
-                                                                    column(5,numericInput("spy",
-                                                                                          "row space (m)",
-                                                                                          value = 20,
-                                                                                          min = 1,
-                                                                                          max = 100000,
-                                                                                          step = 1)),
-                                                                    column(6,numericInput("spx",
-                                                                                          "col space (m)",
-                                                                                          value = 20,
-                                                                                          min = 1,
-                                                                                          max = 100000,
-                                                                                          step = 1))
-                                                                ),
-                                                                
-                                                                fluidRow(
-                                                                    column(5, checkboxInput("hollow", "Hollow", FALSE)),
-                                                                    column(6, actionButton("suggestbtn", "Suggest spacing",
-                                                                           title = "Find detector spacing at which E(n) = E(r)"))
-                                                                )
-                                                       ),
-                                                       tabPanel("Line",
-                                                                br(),
-                                                                fluidRow(
-                                                                    column(7,numericInput("nline",
-                                                                                          "number of detectors",
-                                                                                          value = 20,
-                                                                                          min = 1,
-                                                                                          max = 100,
-                                                                                          step = 1)),
-                                                                    column(5,numericInput("spline",
-                                                                                          "spacing (m)",
-                                                                                          value = 20,
-                                                                                          min = 1,
-                                                                                          max = 100000,
-                                                                                          step = 1))
-                                                                ),
-                                                                actionButton("suggestlinebtn", "Suggest spacing",
-                                                                           title = "Find detector spacing at which E(n) = E(r)"),
-                                                                br(),br(),
-                                                                helpText(HTML("Warning: results with linear arrays may be highly biased if home ranges are elongated and aligned"))
-                                                       ),
-                                                       tabPanel("File", values = "File",
-                                                                br(),
-                                                                div(style="height: 80px;",
-                                                                    fileInput("trapfilename", "",   # Detector layout file
-                                                                              accept = "text/plain")),
-                                                                helpText(HTML(paste0("Requires text file with detector ID ",
-                                                                                     "and x-y coordinates in three columns,",
-                                                                                     " as for secr::read.traps"))),
-                                                                textInput("trapargs", "Optional arguments for read.traps()",
-                                                                          value = "", placeholder = "e.g., skip = 1, sep = ','"),
-                                                                verbatimTextOutput("traptext"),
-                                                                tags$head(tags$style("#traptext{overflow-y:scroll; max-height: 107px; 
+            
+            "secrdesign app 1.6",
+            
+            tabPanel("Design",
+                fluidRow(
+                    column(3, # offset = 0, style='padding:15px;',
+                        h2("Detector array"),
+                        wellPanel(class = "mypanel", 
+                            fluidRow(
+                                column(6, selectInput("detector", "Detector type",
+                                    # choices = c("multi","proximity","count", "single"),
+                                    choices = c("multi","proximity","count"),
+                                    selected = "proximity", width = 120)),
+                                column(6, uiOutput('detectorhelp'))
+                            ),
+                            br(),
+                            tabsetPanel(
+                                type = "pills", id = "arrayinput", selected = "Grid",
+                                
+                                tabPanel("Grid",
+                                    wellPanel(class = "mypanel", 
+                                        
+                                    fluidRow(
+                                        column(5, 
+                                            numericInput("ny",
+                                            "rows", # y dimension:",
+                                            value = 8,
+                                            min = 1,
+                                            max = 40,
+                                            step = 1,
+                                            width = 80)),
+                                        column(6, 
+                                            numericInput("spy",
+                                                "row space (m)",
+                                                value = 20,
+                                                min = 1,
+                                                max = 100000,
+                                                step = 1,
+                                                width = 100)
+                                            )
+                                    ),
+                                    fluidRow(
+                                        column(5,
+                                            numericInput("nx",
+                                                "columns", # x dimension:",
+                                                value = 8,
+                                                min = 1,
+                                                max = 40,
+                                                step = 1,
+                                                width = 80)),
+                                        column(6,
+                                            numericInput("spx",
+                                            "col space (m)",
+                                            value = 20,
+                                            min = 1,
+                                            max = 100000,
+                                            step = 1,
+                                                width = 100))
+                                    ),
+                                        br(),
+                                    
+                                    fluidRow(
+                                        column(5, checkboxInput("hollow", "Hollow", FALSE)),
+                                        column(6, actionButton("suggestbtn", "Suggest spacing",
+                                            title = "Find detector spacing at which E(n) = E(r)"))
+                                    ))
+                                ),
+                                tabPanel("Line",
+                                    wellPanel(class = "mypanel", 
+                                        fluidRow(
+                                        column(6,numericInput("nline",
+                                            "number of detectors",
+                                            value = 20,
+                                            min = 1,
+                                            max = 100,
+                                            step = 1,
+                                            width = 120)),
+                                        column(6,numericInput("spline",
+                                            "spacing (m)",
+                                            value = 20,
+                                            min = 1,
+                                            max = 100000,
+                                            step = 1,
+                                            width = 100))
+                                    ),
+                                    actionButton("suggestlinebtn", "Suggest spacing",
+                                        title = "Find detector spacing at which E(n) = E(r)"),
+                                    br(),br(),
+                                    helpText(HTML("Warning: results with linear arrays may be highly biased if home ranges are elongated and aligned"))
+                                )),
+                                tabPanel("File", values = "File",
+                                    wellPanel(class = "mypanel", 
+                                        div(style="height: 80px;",
+                                        fileInput("trapfilename", "",   # Detector layout file
+                                            accept = "text/plain")),
+                                    helpText(HTML(paste0("Requires text file with detector ID ",
+                                        "and x-y coordinates in three columns,",
+                                        " as for secr::read.traps"))),
+                                    textInput("trapargs", "Optional arguments for read.traps()",
+                                        value = "", placeholder = "e.g., skip = 1, sep = ','"),
+                                    verbatimTextOutput("traptext"),
+                                    tags$head(tags$style("#traptext{overflow-y:scroll; max-height: 107px; 
                                                                                      background: ghostwhite;}"))
-                                                       ),
-                                                       tabPanel("Region",
-                                                                br(),
-                                                                div(style="height: 80px;",
-                                                                    fileInput("regionfilename", "Boundary file(s)",
-                                                                              accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                                         '.shx',".prj", ".txt", ".rdata", 
-                                                                                         ".rda", ".rds"), multiple = TRUE)),
-                                                                # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
-                                                                uiOutput("shapefile"),
-                                                                
-                                                                wellPanel(class = "mypanel", 
-                                                                          tabsetPanel(
-                                                                              type = "tabs", id = "regiontype", selected = "Random",
-                                                                              
-                                                                              tabPanel("Random",
-                                                                                       fluidRow(
-                                                                                           column(6, radioButtons("randomtype", label = "",
-                                                                                               choices = c("SRS", "GRTS"), 
-                                                                                               # choices = c("SRS"), 
-                                                                                               selected = "SRS", inline = TRUE),
-                                                                                                  uiOutput('randomtext')
-                                                                                                  ),
-                                                                                           column(6, br(), numericInput("numpgrid",
-                                                                                                                  "Number",
-                                                                                                                  value = 20,
-                                                                                                                  min = 0,
-                                                                                                                  max = 20000,
-                                                                                                                  step = 5))
-                                                                                       )
-                                                                                       
-                                                                              ),
-                                                                              tabPanel("Systematic",
-                                                                                       
-                                                                                       br(),
-                                                                                       fluidRow(
-                                                                                           column(6,numericInput("sppgrid",
-                                                                                                                 "Spacing (m)",
-                                                                                                                 value = 200,
-                                                                                                                 min = 0,
-                                                                                                                 max = 200000,
-                                                                                                                 step = 10),
-                                                                                                  conditionalPanel("input.lacework",
-                                                                                                                   numericInput("splace",
-                                                                                                                                "Lace spacing (m)",
-                                                                                                                                value = 20,
-                                                                                                                                min = 0,
-                                                                                                                                max = 200000,
-                                                                                                                                step = 5))
-                                                                                                  ),
-                                                                                           column(6, 
-                                                                                                  checkboxInput("randomorigin", "Random origin", FALSE),
-                                                                                                  checkboxInput("chequerboard", "Chequerboard", FALSE),
-                                                                                                  checkboxInput("lacework", "Lacework", FALSE),
-                                                                                                  uiOutput('laceworkK')
-
-                                                                                           )
-                                                                                           
-                                                                                       
-                                                                                       # ,
-                                                                                       # fluidRow(
-                                                                                       #     column(6,
-                                                                                       #            conditionalPanel("input.lacework",
-                                                                                       #            numericInput("splace",
-                                                                                       #                           "Lace spacing (m)",
-                                                                                       #                           value = 20,
-                                                                                       #                           min = 0,
-                                                                                       #                           max = 200000,
-                                                                                       #                           step = 5))
-                                                                                       #     ),
-                                                                                       #     column(6, 
-                                                                                       #            checkboxInput("lacework", "Lacework", FALSE)
-                                                                                       #     )
-                                                                                           
-                                                                                       ),
-                                                                                       uiOutput('clusteroverlap'))
-                                                                              
-                                                                              
-                                                                          )),
-                                                                          fluidRow(column(6, 
-                                                                                          wellPanel(class = "mypanel",
-                                                                                          radioButtons("clustertype", label = "Cluster type",
-                                                                                                       choices = c("Single detector", "Grid", "Line", "File"), 
-                                                                                                       selected = "Single detector"))
-                                                                                          ),
-                                                                                   column(6, 
-                                                                                          wellPanel(class = "mypanel",
-                                                                                              numericInput(
-                                                                                              "rotation",
-                                                                                              "Rotation",
-                                                                                              value = 0,
-                                                                                              min = 0,
-                                                                                              max = 360,
-                                                                                              step = 5),
-                                                                                          numericInput(
-                                                                                              "seedpgrid", 
-                                                                                              "Seed",
-                                                                                              value = 0,
-                                                                                              min = 0, 
-                                                                                              max = 1000000000,
-                                                                                              step = 1),
-                                                                                          
-                                                                                          actionButton("randomarraybtn", "Randomize",
-                                                                                                       title = "Select another realisation"))
-                                                                                   )
-                                                                          )
-                                                                
-                                                       )
-                                                   )
-                                         )
-                                  ),
-                                  
-                                  column(3, # offset = 0, style='padding:0px;',  
-                                         
-                                         h2("Parameters"),
-                                         wellPanel(class = "mypanel", 
-                                                   
-                                                   fluidRow(
-                                                       column(6, numericInput("D",
-                                                                              "D (animals / ha)",
-                                                                              min = 0,
-                                                                              max = 1000,
-                                                                              value = 5,
-                                                                              step=0.1,
-                                                                              width = 180)
-                                                              # uiOutput('persqkm')
-                                                       ),
-                                                       column(6, selectInput("detectfn", "Detection function",
-                                                                             choices = c("HHN","HEX"),
-                                                                             selected = "HHN", width=110))
-                                                   ),
-
-                                                   fluidRow(
-                                                       column(6, numericInput("lambda0",
-                                                                              "lambda0",
-                                                                              value = 0.2,
-                                                                              min = 0,
-                                                                              max = 100,
-                                                                              step = 0.01,
-                                                                              width = 180)),
-                                                       column(6, numericInput("sigma",
-                                                                              "sigma (m)",
-                                                                              min = 0,
-                                                                              max = 100000,
-                                                                              value = 25,
-                                                                              step = 1,
-                                                                              width = 180)))
-                                         ),
-                                         
-                                         h2("General"),
-                                         
-                                         fluidRow(
-                                             column(6,
-                                                    wellPanel(class = "mypanel", 
-                                                              numericInput("noccasions",
-                                                                           "Occasions",
-                                                                           value = 5,
-                                                                           min = 1,
-                                                                           max = 200,
-                                                                           step = 1,
-                                                                           width = 220),
-                                                              numericInput("nrepeats",
-                                                                           "Arrays",
-                                                                           value = 1,
-                                                                           min = 1,
-                                                                           max = 100,
-                                                                           step = 1,
-                                                                           width = 220)
-                                                              # uiOutput('clusterhelp')
-                                                    )),
-                                             column(6, #offset = 1, style='padding:0px;',
-                                                    wellPanel(class = "mypanel", 
-                                                              radioButtons("distributionbtn", label = "Distribution of n",
-                                                                           choices = c("Poisson", "Binomial"))
-                                                    ),
-                                                    checkboxInput("autorefresh", "  Auto refresh", TRUE)
-                                                    # checkboxInput("autoappend", "  Add on refresh", FALSE)
-                                             )
-                                         ),
-                                         
-                                         h2("Actions"),
-                                         
-                                         fluidRow(
-                                             column(5, actionButton("simulatebtn2", "Simulate",  width = 130,
-                                                                           title = "Conduct simulations specified on Simulate page and update Results")),
-                                             column(6, actionButton("appendbtn", "Add to summary",  width = 130,
-                                                                           title = "Append new scenario to Summary table"))
-                                         ),
-
-                                         br(),
-                                         fluidRow(
-                                             column(5, actionButton("resetbtn", "Reset all", width = 130, 
-                                                                    title = "Reset all inputs to initial values")),
-                                             column(6, bookmarkButton(width = 130)) 
-                                         ),
-                                         br(),
-                                         fluidRow(
-                                             column(7, helpText(HTML("F11 to toggle fullscreen")))
-                                         ),
-                                         fluidRow(
-                                             column(11, textInput("title", "", value = "", 
-                                                                  placeholder = "scenario label for Summary")))
-                                  ),
-                                  
-                                  column (4, # style='padding:0px;',
-                                          h2("Results"),
-                                          
-                                          fluidRow(
-                                              column(12,
-                                                     fluidRow(
-                                                         column(11, verbatimTextOutput("nrmPrint")),
-                                                         column(1, style='padding:0px;',
-                                                                conditionalPanel("output.nrmPrint!= ''",
-                                                                                 downloadLink("downloadnrmcode", "R")),
-                                                                br(),
-                                                                conditionalPanel("output.nrmPrint!= ''",
-                                                                                 plotOutput("trafficlightPlot", height = 60, hover = "trafficClick")))
-                                                     )
-                                              )
-                                          ),
-                                          
-                                          fluidRow(
-                                              column(12,
-                                                     br(),
-                                                     tabsetPanel(type = "pills",
-                                                                 id = "tabs",
-                                                                 tabPanel("Array",
-                                                                          fluidRow(
-                                                                              column(9, style='padding:0px;', plotOutput("arrayPlot", height = 340,
-                                                                                                                         click = clickOpts(id="arrayClick", clip = FALSE))),
-                                                                              column(3, br(), conditionalPanel("input.gridlines != 'None'",
-                                                                                                              uiOutput("uigridlines") ),
-                                                                                     br(), uiOutput('xycoord'))
-                                                                          ),
-                                                                          fluidRow(
-                                                                              column(11, style='padding:0px;', verbatimTextOutput("ntrapPrint"))
-                                                                              ,
-                                                                              column(1, br(), conditionalPanel("output.ntrapPrint!= ''",
-                                                                                                               downloadLink("downloadArray", "Save")))
-                                                                          )
-                                                                 ),
-                                                                 tabPanel("Detectfn", plotOutput("detnPlot", height = 320)),
-                                                                 tabPanel("Popn", 
-                                                                          plotOutput("popPlot", height = 320),
-                                                                          
-                                                                          fluidRow(
-                                                                              column(4, checkboxInput("showmaskbox", "Display mask",
-                                                                                                      value = FALSE,
-                                                                                                      width = 180),
-                                                                                     checkboxInput("onlymaskbox", "Restrict to mask",
-                                                                                                   value = TRUE,
-                                                                                                   width = 180)
-                                                                              ),
-                                                                              column(4, checkboxInput("showHRbox", "Display 95% HR",
-                                                                                                      value = FALSE,
-                                                                                                      width = 180),
-                                                                                     uiOutput('uipopN')),
-                                                                              column(4, actionButton("randompopbtn", "Randomize",
-                                                                                                     title = "Pick another realisation of the population")
-                                                                              )
-                                                                          )
-                                                                 ),
-                                                                 tabPanel("Pxy",
-                                                                          plotOutput("pxyPlot", height = 320, click = "pxyclick"),
-                                                                          helpText(HTML("p.(x) is the probability an animal at point x will be detected at least once"))
-                                                                 ),
-                                                                 
-                                                                 tabPanel("Power",
-                                                                          fluidRow(
-                                                                              column(11, plotOutput("powerPlot", height = 320, click = "CIclick"))
-                                                                          ),
-                                                                          br(),
-                                                                          fluidRow(
-                                                                              column(3, offset = 1,
-                                                                                     br(), checkboxInput("powertype", "95% CI",
-                                                                                                         value = FALSE,
-                                                                                                         width = 130)),
-                                                                              ## uiOutput('CIpct'),
-                                                                              column(4, 
-                                                                                     br(), checkboxInput("adjustRSEbox", "Adjust final RSE",
-                                                                                                         value = TRUE,
-                                                                                                         width = 130)),
-                                                                              # helpText(HTML("Scales with population"))),
-                                                                              column(4, conditionalPanel("input.powertype==true",
-                                                                                                         numericInput("xpos", "% change", min = -100, max = 250, 
-                                                                                                                      step = 1, value = 0, width = 70)
-                                                                                                         )
-                                                                                     )
-                                                                              
-                                                                          ),
-                                                                          fluidRow(
-                                                                              column(12,
-                                                                                     sliderInput("RSEslider", "",
-                                                                                                 min = 1.0,
-                                                                                                 max = 40,
-                                                                                                 value = 1,
-                                                                                                 step = 0.1,
-                                                                                                 pre = "RSE ",
-                                                                                                 post = "%",
-                                                                                                 width = "90%"))
-                                                                          )
-                                                                 )
-                                                     ))
-                                          )
-                                  )
-                              )
-                     ),
-                     
-                     tabPanel("Habitat mask",
-                              
-                              fluidRow(
-                                  column(3,
-                                         tabsetPanel(
-                                             type = "pills", id = "masktype", selected = "Build",
-                                             
-                                             tabPanel("Build",
-                                                      wellPanel(class = "mypanel", 
-                                                                fluidRow(
-                                                                    column(6, 
-                                                                           numericInput("habxsigma", "Buffer width (x sigma)",
-                                                                                        min = 0,
-                                                                                        max = 20,
-                                                                                        value = 4,
-                                                                                        step = 0.5,
-                                                                                        width = 180)),
-                                                                    column(6,
-                                                                           numericInput("habnx", "Mesh dimension nx",
-                                                                                        min = 10,
-                                                                                        max = 1000,
-                                                                                        value = 32,
-                                                                                        step = 1,
-                                                                                        width = 180)
-                                                                    )
-                                                                    # column(6,
-                                                                    #        br(),
-                                                                    #        actionButton("suggestbuffer", "Suggest width", width = 130,
-                                                                    #                     title = "Based on either fitted model or RPSV"))
-                                                                ),
-                                                                fluidRow(
-                                                                    column(12, 
-                                                                           radioButtons("maskshapebtn", label = "Shape",
-                                                                                        choices = c("Rectangular", "Trap buffer"), 
-                                                                                        selected = "Trap buffer", inline = TRUE)
-                                                                    )
-                                                                )
-                                                      ),
-                                                      wellPanel(class = "mypanel", 
-                                                                div(style="height: 80px;",
-                                                                    fileInput("habpolyfilename", "Mask polygon file(s)",
-                                                                              accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                                         '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
-                                                                              multiple = TRUE)),
-                                                                uiOutput("habitatfile"),
-                                                                fluidRow(
-                                                                    column(10, 
-                                                                           checkboxInput("polygonbox", "Clip to polygon(s)", value = TRUE),
-                                                                           radioButtons("includeexcludebtn", label = "",
-                                                                                        choices = c("Include", "Exclude"), 
-                                                                                        selected = "Include", inline = TRUE)
-                                                                    )
-                                                                )
-                                                      )
-                                             ),
-                                             tabPanel("File", 
-                                                      wellPanel(class = "mypanel", 
-                                                                div(style = "height: 80px;",
-                                                                    fileInput("maskfilename", "Mask file",
-                                                                              accept = c('.txt'), 
-                                                                              multiple = FALSE)),
-                                                                helpText(HTML(paste0("Requires text file with ",
-                                                                                     "x-y coordinates in first two columns,",
-                                                                                     " as for secr::read.mask"))),
-                                                                textInput("maskargs", "Optional arguments for read.mask()",
-                                                                          value = "header = TRUE", placeholder = "e.g., sep = ','"),
-                                                                verbatimTextOutput("masktext"),
-                                                                tags$head(tags$style("#masktext{overflow-y:scroll; max-height: 127px; 
-                                                                                     background: ghostwhite;}")),
-                                                                br(),
-                                                                fluidRow(
-                                                                    column(6,numericInput("maskcov", "Focal covariate",
-                                                                             min = 0,
-                                                                             max = 0,
-                                                                             value = 0,
-                                                                             step = 1,
-                                                                             width = 180)),
-                                                                    column(6, br(), checkboxInput("scaleD", "Rescale density",
-                                                                                            value = FALSE))
-                                                                )
-                                                      )
-                                             ) 
-                                         )
-                                  ),
-                                  column(5, plotOutput("maskPlot"),
-                                         conditionalPanel ("output.maskUploaded", fluidRow(
-                                             column(3, offset = 1, checkboxInput("dotsbox", "dots", value = FALSE, width = 180)),
-                                             column(3, offset = 1, checkboxInput("xpdbox", "xpd", value = FALSE, width = 180)),
-                                             column(4, checkboxInput("maskedge2", "show mask edge", value = FALSE))
-                                         ))
-                                  ),
-                                  column(3, 
-                                         h2("Summary"),
-                                         fluidRow(
-                                             column(12, 
-                                                    verbatimTextOutput("maskPrint"))
-                                         )
-                                  )
-                              )
-                     ),
-                     
-                     tabPanel("Costing",
-                              fluidRow(
-                                  column(3,
-                                         h2("Unit cost"),
-                                         wellPanel(class = "mypanel", 
-                                                   numericInput("perkm",
-                                                                "Travel per km $",
-                                                                value = 0,
-                                                                min = 0,
-                                                                max = 1000,
-                                                                step = 0.1,
-                                                                width = 200),
-                                                   numericInput("perarray",
-                                                                "Cost per array $",
-                                                                min = 0,
-                                                                max = 10000,
-                                                                value = 0,
-                                                                step=0.1,
-                                                                width = 200),
-                                                   numericInput("perdetector",
-                                                                "Cost per detector $",
-                                                                min = 0,
-                                                                max = 1000,
-                                                                value = 0,
-                                                                step=0.1,
-                                                                width = 200),
-                                                   numericInput("pervisit",
-                                                                "Cost per detector visit $",
-                                                                min = 0,
-                                                                max = 1000,
-                                                                value = 0,
-                                                                step=0.1,
-                                                                width = 200),
-                                                   numericInput("perdetection",
-                                                                "Cost per detection $",
-                                                                min = 0,
-                                                                max = 1000,
-                                                                value = 0,
-                                                                step=0.1,
-                                                                width = 200)),
-                                         br(),
-                                         fluidRow(
-                                             column(10, offset=1, checkboxInput("setupoccasion", "Include setup occasion", TRUE))
-                                         )
-                                  ),
-                                  column(3, offset = 0,
-                                         h2("Route"),
-                                         wellPanel(class = "mypanel", 
-                                                   radioButtons("routetype", label = "Type",
-                                                                choices = c("Sequential", "Manual", "SumSpacing")),
-                                                   #   choices = c("Sequential", "SumSpacing", "TSP", "Manual")),
-                                                   # selectInput("TSPmethod",
-                                                   #             "TSP method",
-                                                   #             c("two_opt", "farthest_insertion", "nearest_insertion", "nn"),
-                                                   #             "farthest_insertion",
-                                                   #             width = 200),
-                                                   # numericInput("TSPrepl",
-                                                   #              "TSP replicates",
-                                                   #              min = 1, max = 10000,
-                                                   #              value = 100,
-                                                   #              step=1,
-                                                   #              width=180),
-                                                   checkboxInput("returnbox", "Return to start",
-                                                                 value = FALSE,
-                                                                 width = 180)
-                                         ),
-                                         br(),
-                                         plotOutput("routePlot", click = "click", height=320),
-                                         conditionalPanel("input.routetype == 'Manual'",
-                                                          actionButton("routebtn", "Define new route by clicking at vertices",
-                                                                       width = 270))
-                                         
-                                  ),
-                                  column(4,
-                                         h2("Current costing"),
-                                         verbatimTextOutput("costPrint")
-                                  )
-                              )
-                     ),
-                     #################################################################################################
-                     
-                     tabPanel("Simulation",
-                              fluidRow(
-                                  column(5,
-                                         h2("Simulation control"),
-                                         fluidRow(
-                                             column(7, 
-                                                    wellPanel(class = "mypanel", 
-                                                              radioButtons("packagebtn", label = "Fit SECR model", 
-                                                                           choices = c("secr.fit", "no fit"), 
-                                                                           selected = "secr.fit", inline = TRUE),
-                                                              radioButtons("method", label = "Maximization method",
-                                                                          choices = c("Newton-Raphson", "Nelder-Mead", "none"),
-                                                                          selected = "none", inline = TRUE),
-                                                              br(),
-                                                              fluidRow(
-                                                                  column(5, selectInput("model2D", "2-D distribution",
-                                                                                        choices = c("poisson","cluster", "even"),
-                                                                                        selected = "poisson", width=160)),
-                                                                  column(7, textInput("details", "other details", value = "",
-                                                                                      placeholder = "sim.popn argument"))
-                                                                  ),
-                                                              uiOutput('model2Dhelp')
+                                )),
+                                tabPanel("Region",
+                                    wellPanel(class = "mypanel", 
+                                        
+                                    tabsetPanel(type = "tabs", id = "regiontype", selected = "Rectangle",
+                                        tabPanel("Rectangle",
+                                            br(),
+                                            fluidRow(
+                                            column(6, numericInput("length",
+                                                "length (m)",
+                                                value = 500,
+                                                min = 10,
+                                                max = 200000,
+                                                step = 10,
+                                                width = 100)),
+                                            column(6,numericInput("width",
+                                                "width (m)",
+                                                value = 400,
+                                                min = 10,
+                                                max = 200000,
+                                                step = 10,
+                                                width = 100)
+                                            )
+                                        )
+                                        ),
+                                        tabPanel("From file(s)",
+                                            br(),
+                                            div(style="height: 80px;",
+                                                fileInput("regionfilename", "Boundary file(s)",
+                                                    accept = c('.shp','.dbf','.sbn','.sbx',
+                                                        '.shx',".prj", ".txt", ".rdata", 
+                                                        ".rda", ".rds"), multiple = TRUE)),
+                                            # helpText(HTML("(at least xxx.shp, xxx.dbf, and xxx.shx)")),
+                                            # uiOutput("shapefile")
+                                        ),
+                                    )
+                                    
+                                    ),
+                                    wellPanel(class = "mypanel", 
+                                        fluidRow(
+                                            column(6, 
+                                                numericInput("numpgrid",
+                                                    "number of detectors",
+                                                    value = 20,
+                                                    min = 0,
+                                                    max = 20000,
+                                                    step = 5,
+                                                    width = 120)),
+                                            column(6,
+                                                numericInput(
+                                                    "seedpgrid", 
+                                                    "seed",
+                                                    value = 0,
+                                                    min = 0, 
+                                                    max = 1000000000,
+                                                    step = 1,
+                                                    width = 100))
+                                        ),
+                                        tabsetPanel(
+                                            type = "tabs", id = "layouttype", selected = "Random",
+                                            
+                                            tabPanel("Random",
+                                                fluidRow(
+                                                    column(12, radioButtons("randomtype", label = "",
+                                                        choices = c("SRS", "GRTS"), 
+                                                        selected = "SRS", inline = TRUE),
+                                                        uiOutput('randomtext')
                                                     )
-                                             ),
-                                             column(5,
-                                                    wellPanel(class = "mypanel", 
-                                                              
-                                                              fluidRow(
-                                                                  column(6, numericInput("nrepl",
-                                                                                         "Replicates",
-                                                                                         min = 1,
-                                                                                         max = 1000,
-                                                                                         value = 5,
-                                                                                         step = 1,
-                                                                                         width = 180)),
-                                                                  column(6, numericInput("ncores",
-                                                                                         "Cores",
-                                                                                         min = 1,
-                                                                                         max = parallel::detectCores(),
-                                                                                         value = 1,
-                                                                                         step = 1,
-                                                                                         width = 180))),
-                                                              fluidRow(
-                                                                  column(6, checkboxInput("simappendbox", 
-                                                                                          "Add to Summary", TRUE)),
-                                                                  column(6, numericInput("seed",
-                                                                                         "Random seed",
-                                                                                         min = 0,
-                                                                                         max = 1e10,
-                                                                                         value = 0,
-                                                                                         step = 1,
-                                                                                         width = 180))
-
-                                                              )
-                                                    ),
-                                                    br(),
-                                                    actionButton("simulatebtn", "Click to execute", width = 200)
-                                                    
-                                             )
-                                         ),
-                                         
-                                         h2("Standalone R code"),
-                                         verbatimTextOutput("simcodePrint")
-                                         
-                                  ),
-                                  column(5,
-                                         h2("Results"),
-                                         fluidRow(
-                                             column(9, verbatimTextOutput("simPrint"))
-                                         )
-                                  )
-                              )
-                     ),
-                     
-                     #################################################################################################
-                     
-                     tabPanel("Spacing",
-                              fluidRow(
-                                  column(5,
-                                         fluidRow(
-                                             column(12, h2("Standalone R code"),
-                                                    verbatimTextOutput("spacingcodePrint"))
-                                         ),
-                                         
-                                         fluidRow(
-                                             column(6, 
-                                                    actionButton("spacingbtn", "Click to execute", width = 200,
-                                                                 title = "Approximate RSE and optionally simulate at spacings selected in Options")
-                                             ),
-                                             column(6, 
-                                                    checkboxInput("spacingsimbox", "with simulations", value = FALSE, width = 200),
-                                                    helpText(HTML('See Simulation for options'))
-                                             )
-                                         )
-                                  ),
-                                  column(5,
-                                         h2("Results"),
-                                         fluidRow(
-                                             column(10, verbatimTextOutput("spacingPrint"))
-                                             ,
-                                             column(2, conditionalPanel("output.validspacing==true",
-                                                                        downloadLink("downloadSpacing", "Save oS")))
-                                         ),
-                                         
-                                         fluidRow(
-                                             column(9, verbatimTextOutput("spacingPrint2"))
-                                         ),
-                                         br(),
-                                         tabsetPanel(
-                                             type = "pills", id = "spacingtabs",
-                                             tabPanel("RSE",
-                                                      fluidRow(
-                                                          column(6,
-                                                                 # Show a plot of the approximate RSE
-                                                                 plotOutput("RSEPlot", width = "520px", height = "400px", 
-                                                                            hover="spacingTrafficClick")
-                                                          )
-                                                      )
-                                             ),
-                                             tabPanel("nrm",
-                                                      fluidRow(
-                                                          br(),
-                                                          column(10,verbatimTextOutput("nrmlegend"))
-                                                      ),
-                                                      fluidRow(
-                                                          column(6,
-                                                                 # Show a plot of the expected number of detections vs spacing
-                                                                 plotOutput("nrmPlot", width = "520px", height = "400px")
-                                                          )
-                                                      )
-                                             ),
-                                             tabPanel("Cost",
-                                                      fluidRow(
-                                                          column(6,
-                                                                 # Show a plot of the cost vs spacing
-                                                                 plotOutput("costPlot", width = "520px", height = "400px")
-                                                          )
-                                                      )
-                                                      
-                                                      
-                                             )
-                                         )
-                                  )
-                              )
-                              
-                     ),
-                     #################################################################################################
-                     
-                     tabPanel("Summary",
-                              br(),
-                              fluidRow(
-                                  column(3, 
-                                         wellPanel(
-                                             h2("Fields"),
-                                             fluidRow(
-                                                 column(4, actionButton("selectfieldsbtn", "Select", title = "Choose fields to display")), 
-                                                 column(4, actionButton("selectnonebtn", "None", title = "Unselect all fields")), 
-                                                 column(4, actionButton("selectallbtn", "All", title = "Select all fields"))
-                                             ),
-                                             br(),
-                                             h2("Scenarios"),
-                                             fluidRow(
-                                                 column(6, actionButton("clearallbtn", "Clear all", title = "Delete all scenarios")), 
-                                                 column(6, actionButton("clearlastbtn", "Delete last", title = "Delete last scenario"))
-                                             ), 
-                                             br(), 
-                                             h2("Download"),
-                                             fluidRow(
-                                                 column(6, downloadButton("downloadSummaryrds", ".rds", 
-                                                                                      title = "Save as RDS file; restore in R with e.g., readRDS(`summary.rds')")), 
-                                                 column(6, downloadButton("downloadSummary", ".csv", 
-                                                                                    title = "Save as comma-delimited text (csv) file"))
-                                             )
-                                         ),
-                                         
-                                         fluidRow(
-                                             column(5, offset=1,
-                                                    conditionalPanel("output.selectingfields == 'TRUE'",
-                                                                     checkboxGroupInput("fields1", "",
-                                                                                        choices = c("date", "time", "note", "detector", "source", "nx", "ny", "spacex", "spacey",
-                                                                                                    "ndetectors", "noccasions", "nrepeats", "distribution", "detectfn",
-                                                                                                    "D", "lambda0", "sigma"),
-                                                                                        selected = c("date", "time", "note", "detector", "source", "nx", "ny", "spacex", "spacey",
-                                                                                                     "ndetectors", "noccasions", "nrepeats", "distribution", "detectfn",
-                                                                                                     "D", "lambda0", "sigma")
-                                                                     ))),
-                                             column(6, 
-                                                    conditionalPanel("output.selectingfields == 'TRUE'",
-                                                                     checkboxGroupInput("fields2", "",
-                                                                                        choices = c("detperHR", "k", "En", "Er", "Em",
-                                                                                                    "rotRSE", "CF", "route", "cost", "simfn",  "model2D", "details", 
-                                                                                                    "nrepl", "simtime", "simRSE", "simRSEse", "simRB", "simRBse", "empiricalRSE"),
-                                                                                        selected = c("detperHR", "k", "En", "Er", "Em",
-                                                                                                     "rotRSE", "CF", "route", "cost", "simfn",  "model2D", "details", 
-                                                                                                     "nrepl", "simtime", "simRSE", "simRSEse", "simRB", "simRBse", "empiricalRSE")
-                                                                     )
-                                                    )                                                  
-                                             )
-                                         )
-                                         
-                                  ),
-                                  column(9, 
-                                         # h2("Results"),
-#                                         div(tableOutput("summarytable"), style = "width:800px; overflow-x: scroll; font-size:80%")
-                                         div(tableOutput("summarytable"), style = "width:800px; overflow-x: scroll")
-                                  )
-                              )
-                     ),
-                     #################################################################################################
-                     
-                     tabPanel("Options",
-                              
-                              fluidRow(
-                                  column(3,
-                                         
-                                         h2("Detector array"),
-                                         wellPanel(class = "mypanel", 
-                                                   fluidRow(
-                                                       column(6, radioButtons("areaunit", label = "Area units",
-                                                                              choices = c("ha", "km^2"), 
-                                                                              selected = "ha", inline = TRUE))
-                                                   ),
-                                                   br(),
-                                                   radioButtons("edgemethod", label = "Method for clusters at edge of region",
-                                                                choices = c("clip", "anyinside", "allinside"),
-                                                                selected = "clip", inline = TRUE),
-                                                   br(),
-                                                   div(style="height: 80px;",
-                                                       fileInput("exclusionfilename", "Excluded region",
-                                                                 accept = c('.shp','.dbf','.sbn','.sbx',
-                                                                            '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
-                                                                 multiple = TRUE)),
-                                                   uiOutput("exclusionfile"),
-                                                   fluidRow(
-                                                       column(9, offset=1,
-                                                              div(style="height: 20px;", checkboxInput("exclusionbox", "Apply exclusion", TRUE)))),
-                                                   br(),
-                                                   fluidRow(
-                                                       column(6, numericInput("maxupload", "Maximum file upload Mb",
-                                                                min = 5,
-                                                                max = 100,
+                                                )
+                                            ),
+                                            tabPanel("Systematic",
+                                                
+                                                br(),
+                                                fluidRow(
+                                                    column(6,
+                                                        numericInput("sppgrid",
+                                                            "spacing (m)",
+                                                            value = 30,
+                                                            min = 0,
+                                                            max = 200000,
+                                                            step = 10),
+                                                        conditionalPanel("input.lacework",
+                                                            numericInput("splace",
+                                                                "lace multiple",
                                                                 value = 5,
-                                                                step = 5)),
-                                                       column(6,numericInput("maxdetectors", "Maximum detectors",
-                                                                             min = 0,
-                                                                             max = 20000,
-                                                                             value = 1000,
-                                                                             step = 100))
-                                                       ),
-                                                   checkboxInput("lockxy", "Couple row and column dimensions", TRUE)
-                                         ),
-                                         
-                                         h2("Costing"),
-                                         wellPanel(class = "mypanel",
-                                                   radioButtons("currency", label = "Currency symbol",
-                                                                choices = c("$", "\U00A3", "\U00A5", 
-                                                                            "\U20AC", "Rs"),  # , "\U20A8" rupees fail
-                                                                selected = "$", inline = TRUE)
-                                         )
-                                         
-                                  ),
-                                  
-                                  column(3,
-                                         
-                                         h2("Array plot"),
-                                         wellPanel(class = "mypanel", 
-                                                   radioButtons("gridlines", label = "Grid spacing (m)",
-                                                                choices = c("None", "100", "1000", "10000", "100000"),
-                                                                selected = "None", inline = TRUE),
-                                                   fluidRow(
-                                                       column(6, checkboxInput("entireregionbox", "Show entire region", value = TRUE, width = 160)),
-                                                       column(5, checkboxInput("snaptodetector", "Snap to detector", value = FALSE, width = 160))
-                                                   )
-                                         ),
-                                         h2("Pxy contour plot"),
-                                         wellPanel(class = "mypanel", 
-                                                   fluidRow(
-                                                       column(6, numericInput("pxyborder", "Border (spacing units)",
-                                                                              min = 0,
-                                                                              max = 10,
-                                                                              value = 3,
-                                                                              step = 0.5,
-                                                                              width = 180),
-                                                              numericInput("pxynx", "Mesh dimension nx",
-                                                                           min = 32,
-                                                                           max = 512,
-                                                                           value = 64,
-                                                                           step = 32,
-                                                                           width = 180)),
-                                                       column(6,
-                                                              br(),
-                                                              checkboxInput("pxyfillbox", "Fill contours",
-                                                                            value = TRUE,
-                                                                            width = 180),
-                                                              checkboxInput("pxyframebox", "Show frame",
-                                                                            value = FALSE,
-                                                                            width = 180),
-                                                              checkboxInput("pxylabelbox", "Label contours",
-                                                                            value = TRUE,
-                                                                            width = 180))
-                                                   )
-                                         ),
-                                         h2("Spacing plot"),
-                                         wellPanel(class = "mypanel", 
-                                                   "Spacing relative to sigma", br(), br(),
-                                                   fluidRow(
-                                                       column (6, numericInput("fromR",
-                                                                               "Minimum",
-                                                                               min = 0.01, max = 4,
-                                                                               value = 0.2,
-                                                                               step = 0.2,
-                                                                               width = 180)),
-                                                       column(6,
-                                                              numericInput("toR",
-                                                                           "Maximum",
-                                                                           min = 1, max = 10,
-                                                                           value = 4,
-                                                                           step = 0.2,
-                                                                           width = 180))),
-                                                   fluidRow(
-                                                       column (6, 
-                                                               numericInput("byR",
-                                                                            "Increment",
-                                                                            min = 0.02, max = 2,
-                                                                            value = 0.2,
-                                                                            step = 0.02,
-                                                                            width = 180)),
-                                                       column (6, 
-                                                               numericInput("simbyR",
-                                                                            "Simulation increment",
-                                                                            min = 0.02, max = 2,
-                                                                            value = 0.4,
-                                                                            step = 0.02,
-                                                                            width = 180))
-                                                       ),
-                                                   fluidRow(
-                                                       column(6,
-                                                              checkboxInput("trafficlightbox", 
-                                                                            "Traffic lights", 
-                                                                            value = TRUE, 
-                                                                            width = 180))
-                                                   )
-                                         )
-                                  ),
-                                  
-                                  column(3,
-                                         h2("Power plot"),
-                                         wellPanel(class = "mypanel", 
-                                                   fluidRow(
-                                                       column(6, numericInput("alpha", "alpha",
-                                                                              min = 0.001,
-                                                                              max = 0.200,
-                                                                              value = 0.05,
-                                                                              step = 0.001,
-                                                                              width = 120))
-                                                   ),
-                                                   fluidRow(
-                                                       column(6, numericInput("minEffect", "xmin",
-                                                                              min = -99,
-                                                                              max = 0,
-                                                                              value = -99,
-                                                                              step = 1,
-                                                                              width = 180)),
-                                                       column (6, numericInput("maxEffect", "xmax",
-                                                                               min = 0,
-                                                                               max = 300,
-                                                                               value = 150,
-                                                                               step = 1,
-                                                                               width = 180))
-                                                   ),
-                                                   
-                                                   br(),
-                                                   h4("Hypothesis test"),
-                                                   # br(),
-                                                   fluidRow(
-                                                       column(6,selectInput("testtype", "Type",
-                                                                            choices = c("two.sided", "decrease", "increase"),
-                                                                            selected = "two.sided",
-                                                                            width = 140)),
-                                                       column(6, numericInput("target", "Target power %",
-                                                                              min = 50,
-                                                                              max = 99,
-                                                                              value = 80,
-                                                                              step = 1,
-                                                                              width = 180))
-                                                   )
-                                         ),
-                                         h2("RSE correction factor"),
-                                         wellPanel(class = "mypanel", 
-                                                   sliderInput("CFslider", "",
-                                                               min = 0.8,
-                                                               max = 2.0,
-                                                               value = 1,
-                                                               step = 0.001,
-                                                               pre = "CF ",
-                                                               post = "",
-                                                               width = 340),
-                                                   fluidRow(
-                                                       column(8, checkboxInput("updateCFbox", "Update from simulations",
-                                                                               value = TRUE,
-                                                                               width = 180)),
-                                                       column(4, actionButton("resetCFbtn", "Reset", title = "Reset slider to default for current array input"))
-                                                   )
-                                         ),
-                                         h2("Traffic light thresholds"),
-                                         wellPanel(class = "mypanel", 
-                                                   fluidRow(
-                                                       column(6, numericInput("minEm", "Minimum E(m)",
-                                                                              min = 0,
-                                                                              max = 100,
-                                                                              value = 5,
-                                                                              step = 1,
-                                                                              width = 180))
-                                                       ),
-                                                   fluidRow(
-                                                       column(6, numericInput("maxgreen", "Max RSE% green",
-                                                                              min = 0,
-                                                                              max = 100,
-                                                                              value = 15,
-                                                                              step = 1,
-                                                                              width = 180)),
-                                                       column (6, numericInput("maxamber", "Max RSE% amber",
-                                                                               min = 0,
-                                                                               max = 100,
-                                                                               value = 20,
-                                                                               step = 1,
-                                                                               width = 180))
-                                                   )
-                                         )
-                                  )
-                              )
-                     ),
-                     tabPanel("Help",
-                              withMathJax(includeMarkdown("help.rmd"))
-                     ),
-                     tabPanel("About",
-                              h2("secrdesign app 1.5"), br(),
-                              
-                              h5(paste("This Shiny application provides an interface to the R package 'secrdesign', version", 
-                                       packageDescription("secrdesign")$Version), "."),
-                              br(),
-                              h5("Copyright 2019, 2022 Murray Efford"),
-                              h5("The application is released under the"),
-                              a("GNU General Public License Version 3.0", href="https://www.gnu.org/licenses/gpl-3.0.txt", target="_blank"), br(),
-                              br(),
-                              h5("For further information see "), 
-                              a("www.otago.ac.nz/density", href="https://www.otago.ac.nz/density", target="_blank"), br(),
-                              a("CRAN.R-project.org/package=secrdesign", href="https://CRAN.R-project.org/package=secrdesign", target="_blank"), br(),
-                              a("https://github.com/MurrayEfford/secrdesignapp", href="https://github.com/MurrayEfford/secrdesignapp", target="_blank"), br(),
-                              br(),
-                              
-                              h5("Citation"),
-                              h5("Efford, M. G. and Boulanger, J. (2019) Fast evaluation of study designs for spatially explicit capture-recapture. Methods in Ecology and Evolution (in press)")
-                     )
-                     
+                                                                min = 1,
+                                                                max = 100,
+                                                                step = 1),
+                                                        ),
+                                                        uiOutput('Edetectors'),
+                                                        uiOutput('clusteroverlap')
+                                                    ),
+                                                    column(6, 
+                                                        checkboxInput("randomorigin", "Random origin", FALSE),
+                                                        checkboxInput("chequerboard", "Chequerboard", FALSE),
+                                                        checkboxInput("lacework", "Lacework", FALSE)
+                                                        )
+                                                )
+                                               
+                                            ),
+                                            
+                                            tabPanel("GA",
+                                                br(),
+                                                fluidRow(
+                                                    
+                                                    column(6, 
+                                                        radioButtons("GAcriterion", label = "criterion",
+                                                            choices = c("min(n,r)", "n2"), 
+                                                            selected = "min(n,r)", inline = TRUE),
+                                                        radioButtons("GAfile", label = "alltraps",
+                                                            choices = c("region", "file"), 
+                                                            selected = "region", inline = TRUE),
+                                                        
+                                                        numericInput("GAminspace",
+                                                            "grid spacing (m)",
+                                                            value = 20,
+                                                            min = 0,
+                                                            max = 200000,
+                                                            step = 5,
+                                                            width = 120),
+                                                        numericInput("GAbuffer",
+                                                            "external buffer (m)",
+                                                            value = 0,
+                                                            min = -200000,
+                                                            max = 200000,
+                                                            step = 10,
+                                                            width = 120)
+                                                    ),
+                                                    column(6,
+                                                        br(),
+                                                        actionButton("optimizebtn", "Optimize",
+                                                            title = "Run genetic algorithm"),
+                                                        br(),
+                                                        br(),
+                                                        numericInput("GAngen",
+                                                            "kofnGA ngen",
+                                                            value = 50,
+                                                            min = 0,
+                                                            max = 2000,
+                                                            step = 5,
+                                                            width = 100),
+                                                        numericInput("GApopsize",
+                                                            "kofnGA popsize",
+                                                            value = 50,
+                                                            min = 0,
+                                                            max = 2000,
+                                                            step = 5,
+                                                            width = 100)
+                                                    )
+                                                ),
+                                                fluidRow (
+                                                    verbatimTextOutput("GAprint"),
+                                                    verbatimTextOutput("GAmsgprint")
+                                                )
+                                                
+                                            )
+                                            
+                                        )),
+                                    conditionalPanel("input.layouttype != 'GA'",
+                                        wellPanel(class = "mypanel",
+                                            fluidRow(
+                                                column(6, 
+                                                    radioButtons("clustertype", label = "cluster type",
+                                                        choices = c("Single detector", "Grid", "Line", "File"), 
+                                                        selected = "Single detector")),
+                                                column(6, 
+                                                        numericInput(
+                                                            "rotation",
+                                                            "rotation",
+                                                            value = 0,
+                                                            min = 0,
+                                                            max = 360,
+                                                            step = 5,
+                                                            width = 100)
+                                                    # ,actionButton("randomarraybtn", "Randomize",
+                                                    #     title = "Select another realisation")
+                                                )
+                                            )
+                                        )
+                                    )
+                                    
+                                )
+                            )
+                        )
+                    ),
+                    
+                    column(3, # offset = 0, style='padding:0px;',  
+                        
+                        h2("Parameters"),
+                        wellPanel(class = "mypanel", 
+                            
+                            fluidRow(
+                                column(6, numericInput("D",
+                                    "D (animals / ha)",
+                                    min = 0,
+                                    max = 1000,
+                                    value = 5,
+                                    step=0.1,
+                                    width = 120)
+                                    # uiOutput('persqkm')
+                                ),
+                                column(6, selectInput("detectfn", "Detection function",
+                                    choices = c("HHN","HEX"),
+                                    selected = "HHN", width=120))
+                            ),
+                            
+                            fluidRow(
+                                column(6, numericInput("lambda0",
+                                    "lambda0",
+                                    value = 0.2,
+                                    min = 0,
+                                    max = 100,
+                                    step = 0.01,
+                                    width = 120)),
+                                column(6, numericInput("sigma",
+                                    "sigma (m)",
+                                    min = 0,
+                                    max = 100000,
+                                    value = 25,
+                                    step = 1,
+                                    width = 120))),
+                            uiOutput('kprint')
+                        ),
+                        
+                        h2("General"),
+                        
+                        fluidRow(
+                            column(6,
+                                wellPanel(class = "mypanel", 
+                                    numericInput("noccasions",
+                                        "Occasions",
+                                        value = 5,
+                                        min = 1,
+                                        max = 200,
+                                        step = 1,
+                                        width = 100),
+                                    numericInput("nrepeats",
+                                        "Arrays",
+                                        value = 1,
+                                        min = 1,
+                                        max = 100,
+                                        step = 1,
+                                        width = 100)
+                                    # uiOutput('clusterhelp')
+                                )),
+                            column(6, #offset = 1, style='padding:0px;',
+                                wellPanel(class = "mypanel", 
+                                    radioButtons("distributionbtn", label = "Distribution of n",
+                                        choices = c("Poisson", "Binomial"))
+                                ),
+                                checkboxInput("autorefresh", "  Auto refresh", TRUE)
+                                # checkboxInput("autoappend", "  Add on refresh", FALSE)
+                            )
+                        ),
+                        
+                        h2("Actions"),
+                        
+                        fluidRow(
+                            column(5, actionButton("simulatebtn2", "Simulate",  width = 130,
+                                title = "Conduct simulations specified on Simulate page and update Results")),
+                            column(6, actionButton("appendbtn", "Add to summary",  width = 130,
+                                title = "Append new scenario to Summary table"))
+                        ),
+                        
+                        br(),
+                        fluidRow(
+                            column(5, actionButton("resetbtn", "Reset all", width = 130, 
+                                title = "Reset all inputs to initial values")),
+                            column(6, bookmarkButton(width = 130)) 
+                        ),
+                        br(),
+                        fluidRow(
+                            column(7, helpText(HTML("F11 to toggle fullscreen")))
+                        ),
+                        fluidRow(
+                            column(11, textInput("title", "", value = "", 
+                                placeholder = "scenario label for Summary")))
+                    ),
+                    
+                    column (4, # style='padding:0px;',
+                        h2("Results"),
+                        
+                        fluidRow(
+                            column(12,
+                                fluidRow(
+                                    column(11, verbatimTextOutput("nrmPrint")),
+                                    column(1, style='padding:0px;',
+                                        conditionalPanel("output.nrmPrint!= ''",
+                                            downloadLink("downloadnrmcode", "R")),
+                                        br(),
+                                        conditionalPanel("output.nrmPrint!= ''",
+                                            plotOutput("trafficlightPlot", height = 60, hover = "trafficClick")))
+                                )
+                            )
+                        ),
+                        
+                        fluidRow(
+                            column(12,
+                                br(),
+                                tabsetPanel(type = "pills",
+                                    id = "tabs",
+                                    tabPanel("Array",
+                                        fluidRow(
+                                            column(9, style='padding:0px;', plotOutput("arrayPlot", height = 340,
+                                                click = clickOpts(id="arrayClick", clip = FALSE))),
+                                            column(3, br(), conditionalPanel("input.gridlines != 'None'",
+                                                uiOutput("uigridlines") ),
+                                                br(), uiOutput('xycoord'))
+                                        ),
+                                        fluidRow(
+                                            column(11, style='padding:0px;', verbatimTextOutput("ntrapPrint"))
+                                            ,
+                                            column(1, br(), conditionalPanel("output.ntrapPrint!= ''",
+                                                downloadLink("downloadArray", "Save")))
+                                        )
+                                    ),
+                                    tabPanel("Detectfn", plotOutput("detnPlot", height = 320)),
+                                    tabPanel("Popn", 
+                                        plotOutput("popPlot", height = 320),
+                                        
+                                        fluidRow(
+                                            column(4, checkboxInput("showmaskbox", "Display mask",
+                                                value = FALSE,
+                                                width = 180),
+                                                checkboxInput("onlymaskbox", "Restrict to mask",
+                                                    value = TRUE,
+                                                    width = 180)
+                                            ),
+                                            column(4, checkboxInput("showHRbox", "Display 95% HR",
+                                                value = FALSE,
+                                                width = 180),
+                                                uiOutput('uipopN')),
+                                            column(4, actionButton("randompopbtn", "Randomize",
+                                                title = "Pick another realisation of the population")
+                                            )
+                                        )
+                                    ),
+                                    tabPanel("Pxy",
+                                        plotOutput("pxyPlot", height = 320, click = "pxyclick"),
+                                        helpText(HTML("p.(x) is the probability an animal at point x will be detected at least once"))
+                                    ),
+                                    
+                                    tabPanel("Power",
+                                        fluidRow(
+                                            column(11, plotOutput("powerPlot", height = 320, click = "CIclick"))
+                                        ),
+                                        br(),
+                                        fluidRow(
+                                            column(3, offset = 1,
+                                                br(), checkboxInput("powertype", "95% CI",
+                                                    value = FALSE,
+                                                    width = 130)),
+                                            ## uiOutput('CIpct'),
+                                            column(4, 
+                                                br(), checkboxInput("adjustRSEbox", "Adjust final RSE",
+                                                    value = TRUE,
+                                                    width = 130)),
+                                            # helpText(HTML("Scales with population"))),
+                                            column(4, conditionalPanel("input.powertype==true",
+                                                numericInput("xpos", "% change", min = -100, max = 250, 
+                                                    step = 1, value = 0, width = 70)
+                                            )
+                                            )
+                                            
+                                        ),
+                                        fluidRow(
+                                            column(12,
+                                                sliderInput("RSEslider", "",
+                                                    min = 1.0,
+                                                    max = 40,
+                                                    value = 1,
+                                                    step = 0.1,
+                                                    pre = "RSE ",
+                                                    post = "%",
+                                                    width = "90%"))
+                                        )
+                                    )
+                                ))
+                        )
+                    )
+                )
+            ),
+            
+            tabPanel("Habitat mask",
+                
+                fluidRow(
+                    column(3,
+                        tabsetPanel(
+                            type = "pills", id = "masktype", selected = "Build",
+                            
+                            tabPanel("Build",
+                                wellPanel(class = "mypanel", 
+                                    fluidRow(
+                                        column(6, 
+                                            numericInput("habxsigma", "Buffer width (x sigma)",
+                                                min = 0,
+                                                max = 20,
+                                                value = 4,
+                                                step = 0.5,
+                                                width = 180)),
+                                        column(6,
+                                            numericInput("habnx", "Mesh dimension nx",
+                                                min = 10,
+                                                max = 1000,
+                                                value = 32,
+                                                step = 1,
+                                                width = 180)
+                                        )
+                                        # column(6,
+                                        #        br(),
+                                        #        actionButton("suggestbuffer", "Suggest width", width = 130,
+                                        #                     title = "Based on either fitted model or RPSV"))
+                                    ),
+                                    fluidRow(
+                                        column(12, 
+                                            radioButtons("maskshapebtn", label = "Shape",
+                                                choices = c("Rectangular", "Trap buffer"), 
+                                                selected = "Trap buffer", inline = TRUE)
+                                        )
+                                    )
+                                ),
+                                wellPanel(class = "mypanel", 
+                                    div(style="height: 80px;",
+                                        fileInput("habpolyfilename", "Mask polygon file(s)",
+                                            accept = c('.shp','.dbf','.sbn','.sbx',
+                                                '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
+                                            multiple = TRUE)),
+                                    uiOutput("habitatfile"),
+                                    fluidRow(
+                                        column(10, 
+                                            checkboxInput("polygonbox", "Clip to polygon(s)", value = TRUE),
+                                            radioButtons("includeexcludebtn", label = "",
+                                                choices = c("Include", "Exclude"), 
+                                                selected = "Include", inline = TRUE)
+                                        )
+                                    )
+                                )
+                            ),
+                            tabPanel("File", 
+                                wellPanel(class = "mypanel", 
+                                    div(style = "height: 80px;",
+                                        fileInput("maskfilename", "Mask file",
+                                            accept = c('.txt'), 
+                                            multiple = FALSE)),
+                                    helpText(HTML(paste0("Requires text file with ",
+                                        "x-y coordinates in first two columns,",
+                                        " as for secr::read.mask"))),
+                                    textInput("maskargs", "Optional arguments for read.mask()",
+                                        value = "header = TRUE", placeholder = "e.g., sep = ','"),
+                                    verbatimTextOutput("masktext"),
+                                    tags$head(tags$style("#masktext{overflow-y:scroll; max-height: 127px; 
+                                                                                     background: ghostwhite;}")),
+                                    br(),
+                                    fluidRow(
+                                        column(6,numericInput("maskcov", "Focal covariate",
+                                            min = 0,
+                                            max = 0,
+                                            value = 0,
+                                            step = 1,
+                                            width = 180)),
+                                        column(6, br(), checkboxInput("scaleD", "Rescale density",
+                                            value = FALSE))
+                                    )
+                                )
+                            ) 
+                        )
+                    ),
+                    column(5, plotOutput("maskPlot"),
+                        conditionalPanel ("output.maskUploaded", fluidRow(
+                            column(3, offset = 1, checkboxInput("dotsbox", "dots", value = FALSE, width = 180)),
+                            column(3, offset = 1, checkboxInput("xpdbox", "xpd", value = FALSE, width = 180)),
+                            column(4, checkboxInput("maskedge2", "show mask edge", value = FALSE))
+                        ))
+                    ),
+                    column(3, 
+                        h2("Summary"),
+                        fluidRow(
+                            column(12, 
+                                verbatimTextOutput("maskPrint"))
+                        )
+                    )
+                )
+            ),
+            
+            tabPanel("Costing",
+                fluidRow(
+                    column(3,
+                        h2("Unit cost"),
+                        wellPanel(class = "mypanel", 
+                            numericInput("perkm",
+                                "Travel per km $",
+                                value = 0,
+                                min = 0,
+                                max = 1000,
+                                step = 0.1,
+                                width = 200),
+                            numericInput("perarray",
+                                "Cost per array $",
+                                min = 0,
+                                max = 10000,
+                                value = 0,
+                                step=0.1,
+                                width = 200),
+                            numericInput("perdetector",
+                                "Cost per detector $",
+                                min = 0,
+                                max = 1000,
+                                value = 0,
+                                step=0.1,
+                                width = 200),
+                            numericInput("pervisit",
+                                "Cost per detector visit $",
+                                min = 0,
+                                max = 1000,
+                                value = 0,
+                                step=0.1,
+                                width = 200),
+                            numericInput("perdetection",
+                                "Cost per detection $",
+                                min = 0,
+                                max = 1000,
+                                value = 0,
+                                step=0.1,
+                                width = 200)),
+                        br(),
+                        fluidRow(
+                            column(10, offset=1, checkboxInput("setupoccasion", "Include setup occasion", TRUE))
+                        )
+                    ),
+                    column(3, offset = 0,
+                        h2("Route"),
+                        wellPanel(class = "mypanel", 
+                            radioButtons("routetype", label = "Type",
+                                choices = c("Sequential", "Manual", "SumSpacing")),
+                            #   choices = c("Sequential", "SumSpacing", "TSP", "Manual")),
+                            # selectInput("TSPmethod",
+                            #             "TSP method",
+                            #             c("two_opt", "farthest_insertion", "nearest_insertion", "nn"),
+                            #             "farthest_insertion",
+                            #             width = 200),
+                            # numericInput("TSPrepl",
+                            #              "TSP replicates",
+                            #              min = 1, max = 10000,
+                            #              value = 100,
+                            #              step=1,
+                            #              width=180),
+                            checkboxInput("returnbox", "Return to start",
+                                value = FALSE,
+                                width = 180)
+                        ),
+                        br(),
+                        plotOutput("routePlot", click = "click", height=320),
+                        conditionalPanel("input.routetype == 'Manual'",
+                            actionButton("routebtn", "Define new route by clicking at vertices",
+                                width = 270))
+                        
+                    ),
+                    column(4,
+                        h2("Current costing"),
+                        verbatimTextOutput("costPrint")
+                    )
+                )
+            ),
+            #################################################################################################
+            
+            tabPanel("Simulation",
+                fluidRow(
+                    column(5,
+                        h2("Simulation control"),
+                        fluidRow(
+                            column(7, 
+                                wellPanel(class = "mypanel", 
+                                    radioButtons("packagebtn", label = "Fit SECR model", 
+                                        choices = c("secr.fit", "no fit"), 
+                                        selected = "secr.fit", inline = TRUE),
+                                    radioButtons("method", label = "Maximization method",
+                                        choices = c("Newton-Raphson", "Nelder-Mead", "none"),
+                                        selected = "none", inline = TRUE),
+                                    br(),
+                                    fluidRow(
+                                        column(5, selectInput("model2D", "2-D distribution",
+                                            choices = c("poisson","cluster", "even"),
+                                            selected = "poisson", width=160)),
+                                        column(7, textInput("details", "other details", value = "",
+                                            placeholder = "sim.popn argument"))
+                                    ),
+                                    uiOutput('model2Dhelp')
+                                )
+                            ),
+                            column(5,
+                                wellPanel(class = "mypanel", 
+                                    
+                                    fluidRow(
+                                        column(6, numericInput("nrepl",
+                                            "Replicates",
+                                            min = 1,
+                                            max = 1000,
+                                            value = 5,
+                                            step = 1,
+                                            width = 180)),
+                                        column(6, numericInput("ncores",
+                                            "Cores",
+                                            min = 1,
+                                            max = parallel::detectCores(),
+                                            value = 1,
+                                            step = 1,
+                                            width = 180))),
+                                    fluidRow(
+                                        column(6, checkboxInput("simappendbox", 
+                                            "Add to Summary", TRUE)),
+                                        column(6, numericInput("seed",
+                                            "Random seed",
+                                            min = 0,
+                                            max = 1e10,
+                                            value = 0,
+                                            step = 1,
+                                            width = 180))
+                                        
+                                    )
+                                ),
+                                br(),
+                                actionButton("simulatebtn", "Click to execute", width = 200)
+                                
+                            )
+                        ),
+                        
+                        h2("Standalone R code"),
+                        verbatimTextOutput("simcodePrint")
+                        
+                    ),
+                    column(5,
+                        h2("Results"),
+                        fluidRow(
+                            column(9, verbatimTextOutput("simPrint"))
+                        )
+                    )
+                )
+            ),
+            
+            #################################################################################################
+            
+            tabPanel("Spacing",
+                fluidRow(
+                    column(5,
+                        fluidRow(
+                            column(12, h2("Standalone R code"),
+                                verbatimTextOutput("spacingcodePrint"))
+                        ),
+                        
+                        fluidRow(
+                            column(6, 
+                                actionButton("spacingbtn", "Click to execute", width = 200,
+                                    title = "Approximate RSE and optionally simulate at spacings selected in Options")
+                            ),
+                            column(6, 
+                                checkboxInput("spacingsimbox", "with simulations", value = FALSE, width = 200),
+                                helpText(HTML('See Simulation for options'))
+                            )
+                        )
+                    ),
+                    column(5,
+                        h2("Results"),
+                        fluidRow(
+                            column(10, verbatimTextOutput("spacingPrint"))
+                            ,
+                            column(2, conditionalPanel("output.validspacing==true",
+                                downloadLink("downloadSpacing", "Save oS")))
+                        ),
+                        
+                        fluidRow(
+                            column(9, verbatimTextOutput("spacingPrint2"))
+                        ),
+                        br(),
+                        tabsetPanel(
+                            type = "pills", id = "spacingtabs",
+                            tabPanel("RSE",
+                                fluidRow(
+                                    column(6,
+                                        # Show a plot of the approximate RSE
+                                        plotOutput("RSEPlot", width = "520px", height = "400px", 
+                                            hover="spacingTrafficClick")
+                                    )
+                                )
+                            ),
+                            tabPanel("nrm",
+                                fluidRow(
+                                    br(),
+                                    column(10,verbatimTextOutput("nrmlegend"))
+                                ),
+                                fluidRow(
+                                    column(6,
+                                        # Show a plot of the expected number of detections vs spacing
+                                        plotOutput("nrmPlot", width = "520px", height = "400px")
+                                    )
+                                )
+                            ),
+                            tabPanel("Cost",
+                                fluidRow(
+                                    column(6,
+                                        # Show a plot of the cost vs spacing
+                                        plotOutput("costPlot", width = "520px", height = "400px")
+                                    )
+                                )
+                                
+                                
+                            )
+                        )
+                    )
+                )
+                
+            ),
+            #################################################################################################
+            
+            tabPanel("Summary",
+                br(),
+                fluidRow(
+                    column(3, 
+                        wellPanel(
+                            h2("Fields"),
+                            fluidRow(
+                                column(4, actionButton("selectfieldsbtn", "Select", title = "Choose fields to display")), 
+                                column(4, actionButton("selectnonebtn", "None", title = "Unselect all fields")), 
+                                column(4, actionButton("selectallbtn", "All", title = "Select all fields"))
+                            ),
+                            br(),
+                            h2("Scenarios"),
+                            fluidRow(
+                                column(6, actionButton("clearallbtn", "Clear all", title = "Delete all scenarios")), 
+                                column(6, actionButton("clearlastbtn", "Delete last", title = "Delete last scenario"))
+                            ), 
+                            br(), 
+                            h2("Download"),
+                            fluidRow(
+                                column(6, downloadButton("downloadSummaryrds", ".rds", 
+                                    title = "Save as RDS file; restore in R with e.g., readRDS(`summary.rds')")), 
+                                column(6, downloadButton("downloadSummary", ".csv", 
+                                    title = "Save as comma-delimited text (csv) file"))
+                            )
+                        ),
+                        
+                        fluidRow(
+                            column(5, offset=1,
+                                conditionalPanel("output.selectingfields == 'TRUE'",
+                                    checkboxGroupInput("fields1", "",
+                                        choices = c("date", "time", "note", "detector", "source", "nx", "ny", "spacex", "spacey",
+                                            "ndetectors", "noccasions", "nrepeats", "distribution", "detectfn",
+                                            "D", "lambda0", "sigma"),
+                                        selected = c("date", "time", "note", "detector", "source", "nx", "ny", "spacex", "spacey",
+                                            "ndetectors", "noccasions", "nrepeats", "distribution", "detectfn",
+                                            "D", "lambda0", "sigma")
+                                    ))),
+                            column(6, 
+                                conditionalPanel("output.selectingfields == 'TRUE'",
+                                    checkboxGroupInput("fields2", "",
+                                        choices = c("detperHR", "k", "En", "Er", "Em",
+                                            "rotRSE", "CF", "route", "cost", "simfn",  "model2D", "details", 
+                                            "nrepl", "simtime", "simRSE", "simRSEse", "simRB", "simRBse", "empiricalRSE"),
+                                        selected = c("detperHR", "k", "En", "Er", "Em",
+                                            "rotRSE", "CF", "route", "cost", "simfn",  "model2D", "details", 
+                                            "nrepl", "simtime", "simRSE", "simRSEse", "simRB", "simRBse", "empiricalRSE")
+                                    )
+                                )                                                  
+                            )
+                        )
+                        
+                    ),
+                    column(9, 
+                        # h2("Results"),
+                        #                                         div(tableOutput("summarytable"), style = "width:800px; overflow-x: scroll; font-size:80%")
+                        div(tableOutput("summarytable"), style = "width:800px; overflow-x: scroll")
+                    )
+                )
+            ),
+            #################################################################################################
+            
+            tabPanel("Options",
+                
+                fluidRow(
+                    column(3,
+                        
+                        h2("Detector array"),
+                        wellPanel(class = "mypanel", 
+                            fluidRow(
+                                column(6, radioButtons("areaunit", label = "Area units",
+                                    choices = c("ha", "km^2"), 
+                                    selected = "ha", inline = TRUE))
+                            ),
+                            br(),
+                            radioButtons("edgemethod", label = "Method for clusters at edge of region",
+                                choices = c("clip", "anyinside", "allinside"),
+                                selected = "clip", inline = TRUE),
+                            br(),
+                            div(style="height: 80px;",
+                                fileInput("exclusionfilename", "Excluded region",
+                                    accept = c('.shp','.dbf','.sbn','.sbx',
+                                        '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
+                                    multiple = TRUE)),
+                            uiOutput("exclusionfile"),
+                            fluidRow(
+                                column(9, offset=1,
+                                    div(style="height: 20px;", checkboxInput("exclusionbox", "Apply exclusion", TRUE)))),
+                            br(),
+                            fluidRow(
+                                column(6, numericInput("maxupload", "Maximum file upload Mb",
+                                    min = 5,
+                                    max = 100,
+                                    value = 5,
+                                    step = 5)),
+                                column(6,numericInput("maxdetectors", "Maximum detectors",
+                                    min = 0,
+                                    max = 20000,
+                                    value = 2000,
+                                    step = 100))
+                            ),
+                            checkboxInput("lockxy", "Couple row and column dimensions", TRUE)
+                        ),
+                        
+                        h2("Costing"),
+                        wellPanel(class = "mypanel",
+                            radioButtons("currency", label = "Currency symbol",
+                                choices = c("$", "\U00A3", "\U00A5", 
+                                    "\U20AC", "Rs"),  # , "\U20A8" rupees fail
+                                selected = "$", inline = TRUE)
+                        )
+                        
+                    ),
+                    
+                    column(3,
+                        
+                        h2("Array plot"),
+                        wellPanel(class = "mypanel", 
+                            radioButtons("gridlines", label = "Grid spacing (m)",
+                                choices = c("None", "100", "1000", "10000", "100000"),
+                                selected = "None", inline = TRUE),
+                            fluidRow(
+                                column(6, checkboxInput("entireregionbox", "Show entire region", value = TRUE, width = 160)),
+                                column(5, checkboxInput("snaptodetector", "Snap to detector", value = FALSE, width = 160))
+                            )
+                        ),
+                        h2("Pxy contour plot"),
+                        wellPanel(class = "mypanel", 
+                            fluidRow(
+                                column(6, numericInput("pxyborder", "Border (spacing units)",
+                                    min = 0,
+                                    max = 10,
+                                    value = 3,
+                                    step = 0.5,
+                                    width = 180),
+                                    numericInput("pxynx", "Mesh dimension nx",
+                                        min = 32,
+                                        max = 512,
+                                        value = 64,
+                                        step = 32,
+                                        width = 180)),
+                                column(6,
+                                    br(),
+                                    checkboxInput("pxyfillbox", "Fill contours",
+                                        value = TRUE,
+                                        width = 180),
+                                    checkboxInput("pxyframebox", "Show frame",
+                                        value = FALSE,
+                                        width = 180),
+                                    checkboxInput("pxylabelbox", "Label contours",
+                                        value = TRUE,
+                                        width = 180))
+                            )
+                        ),
+                        h2("Spacing plot"),
+                        wellPanel(class = "mypanel", 
+                            "Spacing relative to sigma", br(), br(),
+                            fluidRow(
+                                column (6, numericInput("fromR",
+                                    "Minimum",
+                                    min = 0.01, max = 4,
+                                    value = 0.2,
+                                    step = 0.2,
+                                    width = 180)),
+                                column(6,
+                                    numericInput("toR",
+                                        "Maximum",
+                                        min = 1, max = 10,
+                                        value = 4,
+                                        step = 0.2,
+                                        width = 180))),
+                            fluidRow(
+                                column (6, 
+                                    numericInput("byR",
+                                        "Increment",
+                                        min = 0.02, max = 2,
+                                        value = 0.2,
+                                        step = 0.02,
+                                        width = 180)),
+                                column (6, 
+                                    numericInput("simbyR",
+                                        "Simulation increment",
+                                        min = 0.02, max = 2,
+                                        value = 0.4,
+                                        step = 0.02,
+                                        width = 180))
+                            ),
+                            fluidRow(
+                                column(6,
+                                    checkboxInput("trafficlightbox", 
+                                        "Traffic lights", 
+                                        value = TRUE, 
+                                        width = 180))
+                            )
+                        )
+                    ),
+                    
+                    column(3,
+                        h2("Power plot"),
+                        wellPanel(class = "mypanel", 
+                            fluidRow(
+                                column(6, numericInput("alpha", "alpha",
+                                    min = 0.001,
+                                    max = 0.200,
+                                    value = 0.05,
+                                    step = 0.001,
+                                    width = 120))
+                            ),
+                            fluidRow(
+                                column(6, numericInput("minEffect", "xmin",
+                                    min = -99,
+                                    max = 0,
+                                    value = -99,
+                                    step = 1,
+                                    width = 180)),
+                                column (6, numericInput("maxEffect", "xmax",
+                                    min = 0,
+                                    max = 300,
+                                    value = 150,
+                                    step = 1,
+                                    width = 180))
+                            ),
+                            
+                            br(),
+                            h4("Hypothesis test"),
+                            # br(),
+                            fluidRow(
+                                column(6,selectInput("testtype", "Type",
+                                    choices = c("two.sided", "decrease", "increase"),
+                                    selected = "two.sided",
+                                    width = 140)),
+                                column(6, numericInput("target", "Target power %",
+                                    min = 50,
+                                    max = 99,
+                                    value = 80,
+                                    step = 1,
+                                    width = 180))
+                            )
+                        ),
+                        h2("RSE correction factor"),
+                        wellPanel(class = "mypanel", 
+                            sliderInput("CFslider", "",
+                                min = 0.8,
+                                max = 2.0,
+                                value = 1,
+                                step = 0.001,
+                                pre = "CF ",
+                                post = "",
+                                width = 340),
+                            fluidRow(
+                                column(8, checkboxInput("updateCFbox", "Update from simulations",
+                                    value = TRUE,
+                                    width = 180)),
+                                column(4, actionButton("resetCFbtn", "Reset", title = "Reset slider to default for current array input"))
+                            )
+                        ),
+                        h2("Traffic light thresholds"),
+                        wellPanel(class = "mypanel", 
+                            fluidRow(
+                                column(6, numericInput("minEm", "Minimum E(m)",
+                                    min = 0,
+                                    max = 100,
+                                    value = 5,
+                                    step = 1,
+                                    width = 180))
+                            ),
+                            fluidRow(
+                                column(6, numericInput("maxgreen", "Max RSE% green",
+                                    min = 0,
+                                    max = 100,
+                                    value = 15,
+                                    step = 1,
+                                    width = 180)),
+                                column (6, numericInput("maxamber", "Max RSE% amber",
+                                    min = 0,
+                                    max = 100,
+                                    value = 20,
+                                    step = 1,
+                                    width = 180))
+                            )
+                        )
+                    )
+                )
+            ),
+            tabPanel("Help",
+                withMathJax(includeMarkdown("help.rmd"))
+            ),
+            tabPanel("About",
+                h2("secrdesign app 1.6"), br(),
+                
+                h5(paste("This Shiny application provides an interface to the R package 'secrdesign', version", 
+                    packageDescription("secrdesign")$Version), "."),
+                br(),
+                h5("Copyright 2019, 2022 Murray Efford"),
+                h5("The application is released under the"),
+                a("GNU General Public License Version 3.0", href="https://www.gnu.org/licenses/gpl-3.0.txt", target="_blank"), br(),
+                br(),
+                h5("For further information see "), 
+                a("www.otago.ac.nz/density", href="https://www.otago.ac.nz/density", target="_blank"), br(),
+                a("CRAN.R-project.org/package=secrdesign", href="https://CRAN.R-project.org/package=secrdesign", target="_blank"), br(),
+                a("https://github.com/MurrayEfford/secrdesignapp", href="https://github.com/MurrayEfford/secrdesignapp", target="_blank"), br(),
+                br(),
+                
+                h5("Citation"),
+                h5("Efford, M. G. and Boulanger, J. (2019) Fast evaluation of study designs for spatially explicit capture-recapture. Methods in Ecology and Evolution (in press)")
+            )
+            
         )
     )
 }
@@ -1085,18 +1174,18 @@ server <- function(input, output, session) {
     
     desc <- packageDescription("secrdesign")
     summaryfields <- c("date", "time", "note", "detector", "source", "nx", "ny", "spacex", "spacey",
-                       "ndetectors", "noccasions", "nrepeats", "distribution", "detectfn", 
-                       "D", "lambda0", "sigma", "detperHR", "k", "En", "Er", "Em",
-                       "rotRSE", "CF", "route", "cost", "simfn", "model2D", "details", "nrepl", "simtime", 
-                       "simRSE", "simRSEse", "simRB", "simRBse", "empiricalRSE")
+        "ndetectors", "noccasions", "nrepeats", "distribution", "detectfn", 
+        "D", "lambda0", "sigma", "detperHR", "k", "En", "Er", "Em",
+        "rotRSE", "CF", "route", "cost", "simfn", "model2D", "details", "nrepl", "simtime", 
+        "simRSE", "simRSEse", "simRB", "simRBse", "empiricalRSE")
     fieldgroup1 <- 1:17
     fieldgroup2 <- 18:36
     simfields <- summaryfields[27:36]
     
     showNotification(paste("secrdesign", desc$Version, desc$Date),
-                     closeButton = FALSE, type = "message", duration = seconds)
-     output$selectingfields <- renderText('false')
-     outputOptions(output, "selectingfields", suspendWhenHidden = FALSE)
+        closeButton = FALSE, type = "message", duration = seconds)
+    output$selectingfields <- renderText('false')
+    outputOptions(output, "selectingfields", suspendWhenHidden = FALSE)
     ##############################################################################
     
     ## renderUI
@@ -1123,44 +1212,26 @@ server <- function(input, output, session) {
     
     ##############################################################################
     
-     output$laceworkK <- renderUI({
-         helptext <- ""
-         if (input$lacework) {
-             Kmsg <- function (A, spacing, radius = NULL) {
-                 deleteintersect <- abs(spacing[1]/spacing[2] - spacing[1]%/%spacing[2]) < 1e-4
-                 if (deleteintersect)
-                     intersect <- spacing[2]
-                 else
-                     intersect <- 0
-                 k <- A * (2 * spacing[1] - intersect) / (spacing[1]^2 * spacing[2])
-                 if (!is.null(radius)) {
-                     radius <- min(radius, spacing[1]/2)
-                     ## approximate only
-                     k <- k * (4 * trunc(radius/spacing[2]) + 1) / 
-                         (4 * trunc(spacing[1]/2/spacing[2]) + 1)
-                 }
-                 star <- if (deleteintersect) "" else "*"
-                 paste0(round(k, 1), " detectors", " ", star)
-             }
-             A <- polyarea(regionrv$data, ha = FALSE) # m^2
-             helpText(HTML(Kmsg(A, c(input$sppgrid, input$splace))))
-         }
-     })
-     
-     output$detectorhelp <- renderUI({
-         helptext <- ""
-         if (input$detector == 'proximity')
-             helptext <- "binary proximity detector; max. one detection per animal per detector per occasion"
-         else if (input$detector == 'multi')
-             helptext <- "multi-catch trap; max. one detection per animal per occasion"
-         else if (input$detector == 'count')
-             helptext <- "count proximity detector; integer # detections per animal per occasion"
-         else if (input$detector == 'single')
-             helptext <- "single-catch trap; max. one detection per animal & one per trap on any occasion"
-         helpText(HTML(helptext))
-     })
-     ##############################################################################
-     
+    output$Edetectors <- renderUI({
+        if (!is.na(edetrv$ntraps)) {
+            helpText(HTML("E(detectors) ", paste0(round(edetrv$ntraps,1))))
+        }
+    })
+    
+    output$detectorhelp <- renderUI({
+        helptext <- ""
+        if (input$detector == 'proximity')
+            helptext <- "binary proximity detector; max. one detection per animal per detector per occasion"
+        else if (input$detector == 'multi')
+            helptext <- "multi-catch trap; max. one detection per animal per occasion"
+        else if (input$detector == 'count')
+            helptext <- "count proximity detector; integer # detections per animal per occasion"
+        else if (input$detector == 'single')
+            helptext <- "single-catch trap; max. one detection per animal & one per trap on any occasion"
+        helpText(HTML(helptext))
+    })
+    ##############################################################################
+    
     output$model2Dhelp <- renderUI({
         helptext <- ""
         if (input$model2D == 'cluster')
@@ -1168,7 +1239,28 @@ server <- function(input, output, session) {
         helpText(HTML(helptext))
     })
     ##############################################################################
+    
+    output$kprint <- renderUI({
+        helptext <- ""
+        
+        k <- density()^0.5 * input$sigma / 100
+        kstr <- if (input$detectfn=="HHN") 
+            paste0("Overlap coefficient &nbsp k &nbsp =  &nbsp 0.01σ√D &nbsp = &nbsp ", round(k,3))
+        else ""
+        
+        if (k<0.2 || k>1.5) {
+            showNotification(paste0("Unlikely combination of D and sigma  (k = ", round(k,2), ")"),
+                type = "warning", id = "unlikelyk", duration = NULL)
+        }
+        else {
+            removeNotification("unlikelyk")
+        }
+        
+        helpText(HTML(kstr))
 
+    })
+    ##############################################################################
+    
     output$clusterhelp <- renderUI({
         helptext <- "One array"
         if (input$arrayinput!='Region' & input$nrepeats>1)
@@ -1183,7 +1275,7 @@ server <- function(input, output, session) {
         helptext <- ""
         if ((input$arrayinput=='Region') & input$clustertype == "Grid") {
             if ((input$spx * input$nx >= input$sppgrid) |
-                (input$spy * input$ny >= input$sppgrid))
+                    (input$spy * input$ny >= input$sppgrid))
                 helptext <- "Warning: clusters overlap"
         }
         helpText(HTML(helptext))
@@ -1192,7 +1284,7 @@ server <- function(input, output, session) {
     
     output$randomtext <- renderUI({
         helptext <- ""
-        if (input$arrayinput=='Region' & input$regiontype=="Random") {
+        if (input$arrayinput=='Region' & input$layouttype=="Random") {
             if (input$randomtype == "SRS")
                 helptext <- "Simple random sample"
             else if (input$randomtype == "GRTS")
@@ -1202,24 +1294,24 @@ server <- function(input, output, session) {
     })
     ##############################################################################
     
-    output$shapefile <- renderUI({
-        helptext <- ""
-        if (!is.null(regionrv$data)) {
-            pos <- grep(".shp", tolower(input$regionfilename[,1]))
-            if (length(pos)>0)
-                helptext <- paste0(input$regionfilename[pos,1])
-            pos <- grep(".rda", tolower(input$regionfilename[,1]))  # .rda, .rdata
-            if (length(pos)>0) {
-                objlist <- load(input$regionfilename[1,4])
-                helptext <- paste0(objlist[1])
-            }
-            pos <- grep(".rds", tolower(input$regionfilename[,1])) 
-            if (length(pos)>0) {
-                helptext <- paste0(input$regionfilename[pos,1])
-            }
-        }
-        helpText(HTML(helptext))
-    })
+    # output$shapefile <- renderUI({
+    #     helptext <- ""
+    #     if (!is.null(regionrv$data)) {
+    #         pos <- grep(".shp", tolower(input$regionfilename[,1]))
+    #         if (length(pos)>0)
+    #             helptext <- paste0(input$regionfilename[pos,1])
+    #         pos <- grep(".rda", tolower(input$regionfilename[,1]))  # .rda, .rdata
+    #         if (length(pos)>0) {
+    #             objlist <- load(input$regionfilename[1,4])
+    #             helptext <- paste0(objlist[1])
+    #         }
+    #         pos <- grep(".rds", tolower(input$regionfilename[,1])) 
+    #         if (length(pos)>0) {
+    #             helptext <- paste0(input$regionfilename[pos,1])
+    #         }
+    #     }
+    #     helpText(HTML(helptext))
+    # })
     ##############################################################################
     
     output$exclusionfile <- renderUI({
@@ -1359,7 +1451,7 @@ server <- function(input, output, session) {
         }
     }
     ##############################################################################
-
+    
     density <- function() {
         ## return density in animals / hectare
         if (input$areaunit == "ha")
@@ -1374,7 +1466,7 @@ server <- function(input, output, session) {
             stop("requires input of class optimalSpacing")
         if (is.null(costs))
             stop("provide costs as list with components 'perkm', 'perarray', ", 
-                 "'perdetector', 'pervisit', 'perdetection'")
+                "'perdetector', 'pervisit', 'perdetection'")
         df <- x$rotRSE$values
         df$C <- apply(df[, c("n","r")],1,sum)
         trps <- attr(x, "traps")
@@ -1398,8 +1490,8 @@ server <- function(input, output, session) {
     ##############################################################################
     
     plotpower <- function (RSE = 0.2, effectRange = c(-99,150), testtype = "two.sided",
-                           effectIncr = 2, adjustRSE = FALSE, alpha = 0.05,
-                           targetpower = 80, col = topo.colors(8)[2], add = FALSE, ...) {
+        effectIncr = 2, adjustRSE = FALSE, alpha = 0.05,
+        targetpower = 80, col = topo.colors(8)[2], add = FALSE, ...) {
         
         power <- function (D2D1, RSE, adjustRSE, testtype) {
             if (adjustRSE) {
@@ -1430,7 +1522,7 @@ server <- function(input, output, session) {
             xlim <- effectRange
             if (xlim[1] < -98) xlim[1] <- -100
             plot(0,0,type='n', xlim = xlim, ylim=c(0,100), yaxs='i', xaxs = 'i',
-                 xlab = "", ylab = 'Power %', las=1)
+                xlab = "", ylab = 'Power %', las=1)
             mtext(side=1, line=2.5, 'Population change %')
         }
         xval <- seq(effectRange[1], effectRange[2], effectIncr)
@@ -1464,9 +1556,9 @@ server <- function(input, output, session) {
     preplus <- function(x) paste0(symnum(x, c(-Inf, 0, Inf), c("", "+")), x)
     
     plotpowerCI <- function (RSE = seq(0.05,0.25,0.05), effectRange = c(-99,150), 
-                             estimatedRange = effectRange, adjustRSE = FALSE, 
-                             alpha = 0.05, effectincr = 2, col = topo.colors(8), plt = TRUE, 
-                             add = FALSE, ...) {
+        estimatedRange = effectRange, adjustRSE = FALSE, 
+        alpha = 0.05, effectincr = 2, col = topo.colors(8), plt = TRUE, 
+        add = FALSE, ...) {
         
         powerCI <- function (D2D1, RSE, adjustRSE, alpha) {
             ## effect D2D1 is ratio of final and initial density estimates
@@ -1492,7 +1584,7 @@ server <- function(input, output, session) {
             if (xlim[1] < -98) xlim[1] <- -100
             ylim <- xlim * c(1,1.5)
             plot(0,0,type='n', xlim = xlim, ylim = ylim, yaxs='i', xaxs = 'i',
-                 xlab = "", ylab = "", las=1)
+                xlab = "", ylab = "", las=1)
             mtext (side=1, line=2.5, 'Population change %')
             mtext (side=2, line=3, 'Estimated population change %')
             abline(v=0, lty=2)
@@ -1510,7 +1602,7 @@ server <- function(input, output, session) {
         }
         
         list(RSE = RSE, effectRange = effectRange, adjustRSE = adjustRSE,
-             alpha = alpha, limits = ci)
+            alpha = alpha, limits = ci)
     }
     ##############################################################################
     
@@ -1540,12 +1632,12 @@ server <- function(input, output, session) {
         nminr <- function(R) {
             if (arrinput == "Grid") {
                 array <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
-                                   spacex = input$spx*R, spacey = input$spy*R,
-                                   hollow = input$hollow)
+                    spacex = input$spx*R, spacey = input$spy*R,
+                    hollow = input$hollow)
             }
             else if (arrinput == "Line") {
                 array <- make.grid(nx = input$nline, ny = 1, detector = input$detector,
-                                   spacing = input$spline*R)
+                    spacing = input$spline*R)
             }
             else if (arrinput == "File") {
                 array <- array0
@@ -1607,11 +1699,12 @@ server <- function(input, output, session) {
                 coord <- read.table(fileupload[1,4])
                 if (!is.numeric(coord) || (ncol(coord)<2)) {
                     showNotification("bad polygon file(s); clipping switched off",
-                                     type = "error", id = "nopolyfile", duration = errorduration)
+                        type = "error", id = "nopolyfile", duration = errorduration)
                     updateCheckboxInput(session, "polygonbox", value = FALSE)
                     return(NULL)
                 }
-                poly <- secr:::boundarytoSP(coord[,1:2])
+                # poly <- secr:::boundarytoSP(coord[,1:2])
+                poly <- secr:::boundarytoSF(coord[,1:2])
             }
             else if (ext %in% c("rdata", "rda", "rds")) {
                 if (ext == "rds") {
@@ -1621,37 +1714,41 @@ server <- function(input, output, session) {
                     objlist <- load(fileupload[1,4])
                     obj <- get(objlist[1])
                 }
-                if (is.matrix(obj))
-                    poly <- secr:::boundarytoSP(obj[,1:2])
-                else if (inherits(obj, "SpatialPolygons"))
-                    poly <- obj
-                else stop("unrecognised boundary object in ", objlist[1])
+                # if (is.matrix(obj))
+                #     poly <- secr:::boundarytoSF(obj[,1:2])
+                # else if (inherits(obj, "SpatialPolygons"))
+                #     poly <- obj
+                # else stop("unrecognised boundary object in ", objlist[1])
+                
+                poly <- secr:::boundarytoSF(obj)
             }
             else {
-
+                
                 if (!(any(grepl(".shp", fileupload[,1])) &&
-                      any(grepl(".dbf", fileupload[,1])) &&
-                      any(grepl(".shx", fileupload[,1])))) {
+                        any(grepl(".dbf", fileupload[,1])) &&
+                        any(grepl(".shx", fileupload[,1])))) {
                     showNotification("need shapefile components .shp, .dbf, .shx",
-                                     type = "error", id = "nofile", duration = errorduration)
+                        type = "error", id = "nofile", duration = errorduration)
                 }
-                else  if (!requireNamespace("rgdal"))
-                    showNotification("need package rgdal to read shapefile", type = "error", id = "norgdal", 
-                                     duration =errorduration)
+                else  if (!requireNamespace("sf"))
+                    showNotification("need package sf to read shapefile", type = "error", id = "nosf", 
+                        duration =errorduration)
                 else {
                     removeNotification(id = "nofile")
-                    removeNotification(id = "norgdal")
+                    removeNotification(id = "nosf")
                     ## not working on restore bookmark 2019-01-24
                     dsnname <- dirname(fileupload[1,4])
                     ## make temp copy with uniform layername
                     file.copy(from = fileupload[,4], 
-                              to = paste0(dsnname, "/temp.", tools::file_ext(fileupload[,4])),     
-                              overwrite = TRUE)
+                        to = paste0(dsnname, "/temp.", tools::file_ext(fileupload[,4])),     
+                        overwrite = TRUE)
                     layername <- "temp"
-                    poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
+                    # poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
+                    poly <- sf::st_read(dsnname)  
                 }
             }
         }
+        if (inherits(poly, 'sf')) poly <- sf::st_as_sfc(poly)
         poly   
     }
     ##############################################################################
@@ -1661,7 +1758,7 @@ server <- function(input, output, session) {
         progress <- Progress$new(session, min=1, max=15)
         on.exit(progress$close())
         progress$set(message = 'Simulating...',
-                     detail = '')
+            detail = '')
         seed <- input$seed
         if (seed == 0) seed <- NULL
         array <- detectorarray()
@@ -1671,11 +1768,11 @@ server <- function(input, output, session) {
         detail <- if (model2D == 'cluster')
             eval(parse(text = paste0("list(", input$details, ")")))
         else NULL
-            
+        
         fit <- input$packagebtn %in% c('secr.fit')
         fitargs = list(detectfn = input$detectfn, 
-                       method = input$method, 
-                       details = list(distribution= tolower(input$distributionbtn)))
+            method = input$method, 
+            details = list(distribution= tolower(input$distributionbtn)))
         scen <- make.scenarios(
             noccasions = input$noccasions,
             nrepeats = nrepeats(),
@@ -1701,12 +1798,12 @@ server <- function(input, output, session) {
             ncores = input$ncores,
             byscenario = FALSE,
             seed = seed,
-            terse = TRUE, moves = TRUE))  ## arguments for summary.capthist
-        
+            terse = TRUE, moves = TRUE, tpa = TRUE))  ## arguments for summary.capthist
+
         ## empty data.frame 2019-07-02
-        counts <- as.data.frame(matrix(nrow = 3,ncol = 3, 
-                                       dimnames=list(c('Animals','Detections','Moves'),
-                                                     c('n','mean','se'))))
+        counts <- as.data.frame(matrix(nrow = 4,ncol = 3, 
+            dimnames=list(c('Animals','Detections','Moves','Animals2'),
+                c('n','mean','se'))))
         if (fit) {
             if (!inherits(sims, 'try-error')) {
                 fitsum <- summary(count(sims))
@@ -1717,8 +1814,8 @@ server <- function(input, output, session) {
         else {  
             sumc <- function(x) {
                 c(n = sum(!is.na(x)),
-                  mean = mean(x, na.rm = TRUE),
-                  se =  sd(x, na.rm = TRUE)/ sum(!is.na(x))^0.5)
+                    mean = mean(x, na.rm = TRUE),
+                    se =  sd(x, na.rm = TRUE)/ sum(!is.na(x))^0.5)
             }
             counts <- t(apply(sims$output[[1]], 2, sumc))
         }
@@ -1733,13 +1830,16 @@ server <- function(input, output, session) {
             ndet = counts['Detections', 'mean'],
             ndet.se = counts['Detections', 'se'],
             nmov = counts['Moves', 'mean'],
-            nmov.se = counts['Moves', 'se'])
+            nmov.se = counts['Moves', 'se'],
+            n2 = counts['Animals2', 'mean'],
+            n2.se = counts['Animals2', 'se']
+        )
         if (fit && !inherits(sims, 'try-error')) {
             predicted <- summary(predict(sims), fields=c('n','mean','se','sd'))$OUTPUT[[1]]
             if (input$method=='none') {
-                    simrv$output$RB <- NA   
-                    simrv$output$RBse <- NA   
-                    simrv$output$empRSE <- NA
+                simrv$output$RB <- NA   
+                simrv$output$RBse <- NA   
+                simrv$output$empRSE <- NA
             }
             else {    
                 simrv$output$RB <- predicted['RB','mean'] * 100
@@ -1761,13 +1861,12 @@ server <- function(input, output, session) {
             simrv$output$RBse <- NA   
         }
         simrv$current <- TRUE
-
+        
         if (input$simappendbox) addtosummary() 
         
     }
     
     runspacing <- function(sims = FALSE) {
-        ## removeNotification("lownr")
         progress <- Progress$new(session, min=1, max=15)
         on.exit(progress$close())
         R <- seq(input$fromR, input$toR, input$byR)
@@ -1814,6 +1913,24 @@ server <- function(input, output, session) {
         rotrv$current <- TRUE
     }
     
+    detectorsource <- function() {
+        if (input$arrayinput == 'Region') {
+            if (input$layouttype =='Random') {
+                if (input$randomtype == 'SRS') "SRS" else "GRTS"
+            }
+            else if (input$layouttype == 'Systematic') {
+                if (input$lacework) "Lacework"
+                else if (input$chequerboard) "Chequerboard"
+                else "Systematic"
+                
+            }
+            else if (input$layouttype == 'GA') {
+                if (input$GAcriterion=='min(n,r)') 'GA min(n,r)' else 'GA n2'
+            }
+        } 
+        else input$arrayinput
+    }
+    
     addtosummary <- function() {
         ## input$fields is character vector of selected fields
         
@@ -1824,7 +1941,7 @@ server <- function(input, output, session) {
             time = format(Sys.time(), "%H:%M:%S"),
             note = if (simrv$current && input$title=="") paste(input$title, "simulated") else input$title,
             detector = input$detector,
-            source = input$arrayinput,
+            source = detectorsource(),
             nx = if (input$arrayinput=="Grid") input$nx else
                 if (input$arrayinput=="Line") input$nline else NA,
             ny = if (input$arrayinput=="Grid") input$ny else NA,
@@ -1856,7 +1973,7 @@ server <- function(input, output, session) {
             route = round(arraypathlength()/1000 * nrepeats(),3),
             cost = round(nrm()$totalcost, 2)
         )
-
+        
         newfields <- ""        
         
         simdf <- data.frame(
@@ -1905,24 +2022,27 @@ server <- function(input, output, session) {
                 code <- paste0( 
                     "# coordinates from text file\n",
                     "coord <- read.table('", filename, "')   # read boundary coordinates\n",
-                    varname, " <- secr:::boundarytoSP(coord)  # convert to SpatialPolygons\n")
+                    varname, " <- secr:::boundarytoSF(coord)  # convert to Simple Features\n")
             }
             else if (ext %in% c("rdata", "rda")) {
                 objlist <- load(inputfilename[1,4])
                 code <- paste0( 
-                    "# SpatialPolygons from RData file\n",
+                    "# sf from RData file\n",
                     "objlist <- load('", filename, "')\n",
                     varname, " <- get(objlist[1]) \n")
             }
             else if (ext == "rds") {
                 code <- paste0( 
-                    "# SpatialPolygons from RDS file\n",
+                    "# sf from RDS file\n",
                     varname, " <- readRDS('", filename, "') \n")
             }
             else {
                 code <- paste0(
                     "# ESRI polygon shapefile\n",
-                    varname, " <- rgdal::readOGR(dsn = '", 
+                    # varname, " <- rgdal::readOGR(dsn = '", 
+                    # tools::file_path_sans_ext(basename(filename)), 
+                    # ".shp')\n"
+                    varname, " <- sf::st_read('", 
                     tools::file_path_sans_ext(basename(filename)), 
                     ".shp')\n"
                 )
@@ -1966,8 +2086,8 @@ server <- function(input, output, session) {
                 if (trapargs != "")
                     trapargs <- paste0(", ", trapargs)
                 code <- paste0("array <- read.traps ('", 
-                               input$trapfilename[1,"name"],
-                               "', detector = '", input$detector, "'", trapargs, ")\n")
+                    input$trapfilename[1,"name"],
+                    "', detector = '", input$detector, "'", trapargs, ")\n")
                 # if (input$scalefactor != 1.0) {
                 #     code <- paste0(code, 
                 #                    "# optional scaling about centroid\n",
@@ -1982,12 +2102,12 @@ server <- function(input, output, session) {
                 
                 regioncode <- getSPcode(input$regionfilename, "region", TRUE)
                 excludedcode <- getSPcode(input$exclusionfilename, "excluded", input$exclusionbox)
-            
-
+                
+                
                 if (input$randomorigin) 
                     origincode <- "NULL"
                 else {
-                    origincode <- paste0("sp::bbox(region)[,1] + ", input$sppgrid/2)
+                    origincode <- paste0("sf::st_bbox(region)[1:2] + ", input$sppgrid/2)
                 }
                 
                 if (input$chequerboard) { 
@@ -2000,27 +2120,27 @@ server <- function(input, output, session) {
                 
                 if (input$clustertype == "Grid") {
                     clustercode <- paste0("cluster <- make.grid(nx = ", input$nx, ", ny = ", input$ny, 
-                                          ", detector = '", input$detector, "', \n",
-                                          "    spacex = ", input$spx, ", spacey = ", input$spy, ", ",
-                                          "hollow = ", input$hollow, ")\n")
+                        ", detector = '", input$detector, "', \n",
+                        "    spacex = ", input$spx, ", spacey = ", input$spy, ", ",
+                        "hollow = ", input$hollow, ")\n")
                 }
                 else if (input$clustertype == "Line") {
                     clustercode <- paste0("cluster <- make.grid(nx = ", input$nline, 
-                                          ", ny = 1, detector = '", input$detector, "', \n",
-                                          "    spacing = ", input$spline, ")\n")
+                        ", ny = 1, detector = '", input$detector, "', \n",
+                        "    spacing = ", input$spline, ")\n")
                 }
                 else if (input$clustertype == "File") {
                     trapargs <- input$trapargs
                     if (trapargs != "")
                         trapargs <- paste0(", ", trapargs)
                     clustercode <- paste0("cluster <- read.traps ('",
-                                          input$trapfilename[1,"name"],
-                                          "', detector = '", input$detector, "', ", trapargs, ")\n")
+                        input$trapfilename[1,"name"],
+                        "', detector = '", input$detector, "', ", trapargs, ")\n")
                 }
                 else {
-                    if (input$regiontype == "Systematic")
+                    if (input$layouttype == "Systematic")
                         clustercode <- paste0("cluster <- make.grid(nx = 1, ny = 1, detector = '", 
-                                              input$detector, "')\n")
+                            input$detector, "')\n")
                     else
                         clustercode <- ""
                 }
@@ -2051,7 +2171,7 @@ server <- function(input, output, session) {
                 else
                     exclusioncode <- ""
                 
-                if ((input$regiontype == "Random" || input$randomorigin) 
+                if ((input$layouttype == "Random" || input$randomorigin) 
                     & input$seedpgrid>0) {
                     seedcode <- paste0("set.seed(", input$seedpgrid, ")\n")
                 }
@@ -2059,7 +2179,7 @@ server <- function(input, output, session) {
                     seedcode <- ""
                 }
                 
-                if (input$regiontype == "Systematic") {
+                if (input$layouttype == "Systematic") {
                     
                     if (input$lacework && input$clustertype == "Single detector") {
                         code <- paste0( 
@@ -2068,7 +2188,7 @@ server <- function(input, output, session) {
                             seedcode,
                             "array <- make.lacework(region = region, ",
                             "detector = '", input$detector, "', \n    ", 
-                            "spacing = c(", input$sppgrid, ", ", input$splace,
+                            "spacing = c(", input$splace*input$sppgrid, ", ", input$sppgrid,
                             "), rotate = ", input$rotation, ")\n")
                     }
                     else {
@@ -2084,7 +2204,7 @@ server <- function(input, output, session) {
                             exclusioncode, ")\n")
                     }
                 }
-                else if (input$regiontype == "Random") {
+                else if (input$layouttype == "Random") {
                     if (input$clustertype %in% c("Grid", "Line", "File"))
                         clusterarg <- ",\n    cluster = cluster"
                     else 
@@ -2101,7 +2221,28 @@ server <- function(input, output, session) {
                         "region = region", clusterarg, 
                         edgemethodcode, exclusioncode, ")\n")
                 }
-                else stop ("unknown regiontype")
+                else if (input$layouttype == "GA") {
+                    detectparcode <- paste0("list(lambda0 = ", input$lambda0, ", sigma = ", input$sigma, ")")
+                    mskcode <- ""
+                    alltrapscode <- ""
+                    code <- paste0( 
+                        regioncode,
+                        mskcode,
+                        alltrapscode,
+                        "array <- GAoptim(mask = msk, alltraps = alltraps", 
+                        ", ntraps = ", input$numpgrid, 
+                        ", detectpar = ", detectparcode,
+                        ", noccasions = ", input$noccasions, 
+                        ", detectfn = ", input$detectfn, 
+                        ", D = ", input$D, 
+                        ", criterion = ", match(input$GAcriterion, c('min(n,r)','n2'))+3, 
+                        ", penalty = NULL",
+                        ", seed = ", if (input$seedpgrid == 0) "NULL" else input$seedpgrid,
+                        ", ngen = ", input$GAngen, 
+                        ", popsize = ", input$GApopsize, 
+                        ")\n")
+                }
+                else stop ("unknown layouttype")
                 
             }
             else stop ("unknown arrayinput")
@@ -2129,13 +2270,13 @@ server <- function(input, output, session) {
                 polycode <- getSPcode(input$habpolyfilename, "poly", input$polygonbox)
             }
             paste0(polycode,
-                   "mask <- make.mask (", arrayname, 
-                   ", buffer = ", buffer, 
-                   ", nx = ", input$habnx, 
-                   ", type = '", type, "'",  
-                   if (polycode == "") "" else ",\n    poly = poly",
-                   if (polycode == "") "" else ", poly.habitat = ", polyhabitat,
-                   ")\n")
+                "mask <- make.mask (", arrayname, 
+                ", buffer = ", buffer, 
+                ", nx = ", input$habnx, 
+                ", type = '", type, "'",  
+                if (polycode == "") "" else ",\n    poly = poly",
+                if (polycode == "") "" else ", poly.habitat = ", polyhabitat,
+                ")\n")
         }
         else {
             maskargs <- input$maskargs
@@ -2286,18 +2427,26 @@ server <- function(input, output, session) {
             simrv$current <- FALSE
             rotrv$current <- FALSE
             pxyrv$value <- NULL
-            arrrv$v  ## create dependency on randomarraybtn
-            if (!input$autorefresh) return(NULL)
+            # arrrv$v  ## create dependency on randomarraybtn
+            optrv$value  ## create dependency on optimizebtn
+            if (!input$autorefresh) {
+                optrv$message <- ""
+                optrv$OK <- TRUE
+                return(NULL)
+            }
             trps <- NULL
             removeNotification("badarray")
+            removeNotification("lowspan")
+            removeNotification("lownm")
+     
             if (input$arrayinput == "Grid") {
                 trps <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
-                                  spacex = input$spx, spacey = input$spy,
-                                  hollow = input$hollow, ID = "numxb")
+                    spacex = input$spx, spacey = input$spy,
+                    hollow = input$hollow, ID = "numxb")
             }
             else if (input$arrayinput == "Line") {
                 trps <- make.grid(nx = input$nline, ny = 1, detector = input$detector,
-                                  spacing = input$spline)
+                    spacing = input$spline)
             }
             else if (input$arrayinput == 'File') {
                 traprv$scale <- 1.0 # input$scalefactor
@@ -2311,7 +2460,7 @@ server <- function(input, output, session) {
                     trps <- NULL
                 }
                 else {
-                    if (input$randomorigin || input$regiontype == "Random") {
+                    if (input$randomorigin || input$layouttype == "Random") {
                         if (input$seedpgrid>0) {
                             set.seed(input$seedpgrid)
                         }
@@ -2320,16 +2469,16 @@ server <- function(input, output, session) {
                         origin <- NULL
                     }
                     else {
-                        origin <- sp::bbox(regionrv$data)[,1] + input$sppgrid/2
+                        origin <- sf::st_bbox(regionrv$data)[1:2] + input$sppgrid/2
                     }
                     if (input$clustertype == "Grid") {
                         cluster <- make.grid(nx = input$nx, ny = input$ny, detector = input$detector,
-                                             spacex = input$spx, spacey = input$spy,
-                                             hollow = input$hollow, ID = "numxb")
+                            spacex = input$spx, spacey = input$spy,
+                            hollow = input$hollow, ID = "numxb")
                     }
                     else if (input$clustertype == "Line") {
                         cluster <- make.grid(nx = input$nline, ny = 1, detector = input$detector,
-                                             spacing = input$spline)
+                            spacing = input$spline)
                     }
                     else if (input$clustertype == "File") {
                         traprv$scale <- 1.0 # input$scalefactor
@@ -2341,38 +2490,33 @@ server <- function(input, output, session) {
                     
                     #########################################################
                     ## check expected number
-                    regionarea <- polyarea(regionrv$data)
-                    npercluster <- nrow(cluster)
-                    if (input$regiontype == "Systematic")
-                        expectedndetector <- regionarea/(input$sppgrid/100)^2 * npercluster
-                    else
-                        expectedndetector <- input$numpgrid * npercluster
-                    if (expectedndetector > input$maxdetectors*2) {
+                    if (!is.na(edetrv$ntraps) && (edetrv$ntraps > input$maxdetectors*2)) {
                         showNotification("expected N detectors exceeds limit",
-                                         type = "error", id = "toomany",
-                                         duration = errorduration)
+                            type = "error", id = "toomany",
+                            duration = errorduration)
                         return(NULL)
                     }
                     #########################################################
-                    
-                    
-                    
+
                     if (input$clustertype != "Single detector")
                         cluster <- rotate (cluster, input$rotation)
                     
-                    if (input$regiontype == "Random") {   # randompoint
+                    if (input$layouttype == "Random") {   # randompoint
                         ntrps <- input$numpgrid
                         if (ntrps > 0)
                             trps <- trap.builder(n = ntrps, 
-                                                 method = input$randomtype,
-                                                 region = regionrv$data,
-                                                 cluster = cluster,
-                                                 edgemethod = input$edgemethod,
-                                                 exclude = exclusionrv$data,
-                                                 exclmethod = switch(input$edgemethod, 
-                                                                     allinside = "alloutside", 
-                                                                     anyinside = "anyoutside", 
-                                                                     "clip"))
+                                method = input$randomtype,
+                                region = regionrv$data,
+                                cluster = cluster,
+                                edgemethod = input$edgemethod,
+                                exclude = exclusionrv$data,
+                                exclmethod = switch(input$edgemethod, 
+                                    allinside = "alloutside", 
+                                    anyinside = "anyoutside", 
+                                    "clip"))
+                    }
+                    else if (input$layouttype == "GA") {   # genetic algorithm
+                        trps <- optrv$value$optimaltraps
                     }
                     else {
                         if (input$lacework) {
@@ -2382,11 +2526,11 @@ server <- function(input, output, session) {
                                     origin <- NULL
                                 }
                                 else {
-                                    origin <- sp::bbox(regionrv$data)[,1] + input$sppgrid/2
+                                    origin <- sf::st_bbox(regionrv$data)[1:2] + input$sppgrid/2
                                 }
                                 trps <- make.lacework(regionrv$data, detector = input$detector,
-                                                      spacing = c(input$sppgrid, input$splace),
-                                                      origin = origin, rotate = input$rotation)
+                                    spacing = c(input$sppgrid*input$splace, input$sppgrid),
+                                    origin = origin, rotate = input$rotation)
                             }
                             else {
                                 showNotification("Lacework uses single detectors, not clusters")
@@ -2395,18 +2539,20 @@ server <- function(input, output, session) {
                         }
                         else {
                             args <- list(spacing = input$sppgrid, 
-                                         cluster = cluster, 
-                                         region = regionrv$data,
-                                         origin = origin,
-                                         edgemethod = input$edgemethod,
-                                         exclude = exclusionrv$data,
-                                         exclmethod = switch(input$edgemethod, 
-                                                             allinside = "alloutside", 
-                                                             anyinside = "anyoutside", 
-                                                             "clip"))
+                                cluster = cluster, 
+                                region = regionrv$data,
+                                origin = origin,
+                                edgemethod = input$edgemethod,
+                                exclude = exclusionrv$data,
+                                exclmethod = switch(input$edgemethod, 
+                                    allinside = "alloutside", 
+                                    anyinside = "anyoutside", 
+                                    "clip"))
                             
-                            if (input$chequerboard)
+                            if (input$chequerboard) {
+                                args$order <- "y"
                                 args$chequerboard <- "white"
+                            }
                             
                             trps <- do.call(make.systematic, args)
                         }
@@ -2415,19 +2561,19 @@ server <- function(input, output, session) {
                 
             }
             else stop ("unrecognised array input")
-
+            
             if (!is.null(trps)) {
                 attr(trps, "arrayspan") <- suppressWarnings(pmax(0, max(dist(trps))))
             }
             if (!is.null(trps) && (nrow(trps) > input$maxdetectors)) {
                 showNotification(paste0("more than ", input$maxdetectors, " detectors; try again"),
-                                 type = "warning", id = "bigarray", duration = seconds)
+                    type = "warning", id = "bigarray", duration = seconds)
                 trps <- NULL
             }
             
             if (!is.null(trps) && (nrow(trps) == 0)) {
                 showNotification(paste0("no detectors; try again"),
-                                 type = "warning", id = "zeroarray", duration = seconds)
+                    type = "warning", id = "zeroarray", duration = seconds)
                 trps <- NULL
             }
             
@@ -2441,12 +2587,16 @@ server <- function(input, output, session) {
             if (is.null(trps)) {
                 hideTab(inputId = "navlist", target = "Costing")
                 hideTab(inputId = "navlist", target = "Simulation")
+                shinyjs::disable("simulatebtn2")
+                shinyjs::disable("appendbtn")
                 return (NULL)
             }
             else {
                 showTab(inputId = "navlist", target = "Costing")
                 showTab(inputId = "navlist", target = "Simulation")
-                addsequence (trps, input$routetype)
+                shinyjs::enable("simulatebtn2")
+                shinyjs::enable("appendbtn")
+                return(addsequence (trps, input$routetype))  # returns 'trps'
             }
         }
     )
@@ -2459,17 +2609,17 @@ server <- function(input, output, session) {
             if (!is.null(detectorarray())) {
                 if (!maskOK()) {
                     showNotification("no detectors in polygon(s); clipping switched off",
-                                     type = "warning", id = "notrapsinpoly",
-                                     duration = seconds)
+                        type = "warning", id = "notrapsinpoly",
+                        duration = seconds)
                     updateCheckboxInput(session, "polygonbox", value = FALSE)
                 }
                 make.mask (detectorarray(),
-                           buffer = input$habxsigma * input$sigma,
-                           nx = input$habnx,
-                           type = if (input$maskshapebtn=='Rectangular') 'traprect' else 'trapbuffer',
-                           poly = if (input$polygonbox) habpolyrv$data else NULL,
-                           poly.habitat = input$includeexcludebtn == "Include",
-                           keep.poly = FALSE)
+                    buffer = input$habxsigma * input$sigma,
+                    nx = input$habnx,
+                    type = if (input$maskshapebtn=='Rectangular') 'traprect' else 'trapbuffer',
+                    poly = if (input$polygonbox) habpolyrv$data else NULL,
+                    poly.habitat = input$includeexcludebtn == "Include",
+                    keep.poly = FALSE)
             }
             else {
                 NULL
@@ -2477,9 +2627,9 @@ server <- function(input, output, session) {
         }
         else {
             if (!maskOK()) {
-                    showNotification("no detectors in mask",
-                                     type = "warning", id = "notrapsinmask",
-                                     duration = seconds)
+                showNotification("no detectors in mask",
+                    type = "warning", id = "notrapsinmask",
+                    duration = seconds)
             }
             maskrv$data
         }
@@ -2496,7 +2646,7 @@ server <- function(input, output, session) {
             }
             if (density() * maskarea(mask()) > 10000) {
                 showNotification("population exceeds 10000; try again",
-                                 type = "error", id = "bigpop", duration = errorduration)
+                    type = "error", id = "bigpop", duration = errorduration)
                 return(NULL)
             }
             else removeNotification("bigpop")
@@ -2513,7 +2663,7 @@ server <- function(input, output, session) {
             if (input$onlymaskbox) {
                 if (nrow(mask())==0) {
                     showNotification("incompatible mask",
-                                     type = "error", id = "badmask", duration = errorduration)
+                        type = "error", id = "badmask", duration = errorduration)
                     pop <- NULL
                 }
                 else {
@@ -2522,8 +2672,8 @@ server <- function(input, output, session) {
             }
             else { # rectangular area
                 pop <- sim.popn (D = density(), core=core, Ndist = Ndist,
-                                 buffer = input$habxsigma * input$sigma,
-                                 model2D = model2D, details = detail)
+                    buffer = input$habxsigma * input$sigma,
+                    model2D = model2D, details = detail)
             }
             pop
         }
@@ -2534,11 +2684,10 @@ server <- function(input, output, session) {
         # DOES NOT USE habpolyrv$data
         invalidateOutputs()
         trps <- detectorarray()
-        # msk <- make.mask(trps, buffer = input$sigma * input$pxyborder, nx = input$pxynx)
         msk <- make.mask(trps, buffer = border(input$pxyborder), nx = input$pxynx)
         Pxy <- pdot(msk, trps, detectfn = input$detectfn,
-                    detectpar=list(lambda0=input$lambda0, sigma = input$sigma),
-                    noccasions = input$noccasions)
+            detectpar=list(lambda0=input$lambda0, sigma = input$sigma),
+            noccasions = input$noccasions)
         sumPxy <- sum(Pxy)
         EPxy <- sum(Pxy^2) / sumPxy
         EPxy2 <- sum(Pxy^3) /sumPxy
@@ -2553,13 +2702,12 @@ server <- function(input, output, session) {
         if (is.null(trps)) return (NULL)
         # appears not to be needed 2019-01-19
         # invalidateOutputs()
-        
         msk <- mask()
         if (nrow(msk)>0) {
             pathl <- arraypathlength()
             scen <- make.scenarios(trapsindex = 1, noccasions = input$noccasions, 
-                                   nrepeats = nrepeats(), D = density(), sigma = input$sigma, 
-                                   lambda0 = input$lambda0, detectfn = input$detectfn)
+                nrepeats = nrepeats(), D = density(), sigma = input$sigma, 
+                lambda0 = input$lambda0, detectfn = input$detectfn)
             scensum <- scenarioSummary(
                 scen,
                 trapset = trps,
@@ -2591,17 +2739,17 @@ server <- function(input, output, session) {
             }
             if (!is.finite(RSE)) RSE <- maxRSE
             updateSliderInput(session, "RSEslider",
-                              min = 1.0,
-                              max = maxRSE,
-                              value = RSE,
-                              step = 0.1)
+                min = 1.0,
+                max = maxRSE,
+                value = RSE,
+                step = 0.1)
             
             # nr
             scensum
         }
         else {
             showNotification("invalid mask; check sigma parameter", type = "warning", id = "invalidmask",
-                             duration = seconds)
+                duration = seconds)
             
             NULL
         }
@@ -2622,7 +2770,8 @@ server <- function(input, output, session) {
     RSErv <- reactiveValues(current = FALSE, value = NULL, adjRSE = NULL)
     pxyrv <- reactiveValues(current = FALSE, xy = NULL, value = NULL)
     poprv <- reactiveValues(v = 0)  # used to invalidate and re-plot popn
-    arrrv <- reactiveValues(v = 0)  # used to invalidate and re-plot detectorarray
+    # arrrv <- reactiveValues(v = 0)  # used to invalidate and re-plot detectorarray
+    optrv <- reactiveValues(value = NULL, message = "", OK = TRUE)  
     manualroute <- reactiveValues(seq = NULL)
     current <- reactiveValues(unit = "ha")
     selecting <- reactiveValues(v=FALSE)
@@ -2631,7 +2780,7 @@ server <- function(input, output, session) {
     )
     
     ##############################################################################
-
+    
     ## using advice of Joe Cheng 2018-03-23 to allow resetting of fileInputs
     ## https://stackoverflow.com/questions/49344468/resetting-fileinput-in-shiny-app
     
@@ -2643,24 +2792,31 @@ server <- function(input, output, session) {
     
     regionrv <- reactiveValues(
         data = NULL,
+        area = NULL,
         clear = FALSE
     )
-
+    
     exclusionrv <- reactiveValues(
         data = NULL,
         clear = FALSE
     )
-
+    
     habpolyrv <- reactiveValues(
         data = NULL,
         clear = FALSE
     )
-
+    
     maskrv <- reactiveValues(
         data = NULL,
         clear = FALSE
     )
-
+    
+    edetrv <- reactiveValues(
+        ntraps = NA,
+        alltrapsmask = NULL,
+        clear = FALSE
+    )
+    
     ##############################################################################
     
     ## observe
@@ -2682,7 +2838,7 @@ server <- function(input, output, session) {
         OK <- try(eval(parse(text = readtrapcall)))
         if (!inherits(OK, "traps")) {
             showNotification("invalid trap file or arguments; try again",
-                             type = "error", id = "badtrap", duration = seconds)
+                type = "error", id = "badtrap", duration = seconds)
         }
         else {
             traprv$data <- OK
@@ -2724,19 +2880,173 @@ server <- function(input, output, session) {
         req(input$regionfilename)
         req(!regionrv$clear)
         if (input$arrayinput == 'Region') {
-            regionrv$data <- readpolygon(input$regionfilename) 
+            if (input$regiontype == 'Rectangle') {
+                box <- data.frame(x = c(0,0,1,1,0) * input$length, y = c(0,1,1,0,0) * input$width)
+                regionrv$data <- secr:::boundarytoSF(box) 
+            }
+            else {
+                regionrv$data <- readpolygon(input$regionfilename) 
+            }
+            regionrv$area <- polyarea(regionrv$data, ha = FALSE)
         }
         else {
             regionrv$data <- NULL
+            regionrv$area <- NULL
         }
     })
     ##############################################################################
+    
+    # ## make region box
+    observe({
+        req(input$regiontype)
+        if (input$arrayinput == 'Region') {
+            if (input$regiontype == 'Rectangle') {
+                box <- data.frame(x = c(0,0,1,1,0) * input$length, y = c(0,1,1,0,0) * input$width)
+                regionrv$data <- secr:::boundarytoSF(box)
+                regionrv$area <- input$length * input$width
+                regionrv$clear <- FALSE
+            }
+        }
+        else {
+            regionrv$data <- NULL
+            regionrv$area <- NULL
+        }
+    })
+    ##############################################################################
+    
+    
+    ##############################################################################
+    
+    # number of detectors in lacework design
+    Klace <- function (A, a, b, radius = NULL) {
+        k <- A /a^2 * (2 * a/b - 1)
+        if (!is.null(radius)) { ## approximate only
+            radius <- min(radius, a/2)
+            k <- k * (4 * trunc(radius/b) + 1) / (4 * trunc(a/2/b) + 1)
+        }
+        k
+    }
+    
+    expecteddetectors <- function() {
+        removeNotification('toomany')
+        removeNotification("outsideregion")
+        # assuming Region with Systematic or GA 
+        if (input$arrayinput == 'Region') {
+            A <- regionrv$area       # m^2
+            k <- NA
+            if (input$layouttype == 'Systematic') {
+                if (input$lacework) {
+                    k <- Klace(A, input$sppgrid * input$splace, input$sppgrid)
+                }
+                else {
+                    k <- A/input$sppgrid^2 
+                    
+                    if (input$chequerboard) {
+                        k <- k / 2
+                    }
+                    
+                    if (input$clustertype == "Grid") {
+                        npercluster <- nrow(make.grid(nx = input$nx, ny = input$ny, 
+                            detector = input$detector,spacex = input$spx, 
+                            spacey = input$spy,hollow = input$hollow))
+                    }
+                    else if (input$clustertype == "Line") {
+                        npercluster <- nrow(make.grid(nx = input$nline, ny = 1, 
+                            detector = input$detector, spacing = input$spline))
+                    }
+                    else if (input$clustertype == "File") {
+                        npercluster <- nrow(traprv$data)
+                    }
+                    else {
+                        npercluster <- 1
+                    }
+                    k <- k * npercluster  # ignoring edge truncation
+                }
+                edetrv$ntraps <- k
+                edetrv$alltrapsmask <- NULL
+            }
+            else if (input$layouttype == 'GA') {
+                if (input$GAfile =='region') {
+                    edetrv$alltrapsmask <- make.mask(spacing = input$GAminspace, type = 'polygon', poly = regionrv$data)
+                }
+                else {
+                    if (is.null(traprv$data)) {
+                        edetrv$alltrapsmask <- NULL
+                        optrv$message <- "no trap file loaded - see 'File'"
+                    }
+                    else {
+                        edetrv$alltrapsmask <- as.mask(traprv$data)  # from file
+                        inregion <- pointsInPolygon(edetrv$alltrapsmask, regionrv$data)
+                        if (!all(inregion)) {
+                            showNotification(
+                                paste0(sum(!inregion), " locations from file are outside region"),
+                                type = "error", id = "outsideregion",
+                                duration = errorduration
+                            )
+                        }
+                    }
+                }
+                if (!is.null(edetrv$alltrapsmask)) {
+                    k <- nrow(edetrv$alltrapsmask)
+                    if (k > input$maxdetectors*10) {
+                        showNotification(
+                            paste0("number of potential locations exceeds limit ", 
+                                input$maxdetectors*10), type = "error", id = "toomany",
+                            duration = errorduration)
+                    }
+                    optrv$message <- paste0("Number of possible detector locations = ", round(k,1))
+                }
+                edetrv$ntraps <- NA
+            }
+        }
+        else {
+            edetrv$ntraps <- NA
+            edetrv$alltrapsmask <- NULL
+            optrv$message <- ""
+        }
+    }
+    
+    observeEvent(c(input$arrayinput, input$regiontype, input$layouttype, 
+        input$sppgrid, input$splace, input$lacework, input$chequerboard,
+        input$GAminspace, input$GAcriterion, input$GAbuffer, input$numpgrid,
+        input$clustertype, input$randomorigin, input$GAfile), {
+            
+            if (input$arrayinput == 'Region') {
+                if (input$layouttype == 'Random' ||
+                        (input$layouttype == 'Systematic' && input$randomorigin) ||
+                        (input$layouttype == 'GA')) {
+                    shinyjs::enable('seedpgrid')
+                }
+                else {
+                    shinyjs::disable('seedpgrid')
+                }
+                if (input$layouttype %in% c('Random', 'GA')) {
+                    shinyjs::enable('numpgrid')
+                }
+                else {
+                    shinyjs::disable('numpgrid')
+                }
+                
+                if (input$layouttype == 'GA') {
+                    if (input$GAfile == 'file')
+                        shinyjs::disable('GAminspace')
+                    else
+                        shinyjs::enable('GAminspace')
+                }
+            }
+            
+        optrv$value <- NULL    
+        expecteddetectors()
+            
+    })
     
     ## read exclusion file
     observe({
         req(input$exclusionfilename)
         req(!exclusionrv$clear)
         exclusionrv$data <- readpolygon(input$exclusionfilename) 
+        optrv$value <- NULL
+        # optrv$message 
     })
     ##############################################################################
     
@@ -2747,7 +3057,7 @@ server <- function(input, output, session) {
         habpolyrv$data <- readpolygon(input$habpolyfilename) 
     })
     ##############################################################################
-
+    
     ## read mask file
     observe({
         req(input$maskfilename)
@@ -2762,7 +3072,7 @@ server <- function(input, output, session) {
                 OK <- try(eval(parse(text = readmaskcall)))
                 if (!inherits(OK, 'mask')) {
                     showNotification("invalid mask file or arguments; try again",
-                             type = "error", id = "badmask", duration = seconds)
+                        type = "error", id = "badmask", duration = seconds)
                 }
                 else {
                     maskrv$data <- OK
@@ -2780,27 +3090,27 @@ server <- function(input, output, session) {
         traprv$clear <- FALSE
     }, priority = 1000)
     ##############################################################################
-
+    
     observeEvent(input$regionfilename, {
         regionrv$clear <- FALSE
     }, priority = 1000)
     ##############################################################################
-
+    
     observeEvent(input$exclusionfilename, {
         exclusionrv$clear <- FALSE
     }, priority = 1000)
     ##############################################################################
-
+    
     observeEvent(input$habpolyfilename, {
         habpolyrv$clear <- FALSE
     }, priority = 1000)
     ##############################################################################
-
+    
     observeEvent(input$maskfilename, {
         maskrv$clear <- FALSE
     }, priority = 1000)
     ##############################################################################
-
+    
     observe({
         if (input$lockxy) {
             updateNumericInput(session, "spx", value = input$spy)
@@ -2891,7 +3201,7 @@ server <- function(input, output, session) {
         ## E[n] == E[r]
         if (!input$autorefresh) {
             showNotification("enable auto refresh",
-                             type = "error", id = "nosuggest", duration = errorduration)
+                type = "error", id = "nosuggest", duration = errorduration)
         }
         else {
             optimalspacing <- n.eq.r()
@@ -2908,7 +3218,7 @@ server <- function(input, output, session) {
         ## E[n] == E[r]
         if (!input$autorefresh) {
             showNotification("enable auto refresh",
-                             type = "error", id = "nosuggestline", duration = errorduration)
+                type = "error", id = "nosuggestline", duration = errorduration)
         }
         else {
             optimalspacing <- n.eq.r()
@@ -2940,14 +3250,14 @@ server <- function(input, output, session) {
         
         ## DOES NOT RESET FILE INPUTS
         ## SEE E.G. https://groups.google.com/forum/#!topic/shiny-discuss/HbTa4v612FA
-
+        
         current$unit <- "ha"
         
         shinyjs::enable("randomorigin")
         shinyjs::enable("chequerboard")
         
         ## array
-
+        
         ## grid
         updateSelectInput(session, "detector", selected = "proximity")
         updateTabsetPanel(session, "arrayinput", selected = "Grid")
@@ -2956,16 +3266,24 @@ server <- function(input, output, session) {
         updateNumericInput(session, "spy", value = 20)
         updateNumericInput(session, "spx", value = 20)
         updateCheckboxInput(session, "hollow", value = FALSE )
-
+        
         ## line
         updateNumericInput(session, "nline", value = 20)
         updateNumericInput(session, "spline", value = 20)
-
+        
+        ## file
+        updateTextInput(session, "trapargs", value = "", 
+            placeholder = "e.g., skip = 1, sep = ','")
+        # updateNumericInput(session, "scalefactor", value = 1.0)
+        
         ## region
-        updateTabsetPanel(session, inputId = "regiontype", selected = "Random")
-        updateNumericInput(session, "sppgrid", value = 200 )
-        updateNumericInput(session, "splace", value = 20 )
-        updateRadioButtons(session, "clustertype", value = "Single detector" )
+        updateTabsetPanel(session, inputId = "regiontype", selected = "Rectangle")
+        updateTabsetPanel(session, inputId = "layouttype", selected = "Random")
+        updateNumericInput(session, "length", value = 500 )
+        updateNumericInput(session, "width", value = 400 )
+        updateNumericInput(session, "sppgrid", value = 30 )
+        updateNumericInput(session, "splace", value = 5 )
+        updateRadioButtons(session, "clustertype", selected = "Single detector" )
         updateNumericInput(session, "rotation", value = 0)
         updateCheckboxInput(session, "lacework", value = FALSE )
         updateCheckboxInput(session, "chequerboard", value = FALSE )
@@ -2973,38 +3291,40 @@ server <- function(input, output, session) {
         updateRadioButtons(session, "randomtype", selected = "SRS")
         updateNumericInput(session, "numpgrid", value = 20)
         updateNumericInput(session, "seedpgrid", value = 0)
-
-        ## file
-        updateTextInput(session, "trapargs", value = "", 
-                        placeholder = "e.g., skip = 1, sep = ','")
-        # updateNumericInput(session, "scalefactor", value = 1.0)
-
+        
+        updateNumericInput(session, "GAminspace", value = 20)
+        updateNumericInput(session, "GAbuffer", value = 0)
+        updateNumericInput(session, "GAngen", value = 50)
+        updateNumericInput(session, "GApopsize", value = 50)
+        updateRadioButtons(session, "GAcriterion", selected = "min(n,r)")
+        updateRadioButtons(session, "GAfile", selected = "region")
+        
         ## parameters
         updateNumericInput(session, "D", "D (animals / ha)", value = 5)
         updateSelectInput(session, "detectfn", selected = "HHN")
         updateNumericInput(session, "lambda0", value = 0.2)
         updateNumericInput(session, "sigma", value = 25)
-
+        
         ## general
         updateTextInput(session, "title", "", value = "",
-                        placeholder = "scenario label for Summary")
+            placeholder = "scenario label for Summary")
         updateNumericInput(session, "noccasions", value = 5)
         updateNumericInput(session, "nrepeats", value = 1)
         updateTabsetPanel(session, "tabs", selected = "Array")
         updateRadioButtons(session, "distributionbtn", selected = "Poisson")
         updateCheckboxInput(session, "autorefresh", value = TRUE)
         # updateCheckboxInput(session, "autoappend", value = FALSE)
-
+        
         ## pop plot
         updateCheckboxInput(session, "showHRbox", "Display 95% home range", value = FALSE)
         updateCheckboxInput(session, "showmaskbox", "Display mask", value = FALSE)
         updateCheckboxInput(session, "onlymaskbox", "Restrict to mask", value = TRUE)
-
+        
         ## power plot
         updateCheckboxInput(session, "adjustRSEbox", value = TRUE)
         updateCheckboxInput(session, "powertype", "95% CI", value = FALSE)
         updateNumericInput(session, "xpos", value = 0)
-
+        
         ## costing
         updateNumericInput(session, "perkm", value = 0)
         updateNumericInput(session, "perarray", value = 0)
@@ -3014,11 +3334,11 @@ server <- function(input, output, session) {
         updateRadioButtons(session, "routetype", selected = "Sequential")
         updateCheckboxInput(session, "returnbox", value = FALSE)
         updateCheckboxInput(session, "setupoccasion", value = TRUE)
-
+        
         ## spacing
         updateTabsetPanel(session, "spacingtabs", selected = "RSE")
         updateCheckboxInput(session, "spacingsimbox", value = FALSE)
-
+        
         ## simulate
         updateNumericInput(session, "nrepl", value = 5)
         updateNumericInput(session, "ncores", value = 1)
@@ -3032,23 +3352,23 @@ server <- function(input, output, session) {
         updateRadioButtons(session, "method", selected = "none")
         updateRadioButtons(session, "packagebtn", selected = "secr.fit")
         updateCheckboxInput(session, "simappendbox", value = TRUE)
-
+        
         updateCheckboxGroupInput(session, "fields1", selected = summaryfields[fieldgroup1])
         updateCheckboxGroupInput(session, "fields2", selected = summaryfields[fieldgroup2])
-
+        
         ## options
         # updateTextInput(session, "savefilename", value = "log.txt")
         # updateCheckboxInput(session, "appendbox", value = TRUE)
-
+        
         ## detector array
         updateCheckboxInput(session, "lockxy", value = TRUE)
         updateCheckboxInput(session, "randomorigin", value = FALSE)
         updateRadioButtons(session, "edgemethod", selected = "clip")
         updateNumericInput(session, "maxupload", value = 5)
         updateRadioButtons(session, "areaunit", selected = "ha")
-
+        
         updateRadioButtons(session, "currency", selected = "$")
-
+        
         ## habitat
         updateNumericInput(session, "habxsigma", value = 4)
         updateNumericInput(session, "habnx", value = 32)
@@ -3058,7 +3378,7 @@ server <- function(input, output, session) {
         updateRadioButtons(session, "includeexcludebtn", selected = "Include")
         
         updateTextInput(session, "maskargs", value = "header = TRUE", placeholder = "e.g., sep = ','")
-
+        
         updateCheckboxInput(session, "scaleD", value = FALSE)
         updateNumericInput(session, "maskcov", value = 0)
         
@@ -3066,22 +3386,22 @@ server <- function(input, output, session) {
         updateCheckboxInput(session, "entireregionbox", value = TRUE)
         updateCheckboxInput(session, "snaptodetector", value = FALSE)
         updateRadioButtons(session, "gridlines", selected = "None")
-
+        
         ## pxy plot
         updateNumericInput(session, "pxyborder", value = 3)
         updateNumericInput(session, "pxynx", value = 64)
         updateCheckboxInput(session, "pxyfillbox", value = TRUE)
         updateCheckboxInput(session, "pxyframebox", value = FALSE)
         updateCheckboxInput(session, "pxylabelbox", value = TRUE)
-
+        
         updateSliderInput(session, "CFslider", value = 1.0)
         updateCheckboxInput(session, "updateCFbox", value = TRUE)
-
+        
         updateNumericInput(session, "maxgreen", value = 15)
         updateNumericInput(session, "maxamber", value = 20)
         
         updateRadioButtons(session, "powerplotbtn", selected = "Null hypothesis power")
-
+        
         updateNumericInput(session, "alpha", value = 0.05)
         updateNumericInput(session, "target", value = 80)
         updateSelectInput(session, "testtype", selected = "two.sided")
@@ -3099,11 +3419,16 @@ server <- function(input, output, session) {
         traprv$data <- NULL
         traprv$clear <- TRUE
         reset('trapfilename')
-
+        
         regionrv$data <- NULL
+        regionrv$area <- NULL
         regionrv$clear <- TRUE
         reset('regionfilename')
         
+        optrv$value <- NULL
+        optrv$message <- ""
+        optrv$OK <- TRUE
+
         exclusionrv$data <- NULL
         exclusionrv$clear <- TRUE
         reset('exclusionfilename')
@@ -3111,7 +3436,7 @@ server <- function(input, output, session) {
         habpolyrv$data <- NULL
         habpolyrv$clear <- TRUE
         reset('habpolyfilename')
-
+        
         maskrv$data <- NULL
         maskrv$clear <- TRUE
         reset('maskfilename')
@@ -3131,7 +3456,7 @@ server <- function(input, output, session) {
     
     observeEvent(input$areaunit, ignoreInit = TRUE, {
         new.unit <- isolate(input$areaunit)
-         if (new.unit != current$unit) {
+        if (new.unit != current$unit) {
             if (new.unit=="ha") {
                 newD <- isolate(input$D)/100
             }
@@ -3142,7 +3467,7 @@ server <- function(input, output, session) {
             current$unit <- new.unit
         }
     })
-
+    
     observeEvent(input$alpha, {
         updateCheckboxInput(session, "powertype", label = paste0(
             round(100 *(1-input$alpha), 1), "% CI"))
@@ -3151,14 +3476,14 @@ server <- function(input, output, session) {
     observeEvent(input$chequerboard, {
         if (input$chequerboard && compareVersion(as.character(secrversion), '3.2.0') < 0) {
             showNotification("chequerboard requires secr version >= 3.2.0",
-                             type = "error", id = "oldsecr", duration = errorduration)
+                type = "error", id = "oldsecr", duration = errorduration)
             updateCheckboxInput(session, "chequerboard", value = FALSE)
         }
     })
     
     observeEvent(input$spacingbtn, {
         if (input$spacingsimbox) {
-        
+            
             ## time check 2018-12-05
             methodfactor <- 1 + ((input$method != "none") * 4)
             functionfactor <- 4
@@ -3185,7 +3510,7 @@ server <- function(input, output, session) {
     observeEvent(input$model2D, {
         if (input$model2D == 'cluster') {
             if (input$details == '') {
-            updateTextInput(session, "details", value = 'mu = 1, hsigma = 0')
+                updateTextInput(session, "details", value = 'mu = 1, hsigma = 0')
             }
         }
         else if (input$model2D %in% c('poisson','even')) {
@@ -3198,7 +3523,6 @@ server <- function(input, output, session) {
     observeEvent(c(input$simulatebtn, input$simulatebtn2), ignoreInit = TRUE, {
         ## ignoreInit blocks initial execution when simulatebtn2 goes from NULL to 0
         if (!is.null(detectorarray())) {
-            ## removeNotification("lownr")
             methodfactor <- 1 + ((input$method != "none") * 4)
             functionfactor <- switch(input$packagebtn, secr.fit = 4, 0.1)
             detectorfactor <- switch(input$detector, proximity = 1, single = 0.6, multi = 0.6, count = 4)
@@ -3220,9 +3544,9 @@ server <- function(input, output, session) {
     ##############################################################################
     
     observeEvent(c(input$D, input$detectfn, input$lambda0, input$sigma, 
-                   input$noccasions, input$nrepeats, input$distributionbtn), {
-        simrv$current <- FALSE
-    })
+        input$noccasions, input$nrepeats, input$distributionbtn), {
+            simrv$current <- FALSE
+        })
     
     ##############################################################################
     
@@ -3262,9 +3586,9 @@ server <- function(input, output, session) {
         RSE <- nrm()$rotRSE * input$CFslider
         Em <- nrm()$Em
         colour <- trafficlight(attr(detectorarray(), "arrayspan"), 
-                               input$sigma, 
-                               Em,
-                               RSE)
+            input$sigma, 
+            Em,
+            RSE)
         trafficNotification (colour, RSE, Em)        
     })
     ##############################################################################
@@ -3276,9 +3600,9 @@ server <- function(input, output, session) {
         RSE <- approx(R, rotrv$output$rotRSE$values$RSE, Rout)$y
         Em <- approx(R, rotrv$output$rotRSE$values$m, Rout)$y
         colour <- trafficlight(attr(detectorarray(), "arrayspan") * Rout,
-                               input$sigma, 
-                               Em, 
-                               RSE)
+            input$sigma, 
+            Em, 
+            RSE)
         trafficNotification (colour, RSE, Em)        
     })
     ##############################################################################
@@ -3289,9 +3613,61 @@ server <- function(input, output, session) {
     })
     
     ##############################################################################
-    observeEvent(input$randomarraybtn, ignoreInit = TRUE, {
-        # invalidates detectorarray when button pressed
-        arrrv$v <- arrrv$v + 1
+    # observeEvent(input$randomarraybtn, ignoreInit = TRUE, {
+    #     # invalidates detectorarray when button pressed
+    #     arrrv$v <- arrrv$v + 1
+    # })
+
+    
+    ##############################################################################
+    observeEvent(input$optimizebtn, ignoreInit = TRUE, {
+        
+        if (!is.null(edetrv$alltrapsmask) && 
+                nrow(edetrv$alltrapsmask) > 10*input$maxdetectors) {
+            optrv$value <- NULL
+            optrv$message <- "requested potential locations exceed maximum"
+        }
+        else {
+            temppoly <- regionrv$data
+            if (input$GAbuffer != 0) temppoly <- sf::st_buffer(temppoly, input$GAbuffer)
+            msk <- make.mask(buffer = 0, nx = input$habnx, type = 'polygon', poly = temppoly)
+            alltraps <- read.traps(data = edetrv$alltrapsmask, detector = input$detector)
+            
+            detectpar <- list(lambda0 = input$lambda0, sigma = input$sigma)
+            optrv$value <- NULL  # wipe clean
+            progress <- Progress$new(session, min = 1, max = 15)
+            on.exit(progress$close())
+            progress$set(message = 'Optimizing...', detail = '')
+            
+            ntrps <- input$numpgrid
+            if (ntrps > 0) {
+                # https://stackoverflow.com/questions/30474538/possible-to-show-console-messages-written-with-message-in-a-shiny-ui
+                # is only for messages
+                msg <- capture.output( 
+                    optrv$value <- GAoptim (
+                        mask       = msk,
+                        alltraps   = alltraps,
+                        ntraps     = ntrps, 
+                        detectpar  = detectpar, 
+                        noccasions = input$noccasions, 
+                        detectfn   = input$detectfn,
+                        D          = input$D,
+                        criterion  = if (input$GAcriterion=='min(n,r)') 4 else 5, 
+                        penalty    = NULL,
+                        seed       = if (input$seedpgrid == 0) NULL else input$seedpgrid,
+                        ngen       = input$GAngen,
+                        popsize    = input$GApopsize, 
+                        verbose    = 1)
+                )
+                msg <- msg[length(msg)]  # last one
+                msg <- gsub("  ", " ", msg, fixed = TRUE)
+                msg <- gsub(" .", ".", msg, fixed = TRUE)
+                optrv$message <- substring(msg, 1, nchar(msg)-4)  # reduce dec.places
+                
+                optrv$OK <- (input$GAcriterion=='n2' || (abs(diff(optrv$value$optimalenrm[1:2]))<=1))
+            }
+            else optrv$message <- ""
+        }
     })
     
     ##############################################################################
@@ -3307,11 +3683,11 @@ server <- function(input, output, session) {
             if (compareVersion(as.character(secrversion), '4.1.1') < 0) {
                 updateCheckboxInput(session, "lacework", value = FALSE)
                 showNotification("Lacework requires secr > 4.1.0",
-                                  type = "warning", id = "nolacework", duration = NULL)
+                    type = "warning", id = "nolacework", duration = NULL)
             }
             else {
                 updateRadioButtons(session, "clustertype", choices = 
-                                       c("Single detector"), selected = "Single detector")
+                        c("Single detector"), selected = "Single detector")
                 updateCheckboxInput(session, "randomorigin", "Random origin", TRUE)
                 shinyjs::disable("chequerboard")
                 shinyjs::disable("randomorigin")
@@ -3319,8 +3695,8 @@ server <- function(input, output, session) {
         }
         else {
             updateRadioButtons(session, "clustertype", choices = 
-                                   c("Single detector", "Grid", "Line", "File"), 
-                               selected = "Single detector")
+                    c("Single detector", "Grid", "Line", "File"), 
+                selected = "Single detector")
             shinyjs::enable("chequerboard")
             shinyjs::enable("randomorigin")
         }
@@ -3366,13 +3742,13 @@ server <- function(input, output, session) {
     observeEvent(c(input$arrayinput, input$resetCFbtn), {
         if (input$arrayinput != "Region") {
             removeNotification(id = "nofile")
-            removeNotification(id = "norgdal")
+            removeNotification(id = "nosf")
         }
         if (input$arrayinput=="Line" || 
-            (input$arrayinput=="Region" & input$clustertype=="Line")) 
+                (input$arrayinput=="Region" & input$clustertype=="Line")) 
             CF <- 1.3
         else if ((input$arrayinput=="Grid" & input$hollow) ||
-                 (input$arrayinput=="Region" & input$clustertype=="Grid" & input$hollow))
+                (input$arrayinput=="Region" & input$clustertype=="Grid" & input$hollow))
             CF <- 1.2
         else 
             CF <- 1.0
@@ -3397,16 +3773,16 @@ server <- function(input, output, session) {
         
         xy <- c(input$pxyclick$x, input$pxyclick$y)
         if ((xy[2] < (min(trps$y) - border)) ||
-            (xy[2] > (max(trps$y) + border)) ||
-            (xy[1] < (min(trps$x) - border)) ||
-            (xy[1] > (max(trps$x) + border)) ) {
+                (xy[2] > (max(trps$y) + border)) ||
+                (xy[1] < (min(trps$x) - border)) ||
+                (xy[1] > (max(trps$x) + border)) ) {
             pxyrv$value <- NULL
         }
         else {
             Pxy <- pdot (xy, trps,
-                         detectfn = input$detectfn,
-                         detectpar = list(lambda0 = input$lambda0, sigma = input$sigma),
-                         noccasions = input$noccasions)
+                detectfn = input$detectfn,
+                detectpar = list(lambda0 = input$lambda0, sigma = input$sigma),
+                noccasions = input$noccasions)
             pxyrv$xy <-xy
             pxyrv$value <- Pxy}
     })
@@ -3438,7 +3814,7 @@ server <- function(input, output, session) {
     })
     
     ##############################################################################
-
+    
     output$trapsUploaded <- reactive({
         return(!is.null(detectorarray()))
     })
@@ -3472,6 +3848,7 @@ server <- function(input, output, session) {
     # spacingPrint2
     # simPrint 
     # maskPrint
+    # GAprint
     
     ##############################################################################
     
@@ -3492,11 +3869,11 @@ server <- function(input, output, session) {
             
             if (input$spacingsimbox) {
                 simulationargs <- paste0(",\n    fit.function = '", input$packagebtn, "',\n",
-                                         "    simulationR = seq(", input$fromR, ", ", input$toR, ", ", input$simbyR, "),\n",
-                                         "    nrepl = ", input$nrepl, ", ",
-                                         "ncores = ", input$ncores, ",\n",
-                                         "    method = '", input$method, "', ",
-                                         "seed = ", if (input$seed==0) "NULL" else input$seed
+                    "    simulationR = seq(", input$fromR, ", ", input$toR, ", ", input$simbyR, "),\n",
+                    "    nrepl = ", input$nrepl, ", ",
+                    "ncores = ", input$ncores, ",\n",
+                    "    method = '", input$method, "', ",
+                    "seed = ", if (input$seed==0) "NULL" else input$seed
                 )
             }
             else
@@ -3524,8 +3901,8 @@ server <- function(input, output, session) {
     
     output$nrmlegend <- renderText ({
         paste0("Expected number of individuals n\n",
-               "Expected number of recaptures r\n",
-               "Expected number of movement recaptures m\n")
+            "Expected number of recaptures r\n",
+            "Expected number of movement recaptures m\n")
     })
     
     ##############################################################################
@@ -3551,8 +3928,8 @@ server <- function(input, output, session) {
                 )
             fit <- input$packagebtn %in% c("secr.fit")
             countcode <- if (fit) {
-                    if (compareVersion(as.character(secrdesignversion), '2.6.0') < 0) "" else "summary(count(sims))$OUTPUT[[1]]\n" 
-                } else
+                if (compareVersion(as.character(secrdesignversion), '2.6.0') < 0) "" else "summary(count(sims))$OUTPUT[[1]]\n" 
+            } else
                 paste0(
                     "sumc <- function(x) {\n",
                     "    c(n = sum(!is.na(x)),\n",
@@ -3562,13 +3939,13 @@ server <- function(input, output, session) {
             
             fitcode <- if (fit)
                 paste0("output <- summary(predict(sims), fields = c('n', 'mean','se','sd'))$OUTPUT[[1]]\n",
-                       "c(sims$proctime,\n",
-                       ## RBcode,  suppress until nrepeat bug fixed 2019-02-15
-                       "  RSE = output['RSE','mean'] * 100,\n",
-                       "  RSEse = output['RSE','se'] * 100,\n",
-                       "  empiricalRSE = output['RB','sd'] * 100\n",")")
+                    "c(sims$proctime,\n",
+                    ## RBcode,  suppress until nrepeat bug fixed 2019-02-15
+                    "  RSE = output['RSE','mean'] * 100,\n",
+                    "  RSEse = output['RSE','se'] * 100,\n",
+                    "  empiricalRSE = output['RB','sd'] * 100\n",")")
             else ""
-
+            
             paste0(
                 "library(secrdesign)\n\n",
                 
@@ -3593,9 +3970,9 @@ server <- function(input, output, session) {
                 "    fit = ", fit, 
                 ", extractfn = summary, ",
                 if (fit) paste0("fit.function = '", input$packagebtn, "', \n",
-                                "    fit.args = list(detectfn = '", input$detectfn, "', ",
-                                "method = '", input$method, "',\n", 
-                                "        ", distncode, "),\n")
+                    "    fit.args = list(detectfn = '", input$detectfn, "', ",
+                    "method = '", input$method, "',\n", 
+                    "        ", distncode, "),\n")
                 else paste0("terse = TRUE, moves = true, \n"),
                 
                 "    ncores = ", input$ncores, ", ",
@@ -3614,7 +3991,8 @@ server <- function(input, output, session) {
         gr <- detectorarray()
         glength <- attr(gr, "arrayspan")
         if (!is.null(gr)) {
-            if (input$arrayinput=='Region' & input$clustertype %in% c("Grid", "Line")) {
+            if (input$arrayinput=='Region' && input$clustertype %in% c("Grid", "Line")
+                && input$layouttype %in% c("Random","Systematic") ) {
                 if (nrow(gr)==0)
                     ncluster <- 0
                 else
@@ -3632,17 +4010,26 @@ server <- function(input, output, session) {
             else 
                 ratio <- round(ratio,2)
             paste0(nrow(gr), " ", input$detector, " detectors", clustertext, 
-                   "; ", cr, "diameter ", lengthstr(glength), " (", ratio, " HR95) ")
+                "; ", cr, "diameter ", lengthstr(glength), " (", ratio, " HR95) ")
         }
         else ""
     })
     ##############################################################################
     
+    output$GAprint <- renderText({
+        optrv$message
+    })
+    
+    output$GAmsgprint <- renderText({
+        if (optrv$message == "") ""
+        else if (!optrv$OK) "GA min(n,r) did not achieve n = r: increase ngen or popsize?"
+    })
+    
     output$nrmPrint <- renderText({
         progress <- Progress$new(session, min = 1, max = 15)
         on.exit(progress$close())
         progress$set(message = 'Refreshing...',
-                     detail = '')
+            detail = '')
         nrmval <- nrm()
         if (is.null(nrmval)) return (NULL)
         star <- if (nrepeats()>1) "*" else ""
@@ -3650,15 +4037,15 @@ server <- function(input, output, session) {
         Pxyval <- Pxy()
         
         k <- density()^0.5 * input$sigma / 100
-        kstr <- if (input$detectfn=="HHN") paste0(
-            "Overlap coefficient k = ",
-            round(density()^0.5 * input$sigma / 100,3), '\n')
-        else ""
-        
+        # kstr <- if (input$detectfn=="HHN") paste0(
+        #     "Overlap coefficient k = ",
+        #     round(density()^0.5 * input$sigma / 100,3), '\n')
+        # else ""
+         
         esastr <- paste0("Effective sampling area = ",
             areastr(nrmval$esa), star, " (mask ", 
             areastr(nrmval$maskarea * nrepeats()), star, ")\n")
-
+        
         coststr <- if (is.null(nrmval$totalcost) || is.na(nrmval$totalcost) || (nrmval$totalcost<=0))
             ""
         else
@@ -3667,52 +4054,48 @@ server <- function(input, output, session) {
         rotstr <- paste0("Approximate RSE = ",
             round(nrmval$rotRSE * input$CFslider * 100, 1), "%", star, 
             " (correction factor ", round(input$CFslider,3), ")")
-            
+        
         simstr <- if (is.null(simrv$output) || !simrv$current)
             ""
         else
             paste0("\nSimulated RSE = ", round(simrv$output$RSE, 1), "%", star,
-                   " (SE ",  round(simrv$output$RSEse, 2), "%)")
-            
+                " (SE ",  round(simrv$output$RSEse, 2), "%)")
+        
         empstr <- if (is.null(simrv$output) || !simrv$current || 
-                      input$method == "none" || input$model2D == 'poisson')
+                input$method == "none" || input$model2D == 'poisson')
             ""
         else
             paste0("\nEmpirical RSE = ", round(simrv$output$empRSE, 1), "%", star)
-            
+        
         if (attr(detectorarray(), "arrayspan") < (5 * input$sigma)) {
             showNotification("Pathological design - array span < 5.sigma",
-                             type = "warning", id = "zeronm", duration = NULL)
-        }
-        if (k<0.2 || k>1.5) {
-                showNotification(paste0("Unlikely combination of D and sigma  (k = ", round(k,2), ")"),
-                                 type = "warning", id = "unlikelyk", duration = NULL)
+                type = "warning", id = "lowspan", duration = NULL)
         }
         else {
-            removeNotification("unlikelyk")
+            removeNotification("lowspan")
         }
-            
+        
         if (!any(is.na(c(nrmval$En, nrmval$Er, nrmval$Em)))) {
             if (nrmval$Em<5) {
-                ## removeNotification("lownr")
                 showNotification("Pathological design - E(m) less than 5",
-                                 type = "warning", id = "zeronm", duration = NULL)
+                    type = "warning", id = "lownm", duration = NULL)
             }
             else {
-                removeNotification("zeronm")
+                removeNotification("lownm")
             }
         }
         paste0(
             
             "Expected number of individuals detected n = ", 
             round(nrmval$En,1), star,'\n',
-            "Expected number of recaptures r = ",
+            "Expected number at >=2 detectors       n2 = ",
+            round(nrmval$En2,1), star,'\n',
+            "Expected number of recaptures           r = ",
             round(nrmval$Er,1), star, '\n',
-            "Expected number of movement recaptures m = ",
+            "Expected number of movement recaptures  m = ",
             round(nrmval$Em,1), star,'\n',
             "Median detectors per 95% home range = ", 
             nrmval$detperHR, '\n',
-            kstr,
             esastr,
             rotstr, 
             simstr, 
@@ -3728,7 +4111,7 @@ server <- function(input, output, session) {
             costs <- nrm()
             if (is.null(costs)) {
                 showNotification("costing failed; check parameters",
-                                 type = "error", id = "nocost", duration = errorduration)
+                    type = "error", id = "nocost", duration = errorduration)
                 return("")
             }
             else {
@@ -3736,7 +4119,7 @@ server <- function(input, output, session) {
                 paste0(
                     "  Travel      ", input$currency, " ",
                     round(costs$travel,2), "  (", round(arraypathlength()/1000  * 
-                                                            nocc1 * nrepeats(),3), ' km)\n',
+                            nocc1 * nrepeats(),3), ' km)\n',
                     "  Arrays      ", input$currency, " ",
                     round(costs$arrays,2), "  (", nrepeats(), ") \n",
                     "  Detectors   ", input$currency, " ",
@@ -3758,12 +4141,12 @@ server <- function(input, output, session) {
         if (rotrv$current) {
             temp <- rotrv$output
             paste0("Optimal spacing (relative to sigma) = ",
-                   round(temp$rotRSE$optimum.R,2), '\n',
-                   "Optimal spacing (absolute) = ",
-                   round(temp$rotRSE$optimum.spacing, 1), " m", '\n',
-                   "Minimum approximate RSE = ",
-                   round(temp$rotRSE$minimum.RSE*input$CFslider*100, 1), " %  (correction factor ", 
-                   round(input$CFslider,3), ")")
+                round(temp$rotRSE$optimum.R,2), '\n',
+                "Optimal spacing (absolute) = ",
+                round(temp$rotRSE$optimum.spacing, 1), " m", '\n',
+                "Minimum approximate RSE = ",
+                round(temp$rotRSE$minimum.RSE*input$CFslider*100, 1), " %  (correction factor ", 
+                round(input$CFslider,3), ")")
         }
         else NULL
     })
@@ -3789,36 +4172,39 @@ server <- function(input, output, session) {
             sims <- simrv$output
             out <- paste0(
                 
-                "Number of replicates = ",
+                "Number of replicates        = ",
                 sims$nrepl, "\n",
                 
-                "Time for simulations = ",
+                "Time for simulations        = ",
                 round(sims$proctime,2), " seconds",  "\n",
                 
-                "Number of animals (n) = ",
+                "Number of animals         n = ",
                 round(sims$n,2), " (SE ", round(sims$n.se, 2), ")\n",
-
-                "Number of detections (n+r) = ",
+                
+                "Number at >= 2 detectors n2 = ",
+                round(sims$n2,2), " (SE ", round(sims$n2.se, 2), ")\n",
+                
+                "Number of detections    n+r = ",
                 round(sims$ndet,2), " (SE ", round(sims$ndet.se, 2), ")\n",
-
-                "Number of recaptures (r) = ",
+                
+                "Number of recaptures      r = ",
                 round(sims$ndet-sims$n,2), "\n",
-
-                "Number of moves (m) = ",
+                
+                "Number of moves           m = ",
                 round(sims$nmov,2), " (SE ", round(sims$nmov.se, 2), ")\n")
-            
-            if (sims$fit) {
+    
+    if (sims$fit) {
                 out <- paste0(out,
-                              "Simulated RSE = ",
-                              round(sims$RSE, 2), "%", " (SE ",  round(sims$RSEse, 2), "%)", "\n")
+                "Simulated RSE               = ",
+                    round(sims$RSE, 2), "%", " (SE ",  round(sims$RSEse, 2), "%)", "\n")
                 
                 if (sims$method != "none") {
                     out <- paste0(out,
-                                  "Empirical RSE = ",
-                                  round(sims$empRSE, 2), "%\n")
+                    "Empirical RSE               = ",
+                        round(sims$empRSE, 2), "%\n")
                     out <- paste0(out,
-                                  "Simulated RB = ",
-                                  preplus(round(sims$RB, 2)), "%", " (SE ",  round(sims$RBse, 2), "%)")
+                    "Simulated RB                = ",
+                        preplus(round(sims$RB, 2)), "%", " (SE ",  round(sims$RBse, 2), "%)")
                 }
             }
             out
@@ -3841,30 +4227,63 @@ server <- function(input, output, session) {
     ## costPlot
     ## maskPlot
     
-    ##############################################################################
     
-    output$arrayPlot <- renderPlot( height = 340, width = 340, {
+    output$arrayPlot <- renderPlot( height = 340, width = 500, {   # 340
         tmpgrid <- detectorarray()
-        if (is.null(tmpgrid)) return (NULL)
+        if (is.null(tmpgrid)) {
+            removeNotification("lowspan")
+            removeNotification("lownr")
+            # plot region outline as preliminary
+            if (input$arrayinput=='Region') {
+                if (!is.null(regionrv$data)) {
+                    par(mar = c(1,1,1,1), xpd = TRUE)
+                    if (input$layouttype == 'GA') {
+                        if (!is.null(edetrv$alltrapsmask) && 
+                                (nrow(edetrv$alltrapsmask) < input$maxdetectors*20)) {
+                            temppoly <- regionrv$data
+                            if (input$GAbuffer != 0) {
+                                temppoly <- sf::st_buffer(temppoly, input$GAbuffer)
+                            }
+                            plot(temppoly, border = 'black')
+                            plot(edetrv$alltrapsmask, ppoly = FALSE, cex = 0.7, add = TRUE)
+                            plot(regionrv$data, border = 'black', add = TRUE )
+                        }
+                    }
+                    else {
+                        plot(regionrv$data, border = 'black' )
+                    }
+                }
+            }
+            else {
+                edetrv$ntraps <- NA
+                edetrv$alltrapsmask <- NULL
+            }
+            return (NULL)
+        }
         removeNotification("reloadtraps")
         par(mar = c(1,1,1,1), xpd = TRUE)
         if (input$arrayinput=='Region') {
-            if (input$entireregionbox)
-                sp::plot(regionrv$data)
-            else 
+            if (input$entireregionbox) {
+                plot(regionrv$data)
+                if (input$layouttype == 'GA') {
+                    plot(edetrv$alltrapsmask, ppoly = FALSE, cex = 0.7, add = TRUE)
+                }
+            }
+            else {
                 plot (tmpgrid, gridlines = (input$gridlines != "None"), gridspace = as.numeric(input$gridlines))
+            }
             if (!is.null(exclusionrv$data))
-                sp::plot(exclusionrv$data, add = TRUE, col = 'lightblue', border = 'lightblue')
-            sp::plot(regionrv$data, add = TRUE)
+                plot(exclusionrv$data, add = TRUE, col = 'lightblue', border = 'lightblue')
+            plot(regionrv$data, add = TRUE)
             plot (tmpgrid, add = TRUE,  gridlines = (input$gridlines != "None"), gridspace = as.numeric(input$gridlines))
         }
         else {
             plot (tmpgrid, border = border(1), bty='o', xaxs = 'i', yaxs = 'i',
-                   gridlines = (input$gridlines != "None"), gridspace = as.numeric(input$gridlines))
+                gridlines = (input$gridlines != "None"), gridspace = as.numeric(input$gridlines))
         }
     })
     ##############################################################################
-
+    
     trafficlight <- function(arrayspan, sigma, Em, RSE) {
         if (!is.null(Em)) {
             badarray <- (arrayspan / sigma) < (circular.r(detectfn = input$detectfn)*2)
@@ -3883,16 +4302,16 @@ server <- function(input, output, session) {
     output$trafficlightPlot <- renderPlot( height = 60, width = 20, {
         if (!is.null(nrm())) {
             colour <- trafficlight(attr(detectorarray(), "arrayspan"), 
-                                   input$sigma, 
-                                   nrm()$Em, 
-                                   nrm()$rotRSE*input$CFslider)
+                input$sigma, 
+                nrm()$Em, 
+                nrm()$rotRSE*input$CFslider)
             radius <- 0.45
             par(mar=c(0,0,0,0))
             rect(0,0,20,60, col= grey(0.6), border = NA)
             symbols(x = rep(0.50,3), y = 0.2 + (0:2) * 0.32, circles= rep(radius,3), # fg = grey(0.93), 
-                    bg = grey(0.93), inches = FALSE, add = TRUE)
+                bg = grey(0.93), inches = FALSE, add = TRUE)
             symbols(x = 0.50, y = 0.2 + (colour-1)*0.32, circles= radius, # fg = trafficcols[colour], 
-                    bg = trafficcols[colour], inches = FALSE, add = TRUE)
+                bg = trafficcols[colour], inches = FALSE, add = TRUE)
         }
     })
     
@@ -3908,7 +4327,7 @@ server <- function(input, output, session) {
         plot(tmpgrid, add = TRUE)  ## overplot symbols
         if (!is.null(pathl))
             mtext(side=1, line=1.5, paste0("Length of route = ", round(pathl/1000,3), " km"),
-                  xpd = TRUE, adj = 0.5, cex = 1.1)
+                xpd = TRUE, adj = 0.5, cex = 1.1)
     })
     ##############################################################################
     
@@ -3918,13 +4337,13 @@ server <- function(input, output, session) {
         
         par(mar=c(4,5,2,5))
         detectfnplot (detectfn = input$detectfn,
-                      pars = c(input$lambda0, input$sigma),
-                      xval = 0:(3 * input$sigma),
-                      ylab = "",
-                      hazard = TRUE,       ## 2017-08-28
-                      ylim = c(0, input$lambda0*1.2),
-                      las=1, col = 'red', lwd = linewidth,
-                      xaxs='i', yaxs='i')
+            pars = c(input$lambda0, input$sigma),
+            xval = 0:(3 * input$sigma),
+            ylab = "",
+            hazard = TRUE,       ## 2017-08-28
+            ylim = c(0, input$lambda0*1.2),
+            las=1, col = 'red', lwd = linewidth,
+            xaxs='i', yaxs='i')
         mtext(side = 2, line = 3.7, expression(paste("Detection hazard   ", lambda [0])))
         
         if (input$lambda0 <= 0.7) 
@@ -3970,14 +4389,14 @@ server <- function(input, output, session) {
             # rad <- rep(2.45 * tmpsig, nrow(tmppop))
             rad <- secr::circular.r(p = 0.95, detectfn = input$detectfn, sigma = tmpsig)
             symbols(tmppop$x, tmppop$y, circles = rep(rad, n),
-                    inches = FALSE, fg = grey(0.7), add = TRUE, xpd = FALSE)
+                inches = FALSE, fg = grey(0.7), add = TRUE, xpd = FALSE)
         }
     })
     ##############################################################################
     
     border <- function (multiple) {
         spc <- spacing(detectorarray()) 
-        if (is.null(spc) || is.na(spc)) spc <- input$sigma
+        if (is.null(spc) || is.na(spc) || length(spc) == 0) spc <- input$sigma
         multiple * spc
     }
     
@@ -4014,14 +4433,14 @@ server <- function(input, output, session) {
             drawlabels <- input$pxylabelbox
         
         pdot.contour(core, border = border, nx = input$pxynx,
-                     detectfn = input$detectfn,
-                     detectpar = list(sigma = input$sigma, lambda0 = input$lambda0),
-                     noccasions = input$noccasions, drawlabels = drawlabels,
-                     binomN = NULL, levels = lev, 
-                     poly = if (input$polygonbox) habpolyrv$data else NULL, 
-                     poly.habitat = input$includeexcludebtn == "Include",
-                     plt = TRUE, add = TRUE,
-                     col = col, fill = cols)
+            detectfn = input$detectfn,
+            detectpar = list(sigma = input$sigma, lambda0 = input$lambda0),
+            noccasions = input$noccasions, drawlabels = drawlabels,
+            binomN = NULL, levels = lev, 
+            poly = if (input$polygonbox) habpolyrv$data else NULL, 
+            poly.habitat = input$includeexcludebtn == "Include",
+            plt = TRUE, add = TRUE,
+            col = col, fill = cols)
         plot (core, add = TRUE)
         if (!is.null(pxyrv$value)) {
             xy <- pxyrv$xy
@@ -4036,7 +4455,7 @@ server <- function(input, output, session) {
             # strip.legend("right", legend = seq(0,1,0.1), title = "p.(x)", xpd = TRUE,
             #              legendtype='breaks', inset = 0.01, col = cols[3:12])
             strip.legend("right", legend = c(0,lev[1:10],1), title = "p.(x)", xpd = TRUE,
-                         legendtype='breaks', inset = 0.01, col = cols[1:11])
+                legendtype='breaks', inset = 0.01, col = cols[1:11])
             
         }
     })
@@ -4048,8 +4467,8 @@ server <- function(input, output, session) {
             par(mar=c(4,4,2,2), mgp=c(2.4,0.7,0))
             headroom <- (input$maxEffect-input$minEffect)/4
             powLU <- plotpowerCI(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
-                                 estimatedRange = c(input$minEffect, input$maxEffect+headroom),
-                                 adjustRSE = input$adjustRSEbox, alpha = input$alpha)
+                estimatedRange = c(input$minEffect, input$maxEffect+headroom),
+                adjustRSE = input$adjustRSEbox, alpha = input$alpha)
             x <- input$xpos 
             y1 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,1,1], xout = x)$y*100-100
             y2 <- approx(x = as.numeric(dimnames(powLU$limits)[[1]]), y = powLU$limits[,2,1], xout = x)$y*100-100
@@ -4059,9 +4478,9 @@ server <- function(input, output, session) {
         else {
             par(mar=c(4,4,3,1))
             powLU <- plotpower(RSE = RSE, effectRange=c(input$minEffect, input$maxEffect),
-                               adjustRSE = input$adjustRSEbox, alpha = input$alpha,
-                               testtype = input$testtype,
-                               targetpower = input$target)
+                adjustRSE = input$adjustRSEbox, alpha = input$alpha,
+                testtype = input$testtype,
+                targetpower = input$target)
         }
         ## text (110, 10, paste0("RSE = ", round(100*RSE,1), "%") )
     })
@@ -4073,7 +4492,7 @@ server <- function(input, output, session) {
         if (rotrv$current){
             par(mar=c(5,6,3,6))      
             plot(rotrv$output, plottype = "RSE", col = "blue", lwd = linewidth, cex = 1.1,
-                 ylab = expression(paste("Approximate RSE ", hat(italic(D)))))
+                ylab = expression(paste("Approximate RSE ", hat(italic(D)))))
             ## traffic lights 2019-02-11
             if (input$trafficlightbox) {
                 R <- rotrv$output$rotRSE$values$R
@@ -4082,7 +4501,7 @@ server <- function(input, output, session) {
                 arrayspan <- attr(detectorarray(), 'arrayspan') * R
                 lights <- trafficlight(arrayspan, input$sigma, Em, RSE)
                 symbols(R, y = rep(0,length(R)), inches=FALSE, circles = rep(0.06, length(R)), 
-                        bg = trafficcols[lights], add = TRUE, xpd = TRUE)
+                    bg = trafficcols[lights], add = TRUE, xpd = TRUE)
             }
         }
         else NULL
@@ -4102,18 +4521,18 @@ server <- function(input, output, session) {
         if (rotrv$current){
             par(mar=c(5,5,3,5))
             cc <- cost(rotrv$output, costs = list(perkm = input$perkm,
-                                                  perarray = input$perarray,
-                                                  perdetector = input$perdetector,
-                                                  pervisit = input$pervisit,
-                                                  perdetection = input$perdetection))
+                perarray = input$perarray,
+                perdetector = input$perdetector,
+                pervisit = input$pervisit,
+                perdetection = input$perdetection))
             maxx <- max(cc$R)
             maxy <- max(cc$totalcost) * 1.2
             par(cex = 1.1)
             defaultargs <- list(x = 0, y = 0, type = "n", las = 1,
-                                xlab = expression(paste("Spacing -  ", sigma, "  units")),
-                                ylab = paste("Cost", input$currency),
-                                ylim = c(0, maxy),
-                                xlim = c(0, maxx))
+                xlab = expression(paste("Spacing -  ", sigma, "  units")),
+                ylab = paste("Cost", input$currency),
+                ylim = c(0, maxy),
+                xlim = c(0, maxx))
             
             do.call(plot, defaultargs)
             x <- c(cc$R, rev(cc$R))
@@ -4122,14 +4541,14 @@ server <- function(input, output, session) {
             y <- c(cc$detrcost + cc$arraycost, rev(cc$detrcost))
             polygon(x, y, col='blue')
             y <- c(cc$detrcost + cc$arraycost + (cc$pathcost + cc$visitcost), 
-                   rev(cc$detrcost + cc$arraycost))
+                rev(cc$detrcost + cc$arraycost))
             polygon(x, y, col='orange')
             y <- c(cc$totalcost, rev(cc$detrcost + (cc$pathcost + cc$visitcost) + cc$arraycost))
             polygon(x, y, col='yellow')
             y <- c(cc$totalcost, rep(0, nrow(cc)))
             polygon(x, y, col=NA)
             legend (x = "top", legend = c("detectors","arrays","travel","detections"),
-                    fill = c("green","blue","orange","yellow"), horiz = TRUE, cex=0.9)
+                fill = c("green","blue","orange","yellow"), horiz = TRUE, cex=0.9)
         }
         else NULL
     })
@@ -4146,7 +4565,7 @@ server <- function(input, output, session) {
             plot (msk, add = TRUE, col = grey(0.94 - input$dotsbox/5), dots = input$dotsbox)
             plot (core, add = TRUE)
             if (!is.null(habpolyrv$data) && input$polygonbox) {
-                sp::plot(habpolyrv$data, add = TRUE)
+                plot(habpolyrv$data, add = TRUE)
             }
         }
         else {
@@ -4154,7 +4573,7 @@ server <- function(input, output, session) {
                 if (input$maskcov == 0) {
                     cov <- NULL
                     plot (msk, col = grey(0.94 - input$dotsbox/5), dots = input$dotsbox,
-                          covariate = cov)
+                        covariate = cov)
                 }
                 else {
                     covar <- covariates(msk)
@@ -4237,11 +4656,11 @@ server <- function(input, output, session) {
         }
         , contentType = "text/R"
     )
-   
+    
     outputOptions(output, "validspacing", suspendWhenHidden = FALSE)
     outputOptions(output, "trapsUploaded", suspendWhenHidden = FALSE)
     outputOptions(output, "maskUploaded", suspendWhenHidden = FALSE)
-
+    
     ##############################################################################
     # tidy end of session - app closes in R
     # ?apparently incompatible with bookmarking 2019-01-17
@@ -4251,12 +4670,13 @@ server <- function(input, output, session) {
     # })
     
     ##############################################################################
-
+    
     setBookmarkExclude(c("simulatebtn", "simulatebtn2", "spacingbtn", "appendbtn",
-                         "clearallbtn", "clearlastbtn", "selectnonebtn", "selectallbtn",
-                         "suggestbtn", "suggestlinebtn", "suggestfilebtn",
-                         "resetbtn", "routebtn", "randompopbtn", "randomarraybtn", 
-                         "selectfieldsbtn", "selecting"))
+        "clearallbtn", "clearlastbtn", "selectnonebtn", "selectallbtn",
+        "suggestbtn", "suggestlinebtn", "suggestfilebtn",
+        "resetbtn", "routebtn", "randompopbtn", 
+        # "randomarraybtn", 
+        "selectfieldsbtn", "selecting"))
     
     # Save extra values in state$values when we bookmark
     onBookmark(function(state) {
@@ -4276,7 +4696,7 @@ server <- function(input, output, session) {
         updateNumericInput(session, "D", paste0("D (animals / ", input$areaunit, ")"))
     })
     ##############################################################################
-
+    
     ## use parameters provided in calling url
     observe({
         query <- parseQueryString(session$clientData$url_search)

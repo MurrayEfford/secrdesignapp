@@ -1,0 +1,24 @@
+# Detector locations exported from 
+# array <- GAoptim(mask = msk, alltraps = alltraps, ntraps = 20, detectpar = list(lambda0 = 0.2, sigma = 25), noccasions = 5, detectfn = HHN, D = 5, criterion = 4, penalty = NULL, seed = NULL, ngen = 50, popsize = 50)
+# Wed Oct 26 8:27:06 p.m. 2022 
+# Detector  x  y 
+227 230 30
+260 190 50
+261 210 50
+264 270 50
+266 310 50
+296 210 70
+298 250 70
+299 270 70
+329 170 90
+330 190 90
+332 230 90
+367 230 110
+368 250 110
+400 190 130
+402 230 130
+407 330 130
+470 190 170
+501 110 190
+623 450 250
+689 370 290

@@ -66,3 +66,52 @@ tr {
   left: calc(80%);
   top: calc(95%);
 }
+
+#GAprint{
+color: blue;
+font-size: 10px;
+height:30px;
+margin-left: 20px;
+margin-right: 20px;
+}
+
+#GAmsgprint{
+color: red;
+font-size: 10px;
+height:22px;
+margin-left: 10px;
+margin-right: 10px;
+}
+
+.mypanel{
+margin-top:8px; 
+margin-bottom:10px; 
+margin-left:5px;
+padding-top:10px; 
+padding-bottom: 5px; 
+padding-left: 10px; 
+padding-right: 12px; 
+border: 5px solid gray; 
+border-width: thin;
+}
+
+.checkbox{
+padding-top:1px; 
+padding-bottom:1px; 
+margin-top:1px;
+margin-bottom:1px;
+}
+
+.action-button{
+margin-left:6px;
+background-color: CornSilk;
+}
+
+.shiny-input-container{
+margin-left:6px;
+margin-right:6px;
+}
+
+.number{
+width:120px;
+}
