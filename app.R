@@ -538,14 +538,14 @@ ui <- function(request) {
                                 wellPanel(class = "mypanel", 
                                     fluidRow(
                                         column(6, 
-                                            numericInput("habxsigma", "Buffer width (x sigma)",
+                                            numericInput("habxsigma", "buffer width (x sigma)",
                                                 min = 0,
                                                 max = 20,
                                                 value = 4,
                                                 step = 0.5,
                                                 width = 180)),
                                         column(6,
-                                            numericInput("habnx", "Mesh dimension nx",
+                                            numericInput("habnx", "mesh dimension nx",
                                                 min = 10,
                                                 max = 1000,
                                                 value = 32,
@@ -559,7 +559,7 @@ ui <- function(request) {
                                     ),
                                     fluidRow(
                                         column(12, 
-                                            radioButtons("maskshapebtn", label = "Shape",
+                                            radioButtons("maskshapebtn", label = "shape",
                                                 choices = c("Rectangular", "Trap buffer"), 
                                                 selected = "Trap buffer", inline = TRUE)
                                         )
@@ -567,14 +567,14 @@ ui <- function(request) {
                                 ),
                                 wellPanel(class = "mypanel", 
                                     div(style="height: 80px;",
-                                        fileInput("habpolyfilename", "Mask polygon file(s)",
+                                        fileInput("habpolyfilename", "mask polygon file(s)",
                                             accept = c('.shp','.dbf','.sbn','.sbx',
                                                 '.shx',".prj", ".txt", ".rdata", ".rda", ".rds"), 
                                             multiple = TRUE)),
                                     uiOutput("habitatfile"),
                                     fluidRow(
                                         column(10, 
-                                            checkboxInput("polygonbox", "Clip to polygon(s)", value = TRUE),
+                                            checkboxInput("polygonbox", "clip to polygon(s)", value = TRUE),
                                             radioButtons("includeexcludebtn", label = "",
                                                 choices = c("Include", "Exclude"), 
                                                 selected = "Include", inline = TRUE)
@@ -2967,7 +2967,8 @@ server <- function(input, output, session) {
             }
             else if (input$layouttype == 'GA') {
                 if (input$GAfile =='region') {
-                    edetrv$alltrapsmask <- make.mask(spacing = input$GAminspace, type = 'polygon', poly = regionrv$data)
+                    edetrv$alltrapsmask <- make.mask(spacing = input$GAminspace, 
+                        type = 'polygon', poly = regionrv$data)
                 }
                 else {
                     if (is.null(traprv$data)) {
