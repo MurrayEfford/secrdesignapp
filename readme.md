@@ -29,7 +29,7 @@ Simulations may run faster on your own machine, and the GitHub version is always
 library(shiny)
 runGitHub("secrdesignapp", "MurrayEfford")
 ```
-Version 1.6 requires secr >= 4.2.0 and secrdesign >= 2.7.0. Various other R packages may be needed for specific operations.
+Version 1.6 requires secr >= 4.5.8 and secrdesign >= 2.7.0. Various other R packages may be needed for specific operations.
 
 If you intend to use bookmarking on your local machine to store the state of `secrdesignapp` then specify the 'port' and 'destdir' arguments, e.g.,
 
