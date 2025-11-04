@@ -1,4 +1,4 @@
-# secrdesignapp 1.6
+# secrdesignapp 2.0
 
 secrdesignapp is a partial interactive interface to the R package [secrdesign](https://CRAN.R-project.org/package=secrdesign). See the Help tab for details.
 
@@ -19,6 +19,8 @@ Version 1.5 (January 2022) has minor updates in the Help file and suppresses GRT
 
 Version 1.6 (October 2022) adds support for optimization of detector placement by a genetic algorithm (Durbach et al. 2021) and restores GRTS random samples that now available again in **secr**.
 
+Version 2.0 (November 2025) has minor adjustments for recent **secr**, **secrdesign** versions.
+
 Click this link to run secrdesignapp 1.5 in your web browser from a University of Otago server:
 
 [secrdesignapp](https://www.stats.otago.ac.nz/secrdesignapp)
@@ -29,7 +31,7 @@ Simulations may run faster on your own machine, and the GitHub version is always
 library(shiny)
 runGitHub("secrdesignapp", "MurrayEfford")
 ```
-Version 1.6 requires secr >= 4.5.8 and secrdesign >= 2.7.0. Various other R packages may be needed for specific operations.
+Version 2.0 requires secr >= 5.3.0 and secrdesign >= 2.10.0. Various other R packages may be needed for specific operations.
 
 If you intend to use bookmarking on your local machine to store the state of `secrdesignapp` then specify the 'port' and 'destdir' arguments, e.g.,
 
