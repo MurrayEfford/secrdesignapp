@@ -7,7 +7,7 @@ See the internal Help tab for details.
 
 ### Usage
 
-Click this link to run [secrdesignapp](https://www.stats.otago.ac.nz/secrdesignapp) version 1.5 in your web browser from a University of Otago server without installing it locally (2.0 will follow soon):
+Click this link to run [secrdesignapp](https://www.stats.otago.ac.nz/secrdesignapp) version 1.5 in your web browser from a University of Otago server without installing it locally (2.0 will follow soon).
 
 It may be better to run **secrdesignapp** on your own machine: simulations may run faster, and you can install the latest the GitHub version. 
 Also, there is a limit to the number of simultaneous users on the server.
