@@ -72,6 +72,7 @@ capture--recapture. R package version 2.10.0.
 Efford, M. G. (2025b) The SECR Book. A handbook of spatially explicit capture&ndash;recapture methods. Version 1.0.1.
 Zenodo 15109938. Latest version online at https://murrayefford.github.io/SECRbook/.
 
-Efford, M. G. and Boulanger, J. (2019) Fast evaluation of study designs for spatially explicit capture--recapture. *Methods in Ecology and Evolution* **10**, 1529--1535.
+Efford, M. G. and Boulanger, J. (2019) Fast evaluation of study designs for spatially explicit capture--recapture. 
+*Methods in Ecology and Evolution* **10**, 1529--1535.  https://doi.org/10.1111/2041-210X.13239
 
 [SECR book]: https://murrayefford.github.io/SECRbook/
