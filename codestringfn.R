@@ -27,9 +27,6 @@ getSPcode <- function (inputfilename, varname, apply = TRUE) {
         else {
             code <- paste0(
                 "# ESRI polygon shapefile\n",
-                # varname, " <- rgdal::readOGR(dsn = '", 
-                # tools::file_path_sans_ext(basename(filename)), 
-                # ".shp')\n"
                 varname, " <- sf::st_read('", 
                 tools::file_path_sans_ext(basename(filename)), 
                 ".shp')\n"

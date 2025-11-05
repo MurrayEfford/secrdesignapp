@@ -330,12 +330,6 @@ readpolygon <- function (fileupload) {
         objlist <- load(fileupload[1,4])
         obj <- get(objlist[1])
       }
-      # if (is.matrix(obj))
-      #     poly <- secr::boundarytoSF(obj[,1:2])
-      # else if (inherits(obj, "SpatialPolygons"))
-      #     poly <- obj
-      # else stop("unrecognised boundary object in ", objlist[1])
-      
       poly <- secr::boundarytoSF(obj)
     }
     else {
@@ -358,8 +352,6 @@ readpolygon <- function (fileupload) {
         file.copy(from = fileupload[,4], 
                   to = paste0(dsnname, "/temp.", tools::file_ext(fileupload[,4])),     
                   overwrite = TRUE)
-        layername <- "temp"
-        # poly <- rgdal::readOGR(dsn = dsnname, layer = layername)
         poly <- sf::st_read(dsnname)  
       }
     }
