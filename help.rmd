@@ -38,7 +38,7 @@ The application focuses on the effect of detector layout and other design variab
 
 The RSE approximation is biased low for some layouts, especially when sample size is small. A correction factor may be applied to adjust the approximation. Refine the approximation by [simulating](#simspecs) data from the chosen design; this may take a long time. The correction factor is updated automatically from simulation results (see Options to suppress this). Use "Add to summary" to include the current scenario in a spreadsheet for export.
 
-Documentation for **secrdesign** is available at www.otago.ac.nz/density. For example:
+Documentation for **secrdesign** is available at www.otago.ac.nz/density and in the [SECR Book]. For example:
 
 [secrdesign-manual.pdf] &nbsp;                         (details of each function)  
 [secrdesign-tools.pdf]  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (optimal spacing etc.)    
