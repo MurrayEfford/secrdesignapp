@@ -222,13 +222,15 @@ plotpowerCI <- function (RSE = seq(0.05,0.25,0.05), effectRange = c(-99,150),
 ##############################################################################
 
 addsequence <- function (trps, routetype) {
-  if (tolower(routetype) == "sequential")
-    seq <- 1:nrow(trps)
+  if (tolower(routetype) == "sequential") {
+      manualroute$seq <- NULL
+      seq <- 1:nrow(trps)
+  }
   else {
-    if (tolower(routetype) == "manual")
-      seq <- manualroute$seq
-    else
-      seq <- NA
+      if (tolower(routetype) == "manual")
+          seq <- manualroute$seq
+      else
+          seq <- NA
   }
   attr(trps, "seq") <- seq
   trps
