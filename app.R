@@ -73,7 +73,7 @@ server <- function(input, output, session) {
     source('observeEvent.R',    local = TRUE)
     source('observe.R',         local = TRUE)
     source('downloadHandler.R', local = TRUE)
-    source('bookmark.R',        local = TRUE)
+    # source('bookmark.R',        local = TRUE)   # disabled 2025-11-10
 
     output$selectingfields <- renderText('false')
 
@@ -87,11 +87,11 @@ server <- function(input, output, session) {
     
     ##############################################################################
     # tidy end of session - app closes in R
-    # ?apparently incompatible with bookmarking 2019-01-17
+    # apparently incompatible with bookmarking 2019-01-17
     
-    # session$onSessionEnded(function() {
-    #     stopApp()
-    # })
+    session$onSessionEnded(function() {
+        stopApp()
+    })
     
     ##############################################################################
     
@@ -99,5 +99,5 @@ server <- function(input, output, session) {
 
 ##################################################################################
 # Run the application
-shinyApp(ui = ui, server = server, enableBookmarking = "server")
+shinyApp(ui = ui, server = server, enableBookmarking = "disable")
 ##################################################################################
