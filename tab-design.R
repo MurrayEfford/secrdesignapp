@@ -366,12 +366,13 @@ tabdesign <- tabPanel("Design", value = "design_tab",
                     fluidRow(
                         column(5, actionButton("resetbtn", "Reset all", width = 130, 
                                                title = "Reset all inputs to initial values")),
-                        column(6, bookmarkButton(width = 130)) 
+                        # column(6, bookmarkButton(width = 130))    # removed 2025-11-10
+                        column(7, helpText(HTML("&nbsp;&nbsp;&nbsp;F11 to toggle fullscreen")))
                     ),
-                    br(),
-                    fluidRow(
-                        column(7, helpText(HTML("F11 to toggle fullscreen")))
-                    ),
+                    # br(),
+                    # fluidRow(
+                    #     column(7, helpText(HTML("F11 to toggle fullscreen")))
+                    # ),
                     fluidRow(
                         column(11, textInput("title", "", value = "", 
                                              placeholder = "scenario label for Summary")))
