@@ -69,7 +69,7 @@ Version 1.5 (January 2022) minor updates in the Help file and GRTS random sample
 Version 1.6 (October 2022) support for optimization of detector placement by a genetic algorithm (Durbach et al. 2021) and restores GRTS random samples that now available again in **secr**.  
 Version 2.0 (November 2025) adjustments for recent versions of **secr** and **secrdesign** and several minor improvements. 
 Errors now appear in a Log. The internal Help has been edited and refers to the [SECR book] (Efford 2025b). 
-The default number of cores for simulation increased from one to half the total number available.  
+The default number of cores for simulation increased from one to half the total number available. Bookmarking disabled.  
 
 ### References
 
