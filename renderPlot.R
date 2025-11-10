@@ -180,7 +180,7 @@ output$popPlot <- renderPlot( height = 300, width = 380, {
 ##############################################################################
 
 border <- function (multiple) {
-    spc <- spacing(detectorarray()) 
+    spc <- spacing(isolate(detectorarray())) 
     if (is.null(spc) || is.na(spc) || length(spc) == 0) spc <- input$sigma
     multiple * spc
 }
@@ -284,7 +284,7 @@ output$RSEPlot <- renderPlot({
             R <- rotrv$output$rotRSE$values$R
             Em <- rotrv$output$rotRSE$values$m
             RSE <- rotrv$output$rotRSE$values$RSE
-            arrayspan <- attr(detectorarray(), 'arrayspan') * R
+            arrayspan <- attr(isolate(detectorarray()), 'arrayspan') * R
             lights <- trafficlight(arrayspan, input$sigma, Em, RSE)
             symbols(R, y = rep(0,length(R)), inches=FALSE, circles = rep(0.06, length(R)), 
                     bg = trafficcols[lights], add = TRUE, xpd = TRUE)
@@ -341,7 +341,7 @@ output$costPlot <- renderPlot({
 ##############################################################################
 
 output$maskPlot <- renderPlot({
-    core <- detectorarray()
+    core <- isolate(detectorarray())
     msk <- mask()
     par(mar=c(2,2,2,2), xaxs='i', yaxs='i', xpd = input$xpdbox)
     
