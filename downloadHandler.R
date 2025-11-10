@@ -20,7 +20,7 @@ output$downloadArray <- downloadHandler(
     filename = "array.txt",
     content = function(file) {
         head <- paste0("\n", arraycode(comment = TRUE))
-        write.traps(detectorarray(), header = head, file)
+        write.traps(isolate(detectorarray()), header = head, file)
     }
 )
 

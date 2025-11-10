@@ -39,7 +39,7 @@ getSPcode <- function (inputfilename, varname, apply = TRUE) {
 arraycode <- function (comment = FALSE) {
     # returns the R code needed to generate the specified array, 
     # as a character value
-    if (is.null(detectorarray())) {
+    if (is.null(isolate(detectorarray()))) {
         code <- ""  
     }
     else {

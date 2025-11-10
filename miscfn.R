@@ -97,7 +97,7 @@ cost <- function (x, costs = NULL) {
   df$pathcost  <- costs$perkm * df$pathlength * (nocc+1) * nrep
   df$arraycost <- costs$perarray * nrep
   df$detrcost  <- costs$perdetector * nrow(trps) * nrep
-  df$visitcost <- costs$pervisit * nrow(detectorarray()) * (nocc+1) * nrep
+  df$visitcost <- costs$pervisit * nrow(isolate(detectorarray())) * (nocc+1) * nrep
   df$detncost  <- costs$perdetection * df$C
   df$totalcost <- apply(df[,c("detrcost","arraycost","pathcost","visitcost","detncost")], 1, sum)
   df
@@ -270,7 +270,7 @@ n.eq.r <- function () {
     stop ("optimal spacing works only for Grid, Line or File")
   }
   detectpar <- list(lambda0 = input$lambda0, sigma = input$sigma)
-  if (nrow(detectorarray()) > 1) {
+  if (nrow(isolate(detectorarray())) > 1) {
     if (arrinput == "File") {
       temp <- traprv$scale
       traprv$scale <- 1.0   ## not sure this triggers re-read 2019-02-13
@@ -371,7 +371,7 @@ runsims <- function() {
                detail = '')
   seed <- input$seed
   if (seed == 0) seed <- NULL
-  array <- detectorarray()
+  array <- isolate(detectorarray())
   msk <- mask()
   Ndist <- if (input$distributionbtn == 'Poisson') 'poisson' else 'fixed'
   model2D <- input$model2D
@@ -488,7 +488,7 @@ runspacing <- function(sims = FALSE) {
     rotrv$output <- log_and_run(
         expr = optimalSpacing(
             D = density(),
-            traps = detectorarray(),
+            traps = isolate(detectorarray()),
             detectpar = list(lambda0 = input$lambda0, sigma = input$sigma),
             noccasions = input$noccasions,
             nrepeats = nrepeats(),
@@ -513,7 +513,7 @@ runspacing <- function(sims = FALSE) {
       rotrv$output <- log_and_run(
           expr = optimalSpacing(
               D = density(),
-              traps = detectorarray(),
+              traps = isolate(detectorarray()),
               detectpar = list(lambda0 = input$lambda0, sigma = input$sigma),
               noccasions = input$noccasions,
               nrepeats = nrepeats(),
@@ -567,7 +567,7 @@ addtosummary <- function() {
     spacex = if (input$arrayinput=="Grid") input$spx else
       if (input$arrayinput=="Line") input$spline else NA,
     spacey = if (input$arrayinput=="Grid") input$spy else NA,
-    ndetectors = nrow(detectorarray()) * nrepeats(),
+    ndetectors = nrow(isolate(detectorarray())) * nrepeats(),
     noccasions = input$noccasions,
     nrepeats = input$nrepeats,
     distribution = input$distributionbtn,
