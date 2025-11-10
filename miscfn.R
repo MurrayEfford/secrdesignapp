@@ -464,6 +464,12 @@ runsims <- function() {
     simrv$current <- TRUE
     if (input$updateCFbox) {
       CF <- predicted['RSE','mean'] / nrm()$rotRSE
+      if (CF > input$CFslider[['max']]) {
+          log_and_run(stop(paste0("correction factor ", CF, " out of range, set to maximum")), "")
+          CF <- input$CFslider[['max']]
+          showNotification("CF out of range, set to maximum", type = "warning", id = "invalidCF",
+                           duration = seconds)
+      }
       updateSliderInput(session, "CFslider", value = CF)
     }
   }
