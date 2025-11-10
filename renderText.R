@@ -34,7 +34,7 @@ output$masktext <- renderText({
 ##############################################################################
 
 output$spacingcodePrint <- renderText ({
-    if (is.null(detectorarray())) "" # abort if no valid array
+    if (is.null(isolate(detectorarray()))) "" # abort if no valid array
     else {
         
         ## inp <- oS2()
@@ -81,7 +81,7 @@ output$nrmlegend <- renderText ({
 ##############################################################################
 
 output$simcodePrint <- renderText ({
-    if (is.null(detectorarray())) {
+    if (is.null(isolate(detectorarray()))) {
         ""
     }
     else {
@@ -200,7 +200,7 @@ output$GAmsgprint <- renderText({
 
 
 output$costPrint <- renderText({
-    if (!is.null(detectorarray())) {
+    if (!is.null(isolate(detectorarray()))) {
         costs <- nrm()
         if (is.null(costs)) {
             showNotification("costing failed; check parameters",
@@ -216,9 +216,9 @@ output$costPrint <- renderText({
                 "  Arrays      ", input$currency, " ",
                 round(costs$arrays,2), "  (", nrepeats(), ") \n",
                 "  Detectors   ", input$currency, " ",
-                round(costs$detectors,2), "  (", nrow(detectorarray()) * nrepeats(), ") \n",
+                round(costs$detectors,2), "  (", nrow(isolate(detectorarray())) * nrepeats(), ") \n",
                 "  Visits      ", input$currency, " ",
-                round(costs$visits,2), "  (", nrow(detectorarray()) * nocc1 * nrepeats() , ") \n",
+                round(costs$visits,2), "  (", nrow(isolate(detectorarray())) * nocc1 * nrepeats() , ") \n",
                 "  Detections  ", input$currency, " ",
                 round(costs$detections,2), "  (", round(costs$En+costs$Er,1), ')\n\n',
                 "  Total       ", input$currency, " ",
@@ -348,7 +348,7 @@ output$nrmPrint <- renderText ({
     else
         paste0("\nEmpirical RSE = ", round(simrv$output$empRSE, 1), "%", star)
 
-    if (attr(detectorarray(), "arrayspan") < (5 * input$sigma)) {
+    if (attr(isolate(detectorarray()), "arrayspan") < (5 * input$sigma)) {
         showNotification("Pathological design - array span < 5.sigma",
                          type = "warning", id = "lowspan", duration = NULL)
     }
