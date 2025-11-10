@@ -499,13 +499,13 @@ observeEvent(input$spacingbtn, {
         methodfactor <- 1 + ((input$method != "none") * 4)
         functionfactor <- 4
         detectorfactor <- switch(input$detector, proximity = 1, multi = 0.6, count = 4)
-        time <- nrow(mask()) * nrow(detectorarray()) / 1e9 * ## blocked 2019-01-14 nrepeats() * 
+        time <- nrow(mask()) * nrow(isolate(detectorarray())) / 1e9 * ## blocked 2019-01-14 nrepeats() * 
             nrm()$En * input$noccasions * input$nrepl * 
             length(seq(input$fromR, input$toR, input$simbyR)) *
             methodfactor * functionfactor * detectorfactor
-        ## 2019-03-13
+        ## 2019-03-13, removed 2025-11-11
         ## arbitrarily boost expected time because server slow
-        time <- time * 3
+        ## time <- time * 3
         if (time > 0.2) {
             showModal(spacingOKModal(time))
         }
@@ -550,13 +550,13 @@ OKModal <- function(time) {
 
 observeEvent(c(input$simulatebtn, input$simulatebtn2), ignoreInit = TRUE, {
     ## ignoreInit blocks initial execution when simulatebtn2 goes from NULL to 0
-    if (!is.null(detectorarray())) {
+    if (!is.null(isolate(detectorarray()))) {
         methodfactor <- 1 + ((input$method != "none") * 4)
         functionfactor <- switch(input$packagebtn, secr.fit = 4, 0.1)
         detectorfactor <- switch(input$detector, proximity = 1, single = 0.6, multi = 0.6, count = 4)
         En <- nrm()$En
         if (is.na(En)) En <- 100  ## surrogate for 'single' detectors
-        time <- nrow(mask()) * nrow(detectorarray()) / 4.5e9 * ## blocked 2019-01-14 nrepeats() * 
+        time <- nrow(mask()) * nrow(isolate(detectorarray())) / 4.5e9 * ## blocked 2019-01-14 nrepeats() * 
             En * input$noccasions * input$nrepl * 
             methodfactor * functionfactor * detectorfactor
         ## 2019-03-13
@@ -613,7 +613,7 @@ trafficNotification <- function (colour, RSE, Em) {
 observeEvent(input$trafficClick, {
     RSE <- nrm()$rotRSE * input$CFslider
     Em <- nrm()$Em
-    colour <- trafficlight(attr(detectorarray(), "arrayspan"), 
+    colour <- trafficlight(attr(isolate(detectorarray()), "arrayspan"), 
                            input$sigma, 
                            Em,
                            RSE)
@@ -627,7 +627,7 @@ observeEvent(input$spacingTrafficClick, {
     Rout <- input$spacingTrafficClick$x       
     RSE <- approx(R, rotrv$output$rotRSE$values$RSE, Rout)$y
     Em <- approx(R, rotrv$output$rotRSE$values$m, Rout)$y
-    colour <- trafficlight(attr(detectorarray(), "arrayspan") * Rout,
+    colour <- trafficlight(attr(isolate(detectorarray()), "arrayspan") * Rout,
                            input$sigma, 
                            Em, 
                            RSE)
@@ -791,7 +791,7 @@ observeEvent(c(input$arrayinput, input$resetCFbtn), {
 
 observeEvent(input$click, {
     xy <- c(input$click$x, input$click$y)
-    trp <- nearesttrap(xy, detectorarray())
+    trp <- nearesttrap(xy, isolate(detectorarray()))
     manualroute$seq <- c(manualroute$seq, trp)
 })
 
@@ -799,7 +799,7 @@ observeEvent(input$click, {
 
 observeEvent(input$pxyclick, {
     invalidateOutputs()
-    trps <- detectorarray()
+    trps <- isolate(detectorarray())
     
     border <- border(input$pxyborder)
     
@@ -841,7 +841,7 @@ observeEvent(input$currency, {
 ##############################################################################
 
 observeEvent(input$appendbtn, {
-    if (!is.null(detectorarray()))
+    if (!is.null(isolate(detectorarray())))
         addtosummary()
 })
 
