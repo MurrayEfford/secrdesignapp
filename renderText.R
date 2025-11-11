@@ -38,7 +38,7 @@ output$spacingcodePrint <- renderText ({
     else {
         
         ## inp <- oS2()
-        invalidateOutputs()
+        #invalidateOutputs()
         
         if (input$spacingsimbox) {
             simulationargs <- paste0(",\n    fit.function = '", input$packagebtn, "',\n",
@@ -318,10 +318,6 @@ output$nrmPrint <- renderText ({
     Pxyval <- Pxy()
 
     k <- density()^0.5 * input$sigma / 100
-    # kstr <- if (input$detectfn=="HHN") paste0(
-    #     "Overlap coefficient k = ",
-    #     round(density()^0.5 * input$sigma / 100,3), '\n')
-    # else ""
 
     esastr <- paste0("Effective sampling area = ",
                      areastr(nrmval$esa), star, " (mask ",

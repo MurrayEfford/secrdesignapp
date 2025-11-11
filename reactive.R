@@ -58,12 +58,12 @@ arraypathlength <- reactive({
 
 ##############################################################################
 
-invalidateOutputs <- reactive({
-    simrv$current <- FALSE
-    rotrv$current <- FALSE
-    pxyrv$value <- NULL
-    updateNumericInput(session, "D", step = 10^trunc(log10(density()/50)))
-})
+# invalidateOutputs <- reactive({
+#     simrv$current <- FALSE
+#     rotrv$current <- FALSE
+#     pxyrv$value <- NULL
+#     updateNumericInput(session, "D", step = 10^trunc(log10(density()/50)))
+# })
 
 ##############################################################################
 
@@ -345,7 +345,7 @@ pop <- reactive(
 
 Pxy <- reactive({
     # DOES NOT USE habpolyrv$data
-    invalidateOutputs()
+    #invalidateOutputs()
     trps <- detectorarray()
     msk <- make.mask(trps, buffer = border(input$pxyborder), nx = input$pxynx)
     Pxy <- pdot(msk, trps, detectfn = input$detectfn,

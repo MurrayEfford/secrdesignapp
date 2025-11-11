@@ -56,8 +56,8 @@ server <- function(input, output, session) {
     
     # This command forces a browser resize event 500ms after the app loads
     shinyjs::delay(
-        1000, 
-        shinyjs::runjs("$('#target_output_panel').trigger('resize');")
+        500, 
+        shinyjs::runjs("$('body').trigger('resize');")
     )
     
     # source here as these use input or assign to output

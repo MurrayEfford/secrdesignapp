@@ -203,7 +203,7 @@ observeEvent(input$suggestbtn, {
         }
     }
     # Force redraw after R code finishes
-    shinyjs::runjs("$('#target_output_panel').trigger('resize');")
+    # shinyjs::runjs("$('#target_output_panel').trigger('resize');")
 })
 ##############################################################################
 
@@ -406,7 +406,7 @@ observeEvent(input$resetbtn, {
     updateNumericInput(session, "byR", value = 0.2)
     updateNumericInput(session, "simbyR", value = 0.4)
     
-    invalidateOutputs()
+    # invalidateOutputs()
     
     traprv$data <- NULL
     traprv$clear <- TRUE
@@ -436,7 +436,7 @@ observeEvent(input$resetbtn, {
     simrv$output <- NULL
     
     log_data$messages <- character(0)
-    shinyjs::runjs("$('#target_output_panel').trigger('resize');")
+    # shinyjs::runjs("$('#target_output_panel').trigger('resize');")
     
 })
 
@@ -770,7 +770,7 @@ observeEvent(input$clearlastbtn, {
 observeEvent(input$hollow, {
     if (input$hollow) CF <- 1.2 else CF <- 1.0
     updateSliderInput(session, "CFslider", value = CF)
-    shinyjs::runjs("$('#target_output_panel').trigger('resize');")
+    # shinyjs::runjs("$('#target_output_panel').trigger('resize');")
 })
 
 ##############################################################################
@@ -802,7 +802,7 @@ observeEvent(input$click, {
 ##############################################################################
 
 observeEvent(input$pxyclick, {
-    invalidateOutputs()
+    # invalidateOutputs()
     trps <- isolate(detectorarray())
     
     border <- border(input$pxyborder)
@@ -826,7 +826,7 @@ observeEvent(input$pxyclick, {
 ##############################################################################
 
 observeEvent(input$CIclick, {
-    invalidateOutputs()
+    # invalidateOutputs()
     if (input$powertype) {
         updateNumericInput(session, "xpos", value = round(input$CIclick$x))
     }

@@ -118,7 +118,7 @@ output$routePlot <- renderPlot( height = 320, width = 300, {
 
 output$detnPlot <- renderPlot( height = 290, width = 400, {
     ## inp <- oS2()
-    invalidateOutputs()
+    #invalidateOutputs()
     
     par(mar=c(4,5,2,5))
     detectfnplot (detectfn = input$detectfn,
@@ -188,7 +188,7 @@ border <- function (multiple) {
 output$pxyPlot <- renderPlot( height = 300, width = 380, {
     core <- detectorarray()
     if (is.null(core)) return (NULL)
-    invalidateOutputs()
+    #invalidateOutputs()
     
     if (input$pxyfillbox) {
         cols <- terrain.colors(11)
