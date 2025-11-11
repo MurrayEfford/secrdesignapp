@@ -202,8 +202,6 @@ observeEvent(input$suggestbtn, {
             updateNumericInput(session, "spx", value = optimalspacing)
         }
     }
-    # Force redraw after R code finishes
-    # shinyjs::runjs("$('#target_output_panel').trigger('resize');")
 })
 ##############################################################################
 
@@ -770,7 +768,6 @@ observeEvent(input$clearlastbtn, {
 observeEvent(input$hollow, {
     if (input$hollow) CF <- 1.2 else CF <- 1.0
     updateSliderInput(session, "CFslider", value = CF)
-    # shinyjs::runjs("$('#target_output_panel').trigger('resize');")
 })
 
 ##############################################################################
