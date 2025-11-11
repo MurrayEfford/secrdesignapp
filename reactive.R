@@ -241,11 +241,9 @@ detectorarray <- reactive(
         }
         
         if (is.null(trps) || input$arrayinput == "Region") {
-            # hideTab(inputId = "navlist", target = "Spacing")
             shinyjs::disable(selector = '#navlist a[data-value="spacing_tab"]')
         }
         else {
-            # showTab(inputId = "navlist", target = "Spacing")
             shinyjs::enable(selector = '#navlist a[data-value="spacing_tab"]')
         }
         
@@ -365,8 +363,6 @@ Pxy <- reactive({
 nrm <- reactive({
     trps <- detectorarray()
     if (is.null(trps)) return (NULL)
-    # appears not to be needed 2019-01-19
-    # invalidateOutputs()
     msk <- mask()
     if (nrow(msk)>0) {
         pathl <- arraypathlength()
@@ -377,7 +373,6 @@ nrm <- reactive({
             scen,
             trapset = trps,
             mask = msk,
-            ## CF = input$CFslider,  
             CF = 1,  
             routelength = pathl / 1000,
             costing = TRUE,
