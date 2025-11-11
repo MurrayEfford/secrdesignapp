@@ -397,6 +397,10 @@ tabdesign <- tabPanel("Design", value = "design_tab",
                      fluidRow(
                          column(12,
                                 br(),
+                                
+                                # for rendering issue 2025-11-11
+                                div(id = "target_output_panel",
+                                    
                                 tabsetPanel(type = "pills",
                                             id = "tabs",
                                             tabPanel("Array",
@@ -482,7 +486,7 @@ tabdesign <- tabPanel("Design", value = "design_tab",
                                                                 verbatimTextOutput("logPrint"))
                                                      )
                                             )
-                                ))
+                                )))
                      )
              )
          )
