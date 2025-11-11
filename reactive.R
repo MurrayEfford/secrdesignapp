@@ -398,11 +398,13 @@ nrm <- reactive({
             else maxRSE <- 100
         }
         if (!is.finite(RSE)) RSE <- maxRSE
-        updateSliderInput(session, "RSEslider",
+        log_and_run(
+            updateSliderInput(session, "RSEslider",
                           min = 1.0,
                           max = maxRSE,
                           value = RSE,
-                          step = 0.1)
+                          step = 0.1),
+            "")
         
         # nr
         scensum
