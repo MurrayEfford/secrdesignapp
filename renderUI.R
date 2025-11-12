@@ -181,11 +181,11 @@ output$uigridlines <- renderUI({
 output$xycoord <- renderUI({
     req(input$arrayClick)
     xy <- c(input$arrayClick$x, input$arrayClick$y)
-    tmpgrid <- detectorarray()
     if (is.null(xy)) 
         helpText("")
     else {
         if (input$snaptodetector) {
+            tmpgrid <- detectorarray()
             nearest <- nearesttrap(xy, tmpgrid)
             xy <- tmpgrid[nearest,]
             id <- paste0(rownames(tmpgrid)[nearest], ":")
