@@ -179,8 +179,9 @@ output$uigridlines <- renderUI({
 })
 
 output$xycoord <- renderUI({
+    req(input$arrayClick)
     xy <- c(input$arrayClick$x, input$arrayClick$y)
-    tmpgrid <- isolate(detectorarray())
+    tmpgrid <- detectorarray()
     if (is.null(xy)) 
         helpText("")
     else {
