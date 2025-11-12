@@ -345,7 +345,9 @@ pop <- reactive(
 
 Pxy <- reactive({
     # DOES NOT USE habpolyrv$data
-    #invalidateOutputs()
+    req(detectorarray())
+    req(input$pxyborder, input$pxynx, input$detectfn, input$lambda0,
+        input$sigma, input$noccasions)
     trps <- detectorarray()
     msk <- make.mask(trps, buffer = border(input$pxyborder), nx = input$pxynx)
     Pxy <- pdot(msk, trps, detectfn = input$detectfn,
