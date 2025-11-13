@@ -384,9 +384,10 @@ tabdesign <- tabPanel("Design", value = "design_tab",
                                     column(11, verbatimTextOutput("nrmPrint"))
                                     ,
                                     column(1, style='padding:0px;',
-                                           conditionalPanel("output.nrmPrint!= ''",
-                                                            downloadLink("downloadnrmcode", "R")),
-                                           br(),
+                                           # suspend 2025-11-14 because erratic on remote computer
+                                           # conditionalPanel("output.nrmPrint!= ''",
+                                           #                  downloadLink("downloadnrmcode", "R")),
+                                           # br(),
                                            conditionalPanel("output.nrmPrint!= ''",
                                                             plotOutput("trafficlightPlot", height = 60, hover = "trafficClick")))
 
