@@ -7,12 +7,15 @@ See the internal Help tab for details.
 
 ### Usage
 
-Click this link to run [secrdesignapp](https://www.stats.otago.ac.nz/secrdesignapp) version 2.0 in your web browser from a University of Otago server without installing it locally.
 
-As of November 2025, there is some unexplained 'stickiness' of the interface there (for faster rendering, click on the array plot or another Results tab).
+Click this link to run [secrdesignapp](https://murrayefford.shinyapps.io/secrdesignapp/) version 2.0 in your web browser without installing it locally.
 
-It may be better to run **secrdesignapp** on your own machine as described below. Simulations may run faster, you can install the latest the GitHub version, and that 
-avoids a limit to the number of simultaneous users on the server.
+Another source is [secrdesignapp](https://www.stats.otago.ac.nz/secrdesignapp) on a University of Otago server, 
+but there is currently (November 2025) some unexplained 'stickiness' of that interface (for faster rendering, 
+click on the array plot or another Results tab).
+
+It may be better to run **secrdesignapp** on your own machine as described below. Simulations may run faster, you can install the latest the GitHub version, 
+and running locally avoids any limits that may be imposed by the server (e.g., number of simultaneous users).
 
 To run in a local R session directly from GitHub, paste and run this code at the R command prompt:
 
