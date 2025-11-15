@@ -15,6 +15,7 @@
 library(secrdesign)
 library(sf)
 library(shinyjs)
+library(markdown)
 
 source('globalvars.R',      local = TRUE)
 source('tab-design.R',      local = TRUE)
