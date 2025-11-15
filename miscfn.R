@@ -354,7 +354,7 @@ readpolygon <- function (fileupload) {
         file.copy(from = fileupload[,4], 
                   to = paste0(dsnname, "/temp.", tools::file_ext(fileupload[,4])),     
                   overwrite = TRUE)
-        poly <- sf::st_read(dsnname)  
+        poly <- sf::st_read(dsnname, layer = 'temp')  
       }
     }
   }
