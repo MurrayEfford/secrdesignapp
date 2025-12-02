@@ -8,11 +8,8 @@ See the internal Help tab for details.
 ### Usage
 
 
-Click this link to run [secrdesignapp](https://murrayefford.shinyapps.io/secrdesignapp/) version 2.0 in your web browser without installing it locally.
-
-Another source is [secrdesignapp](https://www.stats.otago.ac.nz/secrdesignapp) on a University of Otago server, 
-but there is currently (November 2025) some unexplained 'stickiness' of that interface (for faster rendering, 
-click on the array plot or another Results tab).
+Click this link to run [secrdesignapp](https://www.stats.otago.ac.nz/secrdesignapp) version 2.0 in your web browser without installing it locally. 
+(Unexplained 'stickiness' of the interface in an earlier release has been fixed).
 
 It may be better to run **secrdesignapp** on your own machine as described below. Simulations may run faster, you can install the latest the GitHub version, 
 and running locally avoids any limits that may be imposed by the server (e.g., number of simultaneous users).
@@ -24,7 +21,7 @@ install.packages("shinyjs")  # skip if already installed; installs 'shiny' if ne
 install.packages("secr")     # skip if already installed
 shiny::runGitHub("secrdesignapp", "MurrayEfford")
 ```
-Version 2.0 requires secr >= 5.3.0 and secrdesign >= 2.10.0. 
+Version 2.0 requires secr >= 5.3.0 and secrdesign >= 2.10.1. 
 Other R packages may be needed for specific operations (e.g., **sf** for GIS).
 
 ----
