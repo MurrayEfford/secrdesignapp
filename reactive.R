@@ -248,15 +248,21 @@ detectorarray <- reactive(
         }
         
         if (is.null(trps)) {
-            hideTab(inputId = "navlist", target = "Costing")
-            hideTab(inputId = "navlist", target = "Simulation")
+            # hideTab(inputId = "navlist", target = "Costing")
+            # hideTab(inputId = "navlist", target = "Simulation")
+            # better...
+            shinyjs::disable(selector = '#navlist a[data-value="costing_tab"]')
+            shinyjs::disable(selector = '#navlist a[data-value="simulation_tab"]')
             shinyjs::disable("simulatebtn2")
             shinyjs::disable("appendbtn")
             return (NULL)
         }
         else {
-            showTab(inputId = "navlist", target = "Costing")
-            showTab(inputId = "navlist", target = "Simulation")
+            # showTab(inputId = "navlist", target = "Costing")
+            # showTab(inputId = "navlist", target = "Simulation")
+            # better...
+            shinyjs::enable(selector = '#navlist a[data-value="costing_tab"]')
+            shinyjs::enable(selector = '#navlist a[data-value="simulation_tab"]')
             shinyjs::enable("simulatebtn2")
             shinyjs::enable("appendbtn")
             return(addsequence (trps, input$routetype))  # returns 'trps'

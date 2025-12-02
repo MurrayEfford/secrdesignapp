@@ -5,6 +5,7 @@
 ## 2022-02-06 version 1.5 check compatible secr 4.5.2
 ## 2022-10-26 version 1.6
 ## 2025-11-03 version 2.0
+## 2025-12-02 use disable/enable instead of hide/show for costing, simulation tabs
 
 # requires package sf to read shapefiles
 # requires package sp for plot method for SpatialPolygons
@@ -12,10 +13,12 @@
 # requires package tools for file path when reading shapefiles (distributed with base R)
 # requires package spsurvey >= 5.3.0 for GRTS 
 
+
 library(secrdesign)
 library(sf)
 library(shinyjs)
 library(markdown)
+library(spsurvey)
 
 source('globalvars.R',      local = TRUE)
 source('tab-design.R',      local = TRUE)
